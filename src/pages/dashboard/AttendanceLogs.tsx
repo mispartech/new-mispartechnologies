@@ -1,32 +1,17 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { 
-  Search, 
-  Calendar,
-  Download,
-  Filter,
-  Clock
-} from 'lucide-react';
+import { Search, Calendar, Download, Filter, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface AttendanceRecord {
@@ -40,6 +25,7 @@ interface AttendanceRecord {
     first_name: string;
     last_name: string;
     face_image_url: string;
+    department_id?: string;
     departments?: { name: string };
   };
 }
@@ -61,37 +47,24 @@ const AttendanceLogs = () => {
   }, [dateFilter, departmentFilter]);
 
   const fetchDepartments = async () => {
-    const { data } = await supabase.from('departments').select('id, name');
+    const { data } = await djangoApi.getDepartments();
     setDepartments(data || []);
   };
 
   const fetchAttendance = async () => {
     try {
-      // Use explicit relationship path to avoid ambiguity
-      let query = supabase
-        .from('attendance')
-        .select(`
-          *,
-          profiles!attendance_user_id_fkey(
-            first_name, 
-            last_name, 
-            face_image_url, 
-            department_id,
-            departments!profiles_department_id_fkey(name)
-          )
-        `)
-        .eq('date', dateFilter)
-        .order('time', { ascending: false });
+      const { data, error } = await djangoApi.getAttendance({
+        start_date: dateFilter,
+        end_date: dateFilter,
+        include_profiles: 'true',
+      });
 
-      const { data, error } = await query;
+      if (error) throw new Error(error);
 
-      if (error) throw error;
-
-      // Filter by department if selected
       let filtered = data || [];
       if (departmentFilter !== 'all') {
         filtered = filtered.filter(
-          a => a.profiles?.department_id === departmentFilter
+          (a: any) => a.profiles?.department_id === departmentFilter
         );
       }
 
@@ -272,9 +245,7 @@ const AttendanceLogs = () => {
                       </TableCell>
                       <TableCell>
                         {record.confidence_score ? (
-                          <Badge 
-                            variant={record.confidence_score > 0.8 ? 'default' : 'secondary'}
-                          >
+                          <Badge variant={record.confidence_score > 0.8 ? 'default' : 'secondary'}>
                             {Math.round(record.confidence_score * 100)}%
                           </Badge>
                         ) : '-'}
@@ -322,9 +293,7 @@ const AttendanceLogs = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {record.confidence_score && (
-                      <Badge 
-                        variant={record.confidence_score > 0.8 ? 'default' : 'secondary'}
-                      >
+                      <Badge variant={record.confidence_score > 0.8 ? 'default' : 'secondary'}>
                         {Math.round(record.confidence_score * 100)}% match
                       </Badge>
                     )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,12 +9,7 @@ import AttendanceChart from '@/components/dashboard/AttendanceChart';
 import AttendanceHeatmap from '@/components/dashboard/AttendanceHeatmap';
 import { useTerminology } from '@/contexts/TerminologyContext';
 import { 
-  Users, 
-  UserCheck, 
-  Building2, 
-  Clock, 
-  TrendingUp,
-  Calendar as CalendarIcon
+  Users, UserCheck, Building2, Clock, TrendingUp, Calendar as CalendarIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -27,17 +22,12 @@ interface DashboardContext {
 const DashboardHome = () => {
   const { profile } = useOutletContext<DashboardContext>();
   const [stats, setStats] = useState({
-    totalMembers: 0,
-    totalAdmins: 0,
-    totalDepartments: 0,
-    attendedToday: 0,
-    averageAttendance: 0,
+    totalMembers: 0, totalAdmins: 0, totalDepartments: 0, attendedToday: 0, averageAttendance: 0,
   });
   const [organization, setOrganization] = useState<any>(null);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
   const [recentMembers, setRecentMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const { personPlural, getTerm } = useTerminology();
 
   useEffect(() => {
@@ -46,45 +36,26 @@ const DashboardHome = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      
-      // Fetch organization data first if we have organization_id
+      // Fetch organization
       if (profile?.organization_id) {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', profile.organization_id)
-          .single();
+        const { data: orgData } = await djangoApi.getOrganization(profile.organization_id);
         setOrganization(orgData);
       }
+
+      // Fetch dashboard stats from Django
+      const { data: dashStats } = await djangoApi.getDashboardStats();
       
-      // Fetch stats in parallel
-      const [
-        { count: membersCount },
-        { count: adminsCount },
-        { count: departmentsCount },
-        { count: attendedTodayCount },
-        { data: recentAttendanceData },
-        { data: recentMembersData }
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'member'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('role', 'member'),
-        supabase.from('departments').select('*', { count: 'exact', head: true }),
-        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('date', today),
-        supabase.from('attendance').select('*, profiles(first_name, last_name, face_image_url)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('profiles').select('*').eq('role', 'member').order('created_at', { ascending: false }).limit(5)
-      ]);
-
-      setStats({
-        totalMembers: membersCount || 0,
-        totalAdmins: adminsCount || 0,
-        totalDepartments: departmentsCount || 0,
-        attendedToday: attendedTodayCount || 0,
-        averageAttendance: 0,
-      });
-
-      setRecentAttendance(recentAttendanceData || []);
-      setRecentMembers(recentMembersData || []);
+      if (dashStats) {
+        setStats({
+          totalMembers: dashStats.total_members || 0,
+          totalAdmins: dashStats.total_admins || 0,
+          totalDepartments: dashStats.total_departments || 0,
+          attendedToday: dashStats.attended_today || 0,
+          averageAttendance: 0,
+        });
+        setRecentAttendance(dashStats.recent_attendance || []);
+        setRecentMembers(dashStats.recent_members || []);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -132,34 +103,10 @@ const DashboardHome = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title={`Total ${getTerm('plural', true)}`}
-          value={stats.totalMembers}
-          subtitle={`Registered ${personPlural}`}
-          icon={Users}
-          iconClassName="bg-blue-500"
-        />
-        <StatsCard
-          title="Attended Today"
-          value={stats.attendedToday}
-          subtitle={format(new Date(), 'EEEE, MMM d')}
-          icon={UserCheck}
-          iconClassName="bg-green-500"
-        />
-        <StatsCard
-          title="Departments"
-          value={stats.totalDepartments}
-          subtitle="Active departments"
-          icon={Building2}
-          iconClassName="bg-purple-500"
-        />
-        <StatsCard
-          title="Admins"
-          value={stats.totalAdmins}
-          subtitle="System administrators"
-          icon={TrendingUp}
-          iconClassName="bg-orange-500"
-        />
+        <StatsCard title={`Total ${getTerm('plural', true)}`} value={stats.totalMembers} subtitle={`Registered ${personPlural}`} icon={Users} iconClassName="bg-blue-500" />
+        <StatsCard title="Attended Today" value={stats.attendedToday} subtitle={format(new Date(), 'EEEE, MMM d')} icon={UserCheck} iconClassName="bg-green-500" />
+        <StatsCard title="Departments" value={stats.totalDepartments} subtitle="Active departments" icon={Building2} iconClassName="bg-purple-500" />
+        <StatsCard title="Admins" value={stats.totalAdmins} subtitle="System administrators" icon={TrendingUp} iconClassName="bg-orange-500" />
       </div>
 
       {/* Attendance Chart */}
@@ -178,28 +125,23 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent>
             {recentAttendance.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No attendance records yet
-              </p>
+              <p className="text-muted-foreground text-center py-8">No attendance records yet</p>
             ) : (
               <div className="space-y-4">
-                {recentAttendance.map((record) => (
+                {recentAttendance.map((record: any) => (
                   <div key={record.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10">
-                        <AvatarImage src={record.profiles?.face_image_url} />
+                        <AvatarImage src={record.profiles?.face_image_url || record.face_image_url} />
                         <AvatarFallback className="bg-primary/10 text-primary">
-                          {record.profiles?.first_name?.[0] || 'U'}
-                          {record.profiles?.last_name?.[0] || ''}
+                          {record.profiles?.first_name?.[0] || record.first_name?.[0] || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">
-                          {record.profiles?.first_name} {record.profiles?.last_name}
+                          {record.profiles?.first_name || record.first_name} {record.profiles?.last_name || record.last_name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {record.date} at {record.time}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{record.date} at {record.time}</p>
                       </div>
                     </div>
                     {record.confidence_score && (
@@ -222,33 +164,24 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent>
             {recentMembers.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No {personPlural} registered yet
-              </p>
+              <p className="text-muted-foreground text-center py-8">No {personPlural} registered yet</p>
             ) : (
               <div className="space-y-4">
-                {recentMembers.map((member) => (
+                {recentMembers.map((member: any) => (
                   <div key={member.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={member.face_image_url} />
                         <AvatarFallback className="bg-primary/10 text-primary">
                           {member.first_name?.[0] || 'U'}
-                          {member.last_name?.[0] || ''}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">
-                          {member.first_name} {member.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {member.email}
-                        </p>
+                        <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {member.role?.replace('_', ' ')}
-                    </Badge>
+                    <Badge variant="outline" className="capitalize text-xs">{member.role?.replace('_', ' ')}</Badge>
                   </div>
                 ))}
               </div>
@@ -259,31 +192,13 @@ const DashboardHome = () => {
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <QuickActionCard
-              icon={CalendarIcon}
-              label="Mark Attendance"
-              href="/dashboard/attendance"
-            />
-            <QuickActionCard
-              icon={Users}
-              label={`View ${getTerm('plural', true)}`}
-              href="/dashboard/members"
-            />
-            <QuickActionCard
-              icon={Building2}
-              label="Departments"
-              href="/dashboard/departments"
-            />
-            <QuickActionCard
-              icon={TrendingUp}
-              label="Reports"
-              href="/dashboard/reports"
-            />
+            <QuickActionCard icon={CalendarIcon} label="Mark Attendance" href="/dashboard/attendance" />
+            <QuickActionCard icon={Users} label={`View ${getTerm('plural', true)}`} href="/dashboard/members" />
+            <QuickActionCard icon={Building2} label="Departments" href="/dashboard/departments" />
+            <QuickActionCard icon={TrendingUp} label="Reports" href="/dashboard/reports" />
           </div>
         </CardContent>
       </Card>
@@ -291,24 +206,11 @@ const DashboardHome = () => {
   );
 };
 
-const QuickActionCard = ({ 
-  icon: Icon, 
-  label, 
-  href 
-}: { 
-  icon: any; 
-  label: string; 
-  href: string;
-}) => {
-  return (
-    <a
-      href={href}
-      className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
-    >
-      <Icon className="w-6 h-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
-      <span className="text-sm font-medium text-foreground">{label}</span>
-    </a>
-  );
-};
+const QuickActionCard = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => (
+  <a href={href} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors group">
+    <Icon className="w-6 h-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
+    <span className="text-sm font-medium text-foreground">{label}</span>
+  </a>
+);
 
 export default DashboardHome;

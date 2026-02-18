@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { djangoApi } from '@/lib/api/client';
 
 export type OnboardingSessionPayload = {
   step: number;
@@ -11,33 +11,17 @@ export const getOnboardingStorageKeys = (userId: string) => ({
 });
 
 export const loadOnboardingSession = async (userId: string) => {
-  const { data, error } = await supabase
-    .from("onboarding_sessions")
-    .select("step, data")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) throw error;
+  const { data, error } = await djangoApi.getOnboardingSession(userId);
+  if (error) throw new Error(error);
   return data as { step: number; data: Record<string, unknown> } | null;
 };
 
 export const saveOnboardingSession = async (userId: string, payload: OnboardingSessionPayload) => {
-  // Cast to bypass type issue until Supabase types regenerate
-  const { error } = await supabase
-    .from("onboarding_sessions")
-    .upsert(
-      {
-        user_id: userId,
-        step: payload.step,
-        data: payload.data,
-      } as never,
-      { onConflict: "user_id" }
-    );
-
-  if (error) throw error;
+  const { error } = await djangoApi.saveOnboardingSession(userId, payload);
+  if (error) throw new Error(error);
 };
 
 export const deleteOnboardingSession = async (userId: string) => {
-  const { error } = await supabase.from("onboarding_sessions").delete().eq("user_id", userId);
-  if (error) throw error;
+  const { error } = await djangoApi.deleteOnboardingSession(userId);
+  if (error) throw new Error(error);
 };
