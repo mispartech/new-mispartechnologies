@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { djangoApi } from '@/lib/api/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
         gender: member.gender || '',
         department_id: member.department_id || ''
       });
-      supabase.from('departments').select('id, name').then(({ data }) => setDepartments(data || []));
+      djangoApi.getDepartments().then(({ data }) => setDepartments(data || []));
     }
   }, [isOpen, member]);
 
@@ -39,15 +39,15 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.from('profiles').update({
+      const { error } = await djangoApi.updateMember(member.id, {
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone_number: formData.phone_number,
         gender: formData.gender,
-        department_id: formData.department_id || null
-      }).eq('id', member.id);
+        department_id: formData.department_id || undefined,
+      });
       
-      if (error) throw error;
+      if (error) throw new Error(error);
       toast({ title: 'Success', description: 'Member updated successfully' });
       onSuccess();
       onClose();

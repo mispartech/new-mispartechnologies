@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { djangoApi } from '@/lib/api/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
 
   useEffect(() => {
     if (isOpen) {
-      supabase.from('departments').select('id, name').then(({ data }) => setDepartments(data || []));
+      djangoApi.getDepartments().then(({ data }) => setDepartments(data || []));
     }
   }, [isOpen]);
 
@@ -34,63 +34,27 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
     e.preventDefault();
     setLoading(true);
     try {
-      // Get current admin's organization
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error('Not authenticated');
+      // Get current profile to find organization_id
+      const { data: profile, error: profileError } = await djangoApi.getProfile();
+      if (profileError) throw new Error(profileError);
+      if (!profile?.organization_id) throw new Error('No organization found. Please complete onboarding first.');
 
-      const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('organization_id')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (!adminProfile?.organization_id) {
-        throw new Error('No organization found. Please complete onboarding first.');
-      }
-
-      // Create member invite instead of directly creating user
-      const { data: invite, error: inviteError } = await supabase
-        .from('member_invites')
-        .insert({
-          email: formData.email,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone_number: formData.phone_number || null,
-          gender: formData.gender || null,
-          department_id: formData.department_id || null,
-          organization_id: adminProfile.organization_id,
-          invited_by: currentUser.id,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (inviteError) throw inviteError;
-
-      // Send invite email via edge function
-      const { error: emailError } = await supabase.functions.invoke('send-member-invite', {
-        body: {
-          email: formData.email,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          token: invite.token,
-        }
+      const { data: invite, error: inviteError } = await djangoApi.inviteMember({
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone_number: formData.phone_number || undefined,
+        gender: formData.gender || undefined,
+        department_id: formData.department_id || undefined,
+        organization_id: profile.organization_id,
       });
 
-      if (emailError) {
-        console.error('Failed to send invite email:', emailError);
-        // Don't fail the operation, invite was created
-        toast({ 
-          title: 'Member Added', 
-          description: 'Member invite created. Email sending may have failed - you can resend later.',
-          variant: 'default'
-        });
-      } else {
-        toast({ 
-          title: 'Member Invited', 
-          description: 'An email has been sent to the member to set up their account.' 
-        });
-      }
+      if (inviteError) throw new Error(inviteError);
+
+      toast({ 
+        title: 'Member Invited', 
+        description: 'An email has been sent to the member to set up their account.' 
+      });
 
       onSuccess();
       onClose();
