@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { djangoApi } from '@/lib/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,18 +11,10 @@ import { Activity, Search, Filter, Loader2, User, Calendar } from 'lucide-react'
 import { format } from 'date-fns';
 
 interface ActivityLog {
-  id: string;
-  user_id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  profiles?: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-  };
+  id: string; user_id: string; action: string; entity_type: string; entity_id: string | null;
+  metadata: Record<string, unknown>; created_at: string;
+  user_name?: string; user_email?: string;
+  profiles?: { first_name: string | null; last_name: string | null; email: string | null; };
 }
 
 const ACTION_COLORS: Record<string, string> = {
@@ -37,14 +29,9 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 const ENTITY_TYPES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'member', label: 'Member' },
-  { value: 'department', label: 'Department' },
-  { value: 'attendance', label: 'Attendance' },
-  { value: 'visitor', label: 'Visitor' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'organization', label: 'Organization' },
-  { value: 'settings', label: 'Settings' },
+  { value: 'all', label: 'All Types' }, { value: 'member', label: 'Member' }, { value: 'department', label: 'Department' },
+  { value: 'attendance', label: 'Attendance' }, { value: 'visitor', label: 'Visitor' }, { value: 'admin', label: 'Admin' },
+  { value: 'organization', label: 'Organization' }, { value: 'settings', label: 'Settings' },
 ];
 
 const ActivityLogs = () => {
@@ -54,44 +41,16 @@ const ActivityLogs = () => {
   const [filterType, setFilterType] = useState('all');
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
+  useEffect(() => { fetchLogs(); }, []);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
-
-      if (error) throw error;
-
-      // Fetch profiles separately to avoid relation issues
-      const userIds = [...new Set((data || []).map(log => log.user_id).filter(Boolean))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email')
-        .in('id', userIds);
-
-      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-      
-      const logsWithProfiles = (data || []).map(log => ({
-        ...log,
-        metadata: (log.metadata || {}) as Record<string, unknown>,
-        profiles: log.user_id ? profileMap.get(log.user_id) : undefined
-      }));
-
-      setLogs(logsWithProfiles);
+      const result = await djangoApi.getActivityLogs({ limit: 500 });
+      if (result.error) throw new Error(result.error);
+      setLogs((result.data || []).map((log: any) => ({ ...log, metadata: (log.metadata || {}) as Record<string, unknown> })));
     } catch (error: any) {
-      console.error('Error fetching activity logs:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load activity logs.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to load activity logs.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -99,136 +58,50 @@ const ActivityLogs = () => {
 
   const filteredLogs = logs.filter((log) => {
     const matchesType = filterType === 'all' || log.entity_type === filterType;
-    const userName = log.profiles 
-      ? `${log.profiles.first_name || ''} ${log.profiles.last_name || ''} ${log.profiles.email || ''}`
-      : '';
-    const matchesSearch = 
-      userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entity_type.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const userName = log.user_name || (log.profiles ? `${log.profiles.first_name || ''} ${log.profiles.last_name || ''} ${log.profiles.email || ''}` : '');
+    const matchesSearch = userName.toLowerCase().includes(searchQuery.toLowerCase()) || log.action.toLowerCase().includes(searchQuery.toLowerCase()) || log.entity_type.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 
   const formatMetadata = (metadata: Record<string, unknown>) => {
     if (!metadata || Object.keys(metadata).length === 0) return '-';
-    return Object.entries(metadata)
-      .slice(0, 2)
-      .map(([key, value]) => `${key}: ${String(value)}`)
-      .join(', ');
+    return Object.entries(metadata).slice(0, 2).map(([key, value]) => `${key}: ${String(value)}`).join(', ');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const getUserDisplay = (log: ActivityLog) => {
+    if (log.user_name) return { name: log.user_name, email: log.user_email };
+    if (log.profiles) return { name: `${log.profiles.first_name || ''} ${log.profiles.last_name || ''}`.trim() || log.profiles.email, email: log.profiles.email };
+    return { name: 'Unknown User', email: null };
+  };
+
+  if (loading) return (<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
-        <p className="text-muted-foreground">Track all user actions in your organization</p>
-      </div>
-
+      <div><h1 className="text-2xl font-bold text-foreground">Activity Logs</h1><p className="text-muted-foreground">Track all user actions in your organization</p></div>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent Activity
-          </CardTitle>
-          <CardDescription>
-            Showing the latest {filteredLogs.length} activities
-          </CardDescription>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Recent Activity</CardTitle><CardDescription>Showing the latest {filteredLogs.length} activities</CardDescription></CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by user, action, or type..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ENTITY_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Search by user, action, or type..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" /></div>
+            <Select value={filterType} onValueChange={setFilterType}><SelectTrigger className="w-full sm:w-[180px]"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Filter by type" /></SelectTrigger><SelectContent>{ENTITY_TYPES.map((type) => (<SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>))}</SelectContent></Select>
           </div>
-
           <ScrollArea className="h-[600px]">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Entity Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Time</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Action</TableHead><TableHead>Entity Type</TableHead><TableHead>Details</TableHead><TableHead>Time</TableHead></TableRow></TableHeader>
               <TableBody>
-                {filteredLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      No activity logs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredLogs.map((log) => (
+                {filteredLogs.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No activity logs found</TableCell></TableRow> : filteredLogs.map((log) => {
+                  const userDisplay = getUserDisplay(log);
+                  return (
                     <TableRow key={log.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {log.profiles?.first_name && log.profiles?.last_name
-                                ? `${log.profiles.first_name} ${log.profiles.last_name}`
-                                : log.profiles?.email || 'Unknown User'}
-                            </p>
-                            {log.profiles?.email && log.profiles?.first_name && (
-                              <p className="text-xs text-muted-foreground">
-                                {log.profiles.email}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={ACTION_COLORS[log.action] || 'bg-gray-100'}>
-                          {log.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="capitalize">{log.entity_type}</span>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
-                        {formatMetadata(log.metadata)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(log.created_at), 'MMM d, HH:mm')}
-                        </div>
-                      </TableCell>
+                      <TableCell><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center"><User className="h-4 w-4 text-muted-foreground" /></div><div><p className="font-medium text-sm">{userDisplay.name}</p>{userDisplay.email && userDisplay.name !== userDisplay.email && <p className="text-xs text-muted-foreground">{userDisplay.email}</p>}</div></div></TableCell>
+                      <TableCell><Badge className={ACTION_COLORS[log.action] || 'bg-gray-100'}>{log.action}</Badge></TableCell>
+                      <TableCell><span className="capitalize">{log.entity_type}</span></TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">{formatMetadata(log.metadata)}</TableCell>
+                      <TableCell><div className="flex items-center gap-1 text-sm text-muted-foreground"><Calendar className="h-3 w-3" />{format(new Date(log.created_at), 'MMM d, HH:mm')}</div></TableCell>
                     </TableRow>
-                  ))
-                )}
+                  );
+                })}
               </TableBody>
             </Table>
           </ScrollArea>

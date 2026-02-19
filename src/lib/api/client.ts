@@ -553,6 +553,58 @@ class DjangoApiClient {
     });
   }
 
+  async updateSchedule(
+    id: string,
+    data: Partial<any>,
+  ): Promise<ApiResponse<any>> {
+    return this.request(`/api/schedules/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSchedule(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/api/schedules/${id}/`, { method: 'DELETE' });
+  }
+
+  async bulkUpdateSchedules(
+    updates: Array<{ id: string; [key: string]: any }>,
+  ): Promise<ApiResponse<void>> {
+    return this.request('/api/schedules/bulk-update/', {
+      method: 'PATCH',
+      body: JSON.stringify({ schedules: updates }),
+    });
+  }
+
+  // ═══════════════════════════ SEND INVITE EMAILS ═══════════════════════════
+
+  async sendAdminInviteEmail(data: {
+    invite_id: string;
+    email: string;
+    role: string;
+    token: string;
+    organization_name: string;
+  }): Promise<ApiResponse<void>> {
+    return this.request('/api/admin-invites/send-email/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async sendMemberInviteEmail(data: {
+    invite_id: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    token: string;
+    organization_name?: string;
+  }): Promise<ApiResponse<void>> {
+    return this.request('/api/members/send-invite-email/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // ═══════════════════════════ PASSWORD ═══════════════════════════
 
   async updatePassword(
