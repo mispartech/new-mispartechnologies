@@ -223,24 +223,10 @@ export default function Register() {
         throw new Error("Signup failed — no user returned");
       }
 
-      // 2. Sync to Django to create backend user + get JWT
-      const syncResult = await djangoApi.syncFromSupabase({
-        supabase_uid: authData.user.id,
-        email: inviteData.email,
-        first_name: firstName,
-        last_name: lastName,
-      });
-
-      if (syncResult.error || !syncResult.data?.user) {
-        throw new Error(syncResult.error || "Account sync failed. Please retry.");
-      }
-
-      const djangoUserId = syncResult.data.user.id;
-
-      // 3. Enroll face directly via Django API
+      // 2. Enroll face via Django API (Django creates user lazily on first authenticated request)
       try {
         await djangoApi.enrollFace(
-          djangoUserId,
+          authData.user.id,
           faceImage.replace(/^data:image\/\w+;base64,/, ''),
           `${firstName} ${lastName}`
         );

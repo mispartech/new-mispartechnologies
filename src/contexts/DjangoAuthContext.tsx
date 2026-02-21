@@ -143,20 +143,8 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: 'No user returned from signup.' };
     }
 
-    // Sync to Django
-    const syncResult = await djangoApi.syncFromSupabase({
-      supabase_uid: signUpData.user.id,
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-    });
-
-    if (syncResult.error || !syncResult.data?.user) {
-      return { error: syncResult.error || 'Failed to sync account.' };
-    }
-
-    // Profile will be fetched via onAuthStateChange
-    return { user: syncResult.data.user as unknown as User };
+    // Profile will be fetched via onAuthStateChange (Django creates user lazily on first authenticated request)
+    return {};
   }, []);
 
   const value: AuthContextType = {

@@ -108,17 +108,6 @@ class DjangoApiClient {
     });
   }
 
-  async syncFromSupabase(data: {
-    supabase_uid: string;
-    email: string;
-    first_name?: string;
-    last_name?: string;
-  }): Promise<ApiResponse<any>> {
-    return this.request('/api/auth/sync/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
 
   // ═══════════════════════════ MEMBERS ═══════════════════════════
 
