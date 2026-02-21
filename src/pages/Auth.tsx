@@ -64,11 +64,15 @@ const Auth = () => {
         const result = await login(email, password);
         
         if (result.error) {
+          let description = result.error;
+          if (result.error.includes('Invalid login credentials')) {
+            description = 'Invalid email or password. Please try again.';
+          } else if (result.error.includes('Email not confirmed')) {
+            description = 'Please verify your email before signing in. Check your inbox for a confirmation link.';
+          }
           toast({
             title: 'Login failed',
-            description: result.error.includes('Invalid login credentials')
-              ? 'Invalid email or password. Please try again.'
-              : result.error,
+            description,
             variant: 'destructive',
           });
           return;
@@ -98,10 +102,10 @@ const Auth = () => {
         }
 
         toast({
-          title: 'Account created!',
-          description: 'Welcome to the Smart Attendance System.',
+          title: 'Check your email',
+          description: 'A verification link has been sent to your email. Please confirm before signing in.',
         });
-        navigate('/onboarding', { replace: true });
+        // Don't navigate — user must verify email first
       }
     } catch (error) {
       toast({
