@@ -44,12 +44,19 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
    * Fetch the Django profile using the current Supabase session token.
    */
   const fetchProfile = useCallback(async (): Promise<User | null> => {
-    const { data, error } = await djangoApi.getProfile();
-    if (data && !error) {
-      return data as User;
+    try {
+      console.log('[DjangoAuth] Fetching profile from Django...');
+      const { data, error, status } = await djangoApi.getProfile();
+      console.log('[DjangoAuth] Profile response:', { status, error, hasData: !!data });
+      if (data && !error) {
+        return data as User;
+      }
+      console.warn('[DjangoAuth] Failed to fetch profile:', error, 'status:', status);
+      return null;
+    } catch (err) {
+      console.error('[DjangoAuth] Profile fetch threw:', err);
+      return null;
     }
-    console.warn('[DjangoAuth] Failed to fetch profile:', error);
-    return null;
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -99,10 +106,13 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
    * Login using Supabase only.
    */
   const login = useCallback(async (email: string, password: string) => {
+    console.log('[DjangoAuth] Login attempt for:', email);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      console.error('[DjangoAuth] Supabase login error:', error.message);
       return { error: error.message };
     }
+    console.log('[DjangoAuth] Supabase login successful, waiting for auth state change...');
     // Profile will be fetched via onAuthStateChange SIGNED_IN event
     return {};
   }, []);
