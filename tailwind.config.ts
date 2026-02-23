@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -63,18 +62,22 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))"
         },
-        purple: {
-          DEFAULT: "#663399",
-          light: "#a855f7",
-          dark: "#4b2569",
+        navy: {
+          DEFAULT: "hsl(210 63% 11%)",
+          light: "hsl(210 55% 18%)",
+          dark: "hsl(210 63% 7%)",
+          deeper: "hsl(210 60% 4%)",
         },
-        "purple-light": "#a855f7",
-        charcoal: {
-          DEFAULT: "#333333",
-          light: "#4a4a4a",
+        cyan: {
+          DEFAULT: "hsl(190 90% 50%)",
+          light: "hsl(190 80% 65%)",
+          dark: "hsl(190 90% 40%)",
+          glow: "hsl(190 100% 60%)",
         },
-        neonblue: "#00b4d8",
-        mint: "#98d7c2",
+        mint: {
+          DEFAULT: "hsl(160 60% 60%)",
+          light: "hsl(160 50% 75%)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -109,8 +112,8 @@ export default {
           "75%": { transform: "translateY(-30px) translateX(5px)" }
         },
         "scan-down": {
-          "0%": { top: "0", opacity: "1" },
-          "100%": { top: "100%", opacity: "0.3" }
+          "0%": { top: "-10%", opacity: "1" },
+          "100%": { top: "110%", opacity: "0.3" }
         },
         "scan-line": {
           "0%": { top: "-10%" },
@@ -124,7 +127,40 @@ export default {
         "scale-in": {
           "0%": { opacity: "0", transform: "scale(0.5)" },
           "100%": { opacity: "1", transform: "scale(1)" }
-        }
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px hsl(190 90% 50% / 0.2)" },
+          "50%": { boxShadow: "0 0 40px hsl(190 90% 50% / 0.4), 0 0 80px hsl(190 90% 50% / 0.1)" }
+        },
+        "rotate-text": {
+          "0%, 18%": { transform: "translateY(0%)" },
+          "20%, 38%": { transform: "translateY(-100%)" },
+          "40%, 58%": { transform: "translateY(-200%)" },
+          "60%, 78%": { transform: "translateY(-300%)" },
+          "80%, 100%": { transform: "translateY(0%)" }
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(30px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" }
+        },
+        "count-up-glow": {
+          "0%": { textShadow: "0 0 0 transparent" },
+          "50%": { textShadow: "0 0 20px hsl(190 90% 50% / 0.5)" },
+          "100%": { textShadow: "0 0 0 transparent" }
+        },
+        "mesh-rotate": {
+          "0%": { transform: "rotateY(0deg) rotateX(0deg)" },
+          "50%": { transform: "rotateY(15deg) rotateX(5deg)" },
+          "100%": { transform: "rotateY(0deg) rotateX(0deg)" }
+        },
+        "orbit": {
+          "0%": { transform: "rotate(0deg) translateX(120px) rotate(0deg)" },
+          "100%": { transform: "rotate(360deg) translateX(120px) rotate(-360deg)" }
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -136,15 +172,24 @@ export default {
         "scan-down": "scan-down 1.5s ease-in-out infinite",
         "scan-line": "scan-line 3s linear infinite",
         "confetti": "confetti 0.8s ease-out forwards",
-        "scale-in": "scale-in 0.3s ease-out forwards"
+        "scale-in": "scale-in 0.3s ease-out forwards",
+        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
+        "rotate-text": "rotate-text 10s ease-in-out infinite",
+        "slide-up": "slide-up 0.6s ease-out forwards",
+        "mesh-rotate": "mesh-rotate 8s ease-in-out infinite",
+        "orbit": "orbit 20s linear infinite",
+        "shimmer": "shimmer 3s linear infinite",
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'purple-gradient': 'linear-gradient(to right, #663399, #8e4585)',
+        'mesh-gradient': 'linear-gradient(135deg, hsl(210 63% 11%) 0%, hsl(210 55% 18%) 50%, hsl(190 90% 20%) 100%)',
       },
       fontFamily: {
-        'lora': ['Lora', 'serif'],
-        'montserrat': ['Montserrat', 'sans-serif'],
+        'inter': ['Inter', 'system-ui', 'sans-serif'],
+        'space': ['Space Grotesk', 'sans-serif'],
+        // Keep legacy references working
+        'lora': ['Space Grotesk', 'sans-serif'],
+        'montserrat': ['Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
