@@ -1,146 +1,152 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FaceScanVisualization from './FaceScanVisualization';
+import { useCountUp } from '@/hooks/useCountUp';
 
 interface HeroSectionProps {
   onRequestDemo?: () => void;
 }
 
+const rotatingWords = [
+  'recognizes you.',
+  'knows you.',
+  'verifies you.',
+  'protects you.',
+];
+
 const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showScrollCue, setShowScrollCue] = useState(false);
+  const [currentWord, setCurrentWord] = useState(0);
+
+  const { count: accuracyCount, ref: accuracyRef } = useCountUp(99, 2000);
+  const { count: speedCount, ref: speedRef } = useCountUp(1, 1500);
+  const { count: usersCount, ref: usersRef } = useCountUp(10000, 2500);
 
   useEffect(() => {
-    // Trigger animations after mount
     const timer = setTimeout(() => setIsLoaded(true), 100);
     const scrollTimer = setTimeout(() => setShowScrollCue(true), 1500);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(scrollTimer);
-    };
+    return () => { clearTimeout(timer); clearTimeout(scrollTimer); };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentWord((prev) => (prev + 1) % rotatingWords.length);
+    }, 2500);
+    return () => clearInterval(interval);
   }, []);
 
   const scrollToHowItWorks = () => {
-    const section = document.getElementById('how-it-works');
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth' });
-    }
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Face scan visualization background */}
       <FaceScanVisualization />
 
-      {/* Content */}
       <div className="container-custom relative z-20 pt-20">
-        <div className="max-w-2xl">
-          {/* Badge */}
-          <div 
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30 mb-6 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            <div className="w-2 h-2 rounded-full bg-mint animate-pulse" />
-            <span className="text-sm font-medium text-primary-foreground/90">Smart Attendance System</span>
-          </div>
-
-          {/* Headline */}
-          <h1 
-            className={`text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-primary-foreground transition-all duration-700 delay-150 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            Attendance that{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neonblue to-mint">
-              recognizes you.
-            </span>
-          </h1>
-
-          {/* Subheadline */}
-          <p 
-            className={`text-xl md:text-2xl mb-8 text-primary-foreground/80 font-light transition-all duration-700 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            No cards. No clocks. Just your face.
-          </p>
-
-          {/* CTA Buttons */}
-          <div 
-            className={`flex flex-col sm:flex-row gap-4 transition-all duration-700 delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground text-lg px-8 shadow-lg shadow-primary/30 group"
-              onClick={() => {
-                const demoSection = document.getElementById('demo');
-                if (demoSection) demoSection.scrollIntoView({ behavior: 'smooth' });
-              }}
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left side - Content */}
+          <div>
+            {/* Badge */}
+            <div 
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan/10 backdrop-blur-sm border border-cyan/20 mb-8 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              Try Live Face Demo
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-lg px-8 group"
-              onClick={scrollToHowItWorks}
+              <Zap className="w-3.5 h-3.5 text-cyan" />
+              <span className="text-sm font-medium text-cyan-light">AI-Powered Recognition</span>
+            </div>
+
+            {/* Headline with rotating text */}
+            <h1 
+              className={`text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-[1.1] text-white transition-all duration-700 delay-150 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-              See How It Works
-            </Button>
+              Attendance that{' '}
+              <span className="block h-[1.2em] overflow-hidden relative">
+                {rotatingWords.map((word, index) => (
+                  <span
+                    key={word}
+                    className={`block text-transparent bg-clip-text bg-gradient-to-r from-cyan to-cyan-light transition-all duration-500 absolute w-full ${
+                      index === currentWord 
+                        ? 'translate-y-0 opacity-100' 
+                        : index < currentWord || (currentWord === 0 && index === rotatingWords.length - 1)
+                          ? '-translate-y-full opacity-0'
+                          : 'translate-y-full opacity-0'
+                    }`}
+                  >
+                    {word}
+                  </span>
+                ))}
+              </span>
+            </h1>
+
+            {/* Subheadline */}
+            <p 
+              className={`text-lg md:text-xl mb-10 text-white/60 font-light max-w-lg transition-all duration-700 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              No cards. No clocks. No queues. Just instant, secure facial recognition that works everywhere.
+            </p>
+
+            {/* CTA Buttons */}
+            <div 
+              className={`flex flex-col sm:flex-row gap-4 transition-all duration-700 delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              <Button 
+                size="lg" 
+                className="button-glow bg-gradient-to-r from-cyan to-cyan-dark text-navy-dark text-base font-semibold px-8 h-13 group"
+                onClick={() => {
+                  document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                Experience Live AI
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-white/20 text-white hover:bg-white/5 hover:border-cyan/40 text-base px-8 h-13 group transition-all duration-300"
+                onClick={scrollToHowItWorks}
+              >
+                See Enterprise Solutions
+              </Button>
+            </div>
+
+            {/* Animated Stats Cards */}
+            <div 
+              className={`mt-14 grid grid-cols-3 gap-4 transition-all duration-700 delay-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              <div ref={accuracyRef} className="glass-card p-4 text-center">
+                <div className="text-2xl md:text-3xl font-black text-cyan count-up">{accuracyCount}%</div>
+                <div className="text-xs text-white/50 mt-1">Accuracy</div>
+              </div>
+              <div ref={speedRef} className="glass-card p-4 text-center">
+                <div className="text-2xl md:text-3xl font-black text-cyan count-up">&lt;{speedCount}s</div>
+                <div className="text-xs text-white/50 mt-1">Recognition</div>
+              </div>
+              <div ref={usersRef} className="glass-card p-4 text-center">
+                <div className="text-2xl md:text-3xl font-black text-cyan count-up">{usersCount.toLocaleString()}+</div>
+                <div className="text-xs text-white/50 mt-1">Users</div>
+              </div>
+            </div>
           </div>
 
-          {/* Trust indicators */}
-          <div 
-            className={`mt-12 flex flex-wrap items-center gap-4 sm:gap-6 text-primary-foreground/60 text-sm transition-all duration-700 delay-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-                <span className="text-xs font-bold">99%</span>
-              </div>
-              <span>Accuracy</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-primary-foreground/20" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-                <span className="text-xs font-bold">&lt;1s</span>
-              </div>
-              <span>Recognition</span>
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-primary-foreground/20" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-foreground/10 flex items-center justify-center">
-                <span className="text-xs font-bold">24/7</span>
-              </div>
-              <span>Available</span>
-            </div>
-          </div>
+          {/* Right side - 3D Face Mesh Visualization (handled by FaceScanVisualization) */}
+          <div className="hidden lg:block" />
         </div>
       </div>
 
-      {/* Scroll cue with scanning line animation */}
+      {/* Scroll cue */}
       <div 
         className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 transition-all duration-700 ${showScrollCue ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
         <button 
           onClick={scrollToHowItWorks}
-          className="group flex flex-col items-center text-primary-foreground/70 hover:text-primary-foreground transition-colors cursor-pointer"
+          className="group flex flex-col items-center text-white/40 hover:text-cyan transition-colors cursor-pointer"
           aria-label="Scroll to learn more"
         >
-          <span className="text-sm mb-3 font-medium tracking-wide">Discover the Technology</span>
-          
-          {/* Arrow that morphs into scanning line on hover */}
-          <div className="relative w-8 h-12 overflow-hidden">
-            {/* Arrow */}
-            <svg 
-              className="w-6 h-6 absolute top-0 left-1/2 -translate-x-1/2 animate-bounce group-hover:opacity-0 transition-opacity" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-            
-            {/* Scanning line (appears on hover) */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-gradient-to-r from-transparent via-neonblue to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-scan-down transition-opacity" />
+          <span className="text-xs mb-3 font-medium tracking-widest uppercase">Explore</span>
+          <div className="w-5 h-8 rounded-full border border-current p-1">
+            <div className="w-1 h-2 rounded-full bg-current mx-auto animate-bounce" />
           </div>
         </button>
       </div>
