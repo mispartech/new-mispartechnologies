@@ -48,13 +48,18 @@ class DjangoApiClient {
     const url = `${DJANGO_BASE_URL}${endpoint}`;
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
       const response = await fetch(url, {
         ...options,
+        signal: controller.signal,
         headers: {
           ...headers,
           ...((options.headers as Record<string, string>) || {}),
         },
       });
+      clearTimeout(timeoutId);
 
       const text = await response.text();
       let data: any;
@@ -77,11 +82,11 @@ class DjangoApiClient {
 
       return { data: data as T, status: response.status };
     } catch (err) {
-      console.error('API request failed:', err);
-      return {
-        status: 0,
-        error: err instanceof Error ? err.message : 'Network error',
-      };
+      console.error(`API request failed [${endpoint}]:`, err);
+      const message = err instanceof DOMException && err.name === 'AbortError'
+        ? 'Request timed out (15s)'
+        : err instanceof Error ? err.message : 'Network error';
+      return { status: 0, error: message };
     }
   }
 
