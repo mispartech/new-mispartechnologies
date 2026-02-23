@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,65 +7,73 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 20% 98%;
+    --foreground: 210 60% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 60% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 210 60% 10%;
 
-    --primary: 270 60% 40%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 210 63% 11%;
+    --primary-foreground: 190 100% 97%;
 
-    --secondary: 300 40% 42%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 190 90% 50%;
+    --secondary-foreground: 210 63% 8%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 95%;
+    --muted-foreground: 210 15% 45%;
 
-    --accent: 270 60% 45%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 190 100% 45%;
+    --accent-foreground: 210 63% 8%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 270 60% 40%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 190 90% 50%;
 
     --radius: 0.5rem;
+
+    /* Extended palette */
+    --hero-bg: 210 63% 7%;
+    --section-dark: 210 55% 10%;
+    --section-darker: 210 60% 6%;
+    --glow-cyan: 190 90% 50%;
+    --glow-blue: 210 100% 60%;
+    --surface-glass: 210 30% 15%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 210 60% 5%;
+    --foreground: 210 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 210 55% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 210 55% 10%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 270 60% 50%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 190 90% 50%;
+    --primary-foreground: 210 63% 8%;
 
-    --secondary: 300 40% 47.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 63% 18%;
+    --secondary-foreground: 210 20% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 210 40% 15%;
+    --muted-foreground: 210 15% 55%;
 
-    --accent: 270 60% 50%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 190 100% 45%;
+    --accent-foreground: 210 20% 95%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 270 60% 50%;
+    --border: 210 30% 18%;
+    --input: 210 30% 18%;
+    --ring: 190 90% 50%;
   }
 }
 
@@ -79,11 +87,11 @@
   }
 
   body {
-    @apply font-lora bg-background text-foreground;
+    @apply font-space bg-background text-foreground antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-montserrat font-semibold tracking-tight;
+    @apply font-inter font-bold tracking-tight;
   }
 
   h1 {
@@ -99,7 +107,7 @@
   }
 
   button, .button {
-    @apply font-montserrat font-medium;
+    @apply font-inter font-medium;
   }
 }
 
@@ -112,38 +120,87 @@
     @apply px-6 mx-auto max-w-7xl;
   }
 
-  .button-primary {
-    @apply bg-purple text-white px-6 py-3 rounded-md font-montserrat font-medium transition-all duration-300 
-           hover:bg-purple-dark hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple focus:ring-offset-2;
+  /* Dark section styling */
+  .section-dark {
+    @apply relative overflow-hidden;
+    background: linear-gradient(180deg, hsl(210 55% 10%) 0%, hsl(210 60% 7%) 100%);
   }
 
-  .button-secondary {
-    @apply border-2 border-purple text-purple px-6 py-3 rounded-md font-montserrat font-medium transition-all duration-300
-           hover:bg-purple/10 focus:outline-none focus:ring-2 focus:ring-purple focus:ring-offset-2;
+  .section-darker {
+    @apply relative overflow-hidden;
+    background: linear-gradient(180deg, hsl(210 60% 6%) 0%, hsl(210 63% 4%) 100%);
   }
 
+  /* Gradient section separators */
+  .section-separator-top {
+    @apply absolute top-0 left-0 right-0 h-24;
+    background: linear-gradient(180deg, hsl(210 60% 7%) 0%, transparent 100%);
+  }
+
+  .section-separator-bottom {
+    @apply absolute bottom-0 left-0 right-0 h-24;
+    background: linear-gradient(0deg, hsl(210 60% 7%) 0%, transparent 100%);
+  }
+
+  /* Glow button */
+  .button-glow {
+    @apply relative overflow-hidden transition-all duration-300;
+    box-shadow: 0 0 20px hsl(190 90% 50% / 0.15);
+  }
+  .button-glow:hover {
+    box-shadow: 0 0 30px hsl(190 90% 50% / 0.35), 0 0 60px hsl(190 90% 50% / 0.15);
+  }
+
+  /* Card with lift */
+  .card-lift {
+    @apply transition-all duration-500 ease-out;
+  }
+  .card-lift:hover {
+    @apply -translate-y-2;
+    box-shadow: 0 20px 40px -15px hsl(190 90% 50% / 0.15), 0 8px 16px -8px hsl(210 60% 7% / 0.3);
+  }
+
+  /* Glass card */
   .glass-card {
-    @apply bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl 
-           shadow-lg hover:shadow-xl transition-all duration-300;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
   }
 
-  .animate-on-scroll {
-    @apply opacity-0;
+  /* Glow border */
+  .glow-border {
+    @apply relative;
   }
-
-  .animate-on-scroll.animate {
-    @apply animate-fade-in;
+  .glow-border::after {
+    content: '';
+    @apply absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500;
+    background: linear-gradient(135deg, hsl(190 90% 50% / 0.3), transparent, hsl(190 90% 50% / 0.1));
+    z-index: -1;
+    margin: -1px;
   }
-
-  .animate-on-scroll-right {
-    @apply opacity-0;
-  }
-
-  .animate-on-scroll-right.animate {
-    @apply animate-fade-in-right;
+  .glow-border:hover::after {
+    @apply opacity-100;
   }
 
   .scan-line {
     animation: scan-line 3s linear infinite;
   }
+
+  /* Count-up animation helper */
+  .count-up {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(210 55% 10%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(190 90% 50% / 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(190 90% 50% / 0.5);
 }
