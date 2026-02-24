@@ -128,9 +128,19 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('[DjangoAuth] Supabase login error:', error.message);
       return { error: error.message };
     }
-    console.log('[DjangoAuth] Supabase login successful, waiting for auth state change...');
-    return {};
-  }, []);
+    console.log('[DjangoAuth] Supabase login successful, fetching profile...');
+    
+    // Eagerly fetch profile here instead of waiting for onAuthStateChange race
+    const profile = await fetchProfile();
+    if (profile) {
+      setUser(profile);
+      return {};
+    }
+    
+    // Profile fetch failed — backend is likely down
+    console.error('[DjangoAuth] Profile fetch failed after login');
+    return { error: 'Login succeeded but the server is temporarily unavailable. Please try again in a moment.' };
+  }, [fetchProfile]);
 
   const logout = useCallback(async () => {
     try {
