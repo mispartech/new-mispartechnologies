@@ -74,21 +74,32 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     let mounted = true;
 
     const initialize = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && mounted) {
-        const profile = await fetchProfile();
-        if (mounted) setUser(profile);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && mounted) {
+          const profile = await fetchProfile();
+          if (mounted) setUser(profile);
+        }
+      } catch (err) {
+        console.error('[DjangoAuth] Initialize error:', err);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      if (mounted) setIsLoading(false);
     };
 
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+      console.log('[DjangoAuth] Auth state change:', event);
       if (event === 'SIGNED_IN' && session) {
-        const profile = await fetchProfile();
-        if (mounted) setUser(profile);
+        try {
+          const profile = await fetchProfile();
+          if (mounted) setUser(profile);
+        } catch (err) {
+          console.error('[DjangoAuth] Profile fetch after sign-in failed:', err);
+          if (mounted) setUser(null);
+        }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) setUser(null);
       } else if (event === 'TOKEN_REFRESHED' && session) {
