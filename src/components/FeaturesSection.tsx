@@ -121,10 +121,10 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section id="features" className="section bg-gray-50" ref={sectionRef}>
+    <section id="features" className="section bg-gray-50" ref={sectionRef} aria-labelledby="features-heading">
       <div className="container-custom">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="animate-on-scroll mb-4" ref={headingRef}>Unlocking Possibilities with Face Recognition</h2>
+          <h2 id="features-heading" className="animate-on-scroll mb-4" ref={headingRef}>Unlocking Possibilities with Face Recognition</h2>
           <p className="text-gray-600 text-lg">Our biometric technology powers a range of smart solutions across different sectors.</p>
         </div>
         

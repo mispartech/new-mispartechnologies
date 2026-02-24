@@ -227,6 +227,29 @@
   .scroll-pills > * {
     @apply snap-center flex-shrink-0;
   }
+
+  /* Scroll-triggered fade-in */
+  .scroll-fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+  .scroll-fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Sticky bottom CTA bar for mobile */
+  .sticky-bottom-cta {
+    @apply fixed bottom-0 left-0 right-0 z-40 md:hidden;
+    background: linear-gradient(to top, hsl(210 63% 7%) 80%, transparent);
+    padding: 12px 16px 20px;
+  }
+
+  /* Focus states for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-navy-dark;
+  }
 }
 
 @keyframes shake {
