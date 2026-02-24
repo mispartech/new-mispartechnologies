@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { 
@@ -25,27 +25,16 @@ interface DashboardHeaderProps {
 const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { logout } = useDjangoAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
-      });
-      navigate('/');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoggingOut(false);
+      await logout();
+      window.location.href = '/';
+    } catch {
+      window.location.href = '/';
     }
   };
 
