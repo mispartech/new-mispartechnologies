@@ -70,8 +70,8 @@ const Footer = () => {
           </div>
         </div>
       </div>
-      {/* Bottom spacer for floating mobile CTA */}
-      <div className="h-16 md:hidden" />
+      {/* Bottom spacer for sticky mobile CTA bar */}
+      <div className="h-20 md:hidden" />
     </footer>
   );
 };

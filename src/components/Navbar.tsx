@@ -70,11 +70,15 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled 
-          ? 'bg-navy/90 backdrop-blur-xl border-b border-white/5 py-2 md:py-3' 
-          : 'bg-transparent py-3 md:py-5'
-      }`}>
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          isScrolled 
+            ? 'bg-navy/90 backdrop-blur-xl border-b border-white/5 py-2 md:py-3' 
+            : 'bg-transparent py-3 md:py-5'
+        }`}
+        role="navigation"
+        aria-label="Main navigation"
+      >
         <div className="container-custom">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center">
@@ -238,14 +242,30 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
         </div>
       </div>
 
-      {/* Floating mobile CTA */}
-      <div className="fixed bottom-6 right-4 z-40 md:hidden">
-        <Button 
-          className="button-glow bg-cyan text-navy-dark font-semibold rounded-full shadow-lg shadow-cyan/20 tap-target px-5"
-          onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
-        >
-          Try Live Demo
-        </Button>
+      {/* Sticky bottom CTA bar for mobile */}
+      <div className="sticky-bottom-cta" aria-label="Quick actions">
+        <div className="flex gap-2">
+          <Button 
+            className="flex-1 button-glow bg-cyan text-navy-dark font-semibold rounded-full shadow-lg shadow-cyan/20 tap-target text-sm"
+            onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            Try Live Demo
+          </Button>
+          <a
+            href="tel:+2348012345678"
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-white/10 border border-white/10 text-white active:bg-white/20 transition-colors tap-target"
+            aria-label="Call us"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </a>
+          <a
+            href="mailto:info@mispartech.com"
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-white/10 border border-white/10 text-white active:bg-white/20 transition-colors tap-target"
+            aria-label="Email us"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </a>
+        </div>
       </div>
     </>
   );
