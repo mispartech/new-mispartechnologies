@@ -10,7 +10,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 const DJANGO_BASE_URL =
-  import.meta.env.VITE_DJANGO_API_URL || 'http://16.170.213.254:8000';
+  import.meta.env.VITE_DJANGO_API_URL || 'https://api.mispartechnologies.com';
 
 // Log the API URL on startup for debugging
 console.log('[DjangoApi] Base URL:', DJANGO_BASE_URL);
