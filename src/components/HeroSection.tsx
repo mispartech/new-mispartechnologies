@@ -42,27 +42,27 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className="relative min-h-[100svh] flex items-center overflow-hidden">
       <FaceScanVisualization />
 
-      <div className="container-custom relative z-20 pt-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="container-custom relative z-20 pt-16 md:pt-20 pb-24 md:pb-0">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left side - Content */}
-          <div>
+          <div className="text-center lg:text-left">
             {/* Badge */}
             <div 
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan/10 backdrop-blur-sm border border-cyan/20 mb-8 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-cyan/10 backdrop-blur-sm border border-cyan/20 mb-6 md:mb-8 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              <Zap className="w-3.5 h-3.5 text-cyan" />
-              <span className="text-sm font-medium text-cyan-light">AI-Powered Recognition</span>
+              <Zap className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan" />
+              <span className="text-xs md:text-sm font-medium text-cyan-light">AI-Powered Recognition</span>
             </div>
 
             {/* Headline with rotating text */}
             <h1 
-              className={`text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-[1.1] text-white transition-all duration-700 delay-150 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`font-black mb-4 md:mb-6 text-white transition-all duration-700 delay-150 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
               Attendance that{' '}
-              <span className="block h-[1.2em] overflow-hidden relative">
+              <span className="block h-[1.15em] overflow-hidden relative">
                 {rotatingWords.map((word, index) => (
                   <span
                     key={word}
@@ -82,18 +82,18 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
 
             {/* Subheadline */}
             <p 
-              className={`text-lg md:text-xl mb-10 text-white/60 font-light max-w-lg transition-all duration-700 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`text-base md:text-lg lg:text-xl mb-8 md:mb-10 text-white/60 font-light max-w-lg mx-auto lg:mx-0 transition-all duration-700 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              No cards. No clocks. No queues. Just instant, secure facial recognition that works everywhere.
+              No cards. No clocks. No queues. Just instant, secure facial recognition.
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons - stacked on mobile */}
             <div 
-              className={`flex flex-col sm:flex-row gap-4 transition-all duration-700 delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`flex flex-col sm:flex-row gap-3 sm:gap-4 transition-all duration-700 delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
               <Button 
                 size="lg" 
-                className="button-glow bg-gradient-to-r from-cyan to-cyan-dark text-navy-dark text-base font-semibold px-8 h-13 group"
+                className="button-glow bg-gradient-to-r from-cyan to-cyan-dark text-navy-dark text-base font-semibold px-8 h-14 sm:h-13 group tap-target w-full sm:w-auto"
                 onClick={() => {
                   document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
                 }}
@@ -104,7 +104,7 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="border-white/20 text-white hover:bg-white/5 hover:border-cyan/40 text-base px-8 h-13 group transition-all duration-300"
+                className="border-white/20 text-white hover:bg-white/5 hover:border-cyan/40 text-base px-8 h-14 sm:h-13 group transition-all duration-300 tap-target w-full sm:w-auto"
                 onClick={scrollToHowItWorks}
               >
                 See Enterprise Solutions
@@ -113,19 +113,19 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
 
             {/* Animated Stats Cards */}
             <div 
-              className={`mt-14 grid grid-cols-3 gap-4 transition-all duration-700 delay-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`mt-10 md:mt-14 grid grid-cols-3 gap-3 md:gap-4 transition-all duration-700 delay-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
-              <div ref={accuracyRef} className="glass-card p-4 text-center">
-                <div className="text-2xl md:text-3xl font-black text-cyan count-up">{accuracyCount}%</div>
-                <div className="text-xs text-white/50 mt-1">Accuracy</div>
+              <div ref={accuracyRef} className="glass-card p-3 md:p-4 text-center">
+                <div className="text-xl md:text-2xl lg:text-3xl font-black text-cyan count-up">{accuracyCount}%</div>
+                <div className="text-[10px] md:text-xs text-white/50 mt-1">Accuracy</div>
               </div>
-              <div ref={speedRef} className="glass-card p-4 text-center">
-                <div className="text-2xl md:text-3xl font-black text-cyan count-up">&lt;{speedCount}s</div>
-                <div className="text-xs text-white/50 mt-1">Recognition</div>
+              <div ref={speedRef} className="glass-card p-3 md:p-4 text-center">
+                <div className="text-xl md:text-2xl lg:text-3xl font-black text-cyan count-up">&lt;{speedCount}s</div>
+                <div className="text-[10px] md:text-xs text-white/50 mt-1">Recognition</div>
               </div>
-              <div ref={usersRef} className="glass-card p-4 text-center">
-                <div className="text-2xl md:text-3xl font-black text-cyan count-up">{usersCount.toLocaleString()}+</div>
-                <div className="text-xs text-white/50 mt-1">Users</div>
+              <div ref={usersRef} className="glass-card p-3 md:p-4 text-center">
+                <div className="text-xl md:text-2xl lg:text-3xl font-black text-cyan count-up">{usersCount.toLocaleString()}+</div>
+                <div className="text-[10px] md:text-xs text-white/50 mt-1">Users</div>
               </div>
             </div>
           </div>
@@ -135,9 +135,9 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
         </div>
       </div>
 
-      {/* Scroll cue */}
+      {/* Scroll cue - hidden on mobile to avoid overlap with floating CTA */}
       <div 
-        className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 transition-all duration-700 ${showScrollCue ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+        className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 hidden md:block transition-all duration-700 ${showScrollCue ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
         <button 
           onClick={scrollToHowItWorks}
@@ -152,7 +152,7 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-10" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 md:h-32 bg-gradient-to-t from-background to-transparent z-10" />
     </section>
   );
 };
