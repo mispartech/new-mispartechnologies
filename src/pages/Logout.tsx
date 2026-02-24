@@ -1,10 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Logout = () => {
-  const navigate = useNavigate();
-  const { logout } = useDjangoAuth();
   const hasRun = useRef(false);
 
   useEffect(() => {
@@ -13,17 +10,19 @@ const Logout = () => {
 
     const doLogout = async () => {
       try {
-        await logout();
+        await supabase.auth.signOut({ scope: 'local' });
       } catch (err) {
-        console.error('[Logout] Error during sign out:', err);
+        console.error('[Logout] signOut failed, clearing manually:', err);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
       } finally {
-        // Always redirect, even if logout threw
         window.location.href = '/';
       }
     };
 
     doLogout();
-  }, [logout]);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
