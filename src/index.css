@@ -84,26 +84,34 @@
   
   html {
     @apply scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply font-space bg-background text-foreground antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 
+  /* Fluid typography using clamp */
   h1, h2, h3, h4, h5, h6 {
     @apply font-inter font-bold tracking-tight;
   }
 
   h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl;
+    font-size: clamp(2rem, 5vw + 0.5rem, 3.75rem);
+    line-height: 1.1;
   }
 
   h2 {
-    @apply text-3xl md:text-4xl;
+    font-size: clamp(1.5rem, 3.5vw + 0.5rem, 2.5rem);
+    line-height: 1.15;
   }
 
   h3 {
-    @apply text-2xl md:text-3xl;
+    font-size: clamp(1.25rem, 2.5vw + 0.25rem, 1.875rem);
+    line-height: 1.2;
   }
 
   button, .button {
@@ -113,11 +121,11 @@
 
 @layer components {
   .section {
-    @apply py-16 md:py-24;
+    @apply py-12 md:py-16 lg:py-24;
   }
 
   .container-custom {
-    @apply px-6 mx-auto max-w-7xl;
+    @apply px-4 sm:px-6 mx-auto max-w-7xl;
   }
 
   /* Dark section styling */
@@ -133,12 +141,12 @@
 
   /* Gradient section separators */
   .section-separator-top {
-    @apply absolute top-0 left-0 right-0 h-24;
+    @apply absolute top-0 left-0 right-0 h-16 md:h-24;
     background: linear-gradient(180deg, hsl(210 60% 7%) 0%, transparent 100%);
   }
 
   .section-separator-bottom {
-    @apply absolute bottom-0 left-0 right-0 h-24;
+    @apply absolute bottom-0 left-0 right-0 h-16 md:h-24;
     background: linear-gradient(0deg, hsl(210 60% 7%) 0%, transparent 100%);
   }
 
@@ -151,18 +159,28 @@
     box-shadow: 0 0 30px hsl(190 90% 50% / 0.35), 0 0 60px hsl(190 90% 50% / 0.15);
   }
 
-  /* Card with lift */
+  /* Touch-friendly tap target */
+  .tap-target {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Card with lift - reduced on mobile for performance */
   .card-lift {
     @apply transition-all duration-500 ease-out;
   }
-  .card-lift:hover {
-    @apply -translate-y-2;
-    box-shadow: 0 20px 40px -15px hsl(190 90% 50% / 0.15), 0 8px 16px -8px hsl(210 60% 7% / 0.3);
+  @media (hover: hover) {
+    .card-lift:hover {
+      @apply -translate-y-2;
+      box-shadow: 0 20px 40px -15px hsl(190 90% 50% / 0.15), 0 8px 16px -8px hsl(210 60% 7% / 0.3);
+    }
+  }
+  .card-lift:active {
+    @apply scale-[0.98];
   }
 
   /* Glass card */
   .glass-card {
-    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-xl md:rounded-2xl;
   }
 
   /* Glow border */
@@ -176,8 +194,10 @@
     z-index: -1;
     margin: -1px;
   }
-  .glow-border:hover::after {
-    @apply opacity-100;
+  @media (hover: hover) {
+    .glow-border:hover::after {
+      @apply opacity-100;
+    }
   }
 
   .scan-line {
@@ -187,6 +207,25 @@
   /* Count-up animation helper */
   .count-up {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Mobile drawer overlay */
+  .drawer-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-40;
+  }
+
+  /* Horizontal scrollable pills (no scrollbar) */
+  .scroll-pills {
+    @apply flex overflow-x-auto gap-2 pb-2 snap-x snap-mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scroll-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .scroll-pills > * {
+    @apply snap-center flex-shrink-0;
   }
 }
 
@@ -198,17 +237,19 @@
   80% { transform: translateX(4px); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: hsl(210 55% 10%);
-}
-::-webkit-scrollbar-thumb {
-  background: hsl(190 90% 50% / 0.3);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(190 90% 50% / 0.5);
+/* Custom scrollbar - desktop only */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(210 55% 10%);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(190 90% 50% / 0.3);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(190 90% 50% / 0.5);
+  }
 }

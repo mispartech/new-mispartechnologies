@@ -6,12 +6,12 @@ const FaceScanVisualization = () => {
       {/* Deep navy gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-navy-dark via-navy to-navy-light" />
       
-      {/* Subtle radial glow */}
-      <div className="absolute top-1/2 right-1/4 w-[600px] h-[600px] -translate-y-1/2 rounded-full bg-cyan/5 blur-[100px]" />
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-cyan/3 blur-[80px]" />
+      {/* Subtle radial glow - reduced on mobile */}
+      <div className="absolute top-1/2 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] -translate-y-1/2 rounded-full bg-cyan/5 blur-[60px] md:blur-[100px]" />
+      <div className="absolute bottom-0 left-1/4 w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-cyan/3 blur-[50px] md:blur-[80px]" />
 
-      {/* Animated grid lines */}
-      <div className="absolute inset-0 opacity-[0.08]">
+      {/* Animated grid lines - lighter on mobile */}
+      <div className="absolute inset-0 opacity-[0.04] md:opacity-[0.08]">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -24,11 +24,11 @@ const FaceScanVisualization = () => {
 
       {/* Scanning line animation */}
       <div className="absolute left-1/2 top-0 w-px h-full -translate-x-1/2">
-        <div className="scan-line absolute w-[400px] md:w-[600px] h-[2px] left-1/2 -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan to-transparent opacity-40" />
+        <div className="scan-line absolute w-[200px] md:w-[600px] h-[2px] left-1/2 -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan to-transparent opacity-20 md:opacity-40" />
       </div>
 
-      {/* Face detection frame - positioned right for desktop */}
-      <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-[280px] h-[350px] md:w-[320px] md:h-[400px] hidden lg:block">
+      {/* Face detection frame - desktop only */}
+      <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-[320px] h-[400px] hidden lg:block">
         {/* Corner brackets with glow */}
         <div className="absolute top-0 left-0 w-12 h-12 border-l-2 border-t-2 border-cyan/60 animate-pulse" />
         <div className="absolute top-0 right-0 w-12 h-12 border-r-2 border-t-2 border-cyan/60 animate-pulse" style={{ animationDelay: '0.2s' }} />
@@ -42,9 +42,6 @@ const FaceScanVisualization = () => {
           <div className="absolute top-[50%] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-mint shadow-[0_0_8px_hsl(160,60%,60%)] animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
           <div className="absolute top-[65%] left-[35%] w-1.5 h-1.5 rounded-full bg-cyan-light shadow-[0_0_8px_hsl(190,80%,65%)] animate-ping" style={{ animationDuration: '2s', animationDelay: '0.7s' }} />
           <div className="absolute top-[65%] right-[35%] w-1.5 h-1.5 rounded-full bg-cyan-light shadow-[0_0_8px_hsl(190,80%,65%)] animate-ping" style={{ animationDuration: '2s', animationDelay: '0.9s' }} />
-          <div className="absolute top-[75%] left-[25%] w-1 h-1 rounded-full bg-cyan/40" />
-          <div className="absolute top-[75%] right-[25%] w-1 h-1 rounded-full bg-cyan/40" />
-          <div className="absolute top-[80%] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan/40" />
         </div>
 
         {/* Connecting lines */}
@@ -65,7 +62,7 @@ const FaceScanVisualization = () => {
         </div>
       </div>
 
-      {/* Status indicator */}
+      {/* Status indicator - desktop only */}
       <div className="absolute top-1/2 right-[5%] -translate-y-1/2 hidden xl:block">
         <div className="space-y-3 text-xs font-inter text-white/50">
           <div className="flex items-center gap-2 animate-fade-in" style={{ animationDelay: '0.5s' }}>
@@ -83,8 +80,8 @@ const FaceScanVisualization = () => {
         </div>
       </div>
 
-      {/* Floating particles */}
-      {[...Array(20)].map((_, i) => (
+      {/* Floating particles - fewer on mobile for performance */}
+      {[...Array(8)].map((_, i) => (
         <div
           key={i}
           className="absolute w-0.5 h-0.5 rounded-full bg-cyan/30 animate-float"
