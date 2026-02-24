@@ -23,7 +23,7 @@ const AuthLeftPanel = () => {
   }, []);
 
   return (
-    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[hsl(var(--deep-navy))] items-center justify-center">
+    <div className="hidden md:flex md:w-2/5 lg:w-1/2 relative overflow-hidden bg-[hsl(var(--deep-navy))] items-center justify-center">
       {/* Animated grid */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
@@ -211,11 +211,11 @@ const Auth = () => {
   const passwordValid = touched.password && !errors.password && password.length > 0;
 
   return (
-    <div className="min-h-screen flex bg-[hsl(var(--deep-navy))]">
+    <div className="min-h-[100svh] flex flex-col md:flex-row bg-[hsl(var(--deep-navy))]">
       <AuthLeftPanel />
 
       {/* Right side — Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+      <div className="w-full md:w-3/5 lg:w-1/2 flex items-center justify-center p-4 sm:p-8 md:p-10 lg:p-12 relative">
         {/* Subtle background glow */}
         <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[hsl(var(--electric-cyan)/0.04)] blur-[100px]" />
 
@@ -233,7 +233,7 @@ const Auth = () => {
           <div className="glass-card rounded-2xl p-8 border border-[hsl(var(--electric-cyan)/0.1)]">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="lg:hidden flex items-center justify-center gap-2 mb-4">
+              <div className="md:hidden flex items-center justify-center gap-2 mb-4">
                 <Scan className="w-7 h-7 text-[hsl(var(--electric-cyan))]" />
                 <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
               </div>
@@ -245,7 +245,7 @@ const Auth = () => {
               </p>
             </div>
 
-            <form onSubmit={handleAuth} className="space-y-5">
+            <form onSubmit={handleAuth} className="space-y-5" noValidate>
               {!isLogin && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
