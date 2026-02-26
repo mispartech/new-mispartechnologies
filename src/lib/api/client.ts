@@ -304,21 +304,10 @@ class DjangoApiClient {
   }
 
   // ═══════════════════════════ ORGANIZATIONS ═══════════════════════════
+  // createOrganization removed — onboarding writes via PUT /api/onboarding/
 
   async getOrganization(id: string): Promise<ApiResponse<any>> {
     return this.request(`/api/organizations/${id}/`);
-  }
-
-  async createOrganization(data: {
-    name: string;
-    type: string;
-    industry?: string;
-    size_range?: string;
-  }): Promise<ApiResponse<any>> {
-    return this.request('/api/organizations/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
 
   async updateOrganization(

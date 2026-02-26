@@ -408,45 +408,27 @@ const Onboarding = () => {
 
     setIsLoading(true);
     try {
-      // 1. Create organization via Django API
-      const orgResp = await djangoApi.createOrganization({
-        name: data.organizationName,
-        type: data.organizationType,
-        industry: data.industry,
-        size_range: data.sizeRange,
-      });
-      if (orgResp.error || !orgResp.data) throw new Error(orgResp.error || 'Failed to create organization');
-
-      const orgId = orgResp.data.id;
-
-      // 2. Update profile with org + admin info via Django API
-      if (userId) {
-        const profileResp = await djangoApi.updateProfile(userId, {
-          first_name: data.adminFirstName,
-          last_name: data.adminLastName,
-        });
-        if (profileResp.error) console.warn('Profile update warning:', profileResp.error);
-      }
-
-      // 3. Create schedules via Django API
-      if (data.serviceSchedules.length > 0) {
-        for (const s of data.serviceSchedules) {
-          await djangoApi.createSchedule({
-            organization_id: orgId,
+      // Save all onboarding data via Django PUT /api/onboarding/
+      // Django backend handles org creation, profile update, schedules internally
+      await djangoApi.saveOnboardingSession({
+        step: totalSteps,
+        data: {
+          organization_name: data.organizationName,
+          organization_type: data.organizationType,
+          industry: data.industry,
+          size_range: data.sizeRange,
+          admin_first_name: data.adminFirstName,
+          admin_last_name: data.adminLastName,
+          service_schedules: data.serviceSchedules.map((s: any) => ({
             name: s.name || getScheduleItemLabel(data.organizationType),
             description: s.description,
             day_of_week: s.dayOfWeek,
             start_time: s.startTime,
             end_time: s.endTime,
             is_active: s.isActive,
-          });
-        }
-      }
-
-      // 4. Mark onboarding as complete via Django API
-      await djangoApi.saveOnboardingSession({
-        step: totalSteps,
-        data: { ...data, is_completed: true } as unknown as Record<string, unknown>,
+          })),
+          is_completed: true,
+        } as unknown as Record<string, unknown>,
       });
 
       // 5. Cleanup local storage
