@@ -39,9 +39,8 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
     return () => { document.body.style.overflow = ''; };
   }, [isMenuOpen]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
+  const handleLogout = () => {
+    window.location.href = '/logout';
   };
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -74,7 +73,7 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled 
             ? 'bg-navy/90 backdrop-blur-xl border-b border-white/5 py-2 md:py-3' 
-            : 'bg-transparent py-3 md:py-5'
+            : 'bg-navy/80 backdrop-blur-xl py-3 md:py-5'
         }`}
         role="navigation"
         aria-label="Main navigation"
