@@ -300,15 +300,18 @@ const Onboarding = () => {
 
       if (storageKeys && !didHydrateRef.current) {
         try {
-          const savedData = sessionStorage.getItem(storageKeys.data);
-          const savedStep = sessionStorage.getItem(storageKeys.step);
-          if (savedData) setData((prev) => ({ ...prev, ...JSON.parse(savedData) }));
+          const savedData = localStorage.getItem(storageKeys.data);
+          const savedStep = localStorage.getItem(storageKeys.step);
+          if (savedData) {
+            didHydrateRef.current = true;
+            setData((prev) => ({ ...prev, ...JSON.parse(savedData) }));
+          }
           if (savedStep) {
             const n = parseInt(savedStep, 10);
             if (!Number.isNaN(n)) setStep(Math.min(5, Math.max(1, n)));
           }
         } catch (e) {
-          console.warn('Failed to load onboarding session from sessionStorage:', e);
+          console.warn('Failed to load onboarding session from localStorage:', e);
         }
       }
 
@@ -323,8 +326,8 @@ const Onboarding = () => {
     if (!userId || !storageKeys || isAuthLoading) return;
 
     try {
-      sessionStorage.setItem(storageKeys.data, JSON.stringify(data));
-      sessionStorage.setItem(storageKeys.step, String(step));
+      localStorage.setItem(storageKeys.data, JSON.stringify(data));
+      localStorage.setItem(storageKeys.step, String(step));
     } catch {
       // ignore
     }
