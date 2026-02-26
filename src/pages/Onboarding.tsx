@@ -346,26 +346,31 @@ const Onboarding = () => {
   }, [navigate, djangoLoading, djangoAuthenticated, djangoUser]);
 
   useEffect(() => {
-    if (!userId || !storageKeys || isAuthLoading) return;
+    if (!userId || isAuthLoading) return;
 
+    const keys = getOnboardingStorageKeys(userId);
+
+    // Persist to localStorage immediately
     try {
-      localStorage.setItem(storageKeys.data, JSON.stringify(data));
-      localStorage.setItem(storageKeys.step, String(step));
+      localStorage.setItem(keys.data, JSON.stringify(data));
+      localStorage.setItem(keys.step, String(step));
     } catch {
       // ignore
     }
 
+    // Debounced save to Django backend
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
+      console.log('[Onboarding] Saving session to backend, step:', step);
       saveOnboardingSession({ step, data: data as unknown as Record<string, unknown> }).catch((e) => {
-        console.warn('Failed to save onboarding session:', e);
+        console.warn('[Onboarding] Failed to save session:', e);
       });
     }, 500);
 
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [data, step, userId, storageKeys, isAuthLoading]);
+  }, [data, step, userId, isAuthLoading]);
 
   const handleTypeSelect = (type: OrganizationType) => {
     const defaultSchedules = defaultSchedulesByType[type] || [];
