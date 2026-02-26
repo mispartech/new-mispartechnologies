@@ -251,10 +251,7 @@ const Onboarding = () => {
   const didHydrateRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
-  const storageKeys = useMemo(() => {
-    if (!userId) return null;
-    return getOnboardingStorageKeys(userId);
-  }, [userId]);
+  // Storage keys computed inline where needed to avoid race conditions
 
   useEffect(() => {
     if (djangoLoading) return;
