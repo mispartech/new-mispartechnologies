@@ -513,26 +513,21 @@ class DjangoApiClient {
 
   // ═══════════════════════════ ONBOARDING ═══════════════════════════
 
-  async getOnboardingSession(
-    userId: string,
-  ): Promise<ApiResponse<{ step: number; data: Record<string, unknown> }>> {
-    return this.request(`/api/onboarding/${userId}/`);
+  async getOnboardingSession(): Promise<ApiResponse<any>> {
+    return this.request('/api/onboarding/');
   }
 
   async saveOnboardingSession(
-    userId: string,
     payload: { step: number; data: Record<string, unknown> },
   ): Promise<ApiResponse<void>> {
-    return this.request(`/api/onboarding/${userId}/`, {
+    return this.request('/api/onboarding/', {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
   }
 
-  async deleteOnboardingSession(
-    userId: string,
-  ): Promise<ApiResponse<void>> {
-    return this.request(`/api/onboarding/${userId}/`, { method: 'DELETE' });
+  async deleteOnboardingSession(): Promise<ApiResponse<void>> {
+    return this.request('/api/onboarding/', { method: 'DELETE' });
   }
 
   // ═══════════════════════════ SCHEDULES ═══════════════════════════
