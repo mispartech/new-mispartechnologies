@@ -462,9 +462,10 @@ const Onboarding = () => {
       } catch {
         // ignore cleanup errors
       }
-      if (storageKeys) {
-        localStorage.removeItem(storageKeys.data);
-        localStorage.removeItem(storageKeys.step);
+      if (userId) {
+        const keys = getOnboardingStorageKeys(userId);
+        localStorage.removeItem(keys.data);
+        localStorage.removeItem(keys.step);
       }
 
       toast({
