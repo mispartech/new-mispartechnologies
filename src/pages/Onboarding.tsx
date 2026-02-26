@@ -485,8 +485,8 @@ const Onboarding = () => {
         // ignore cleanup errors
       }
       if (storageKeys) {
-        sessionStorage.removeItem(storageKeys.data);
-        sessionStorage.removeItem(storageKeys.step);
+        localStorage.removeItem(storageKeys.data);
+        localStorage.removeItem(storageKeys.step);
       }
 
       toast({
