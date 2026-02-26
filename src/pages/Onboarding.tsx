@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import { djangoApi } from '@/lib/api/client';
@@ -251,10 +251,7 @@ const Onboarding = () => {
   const didHydrateRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
-  const storageKeys = useMemo(() => {
-    if (!userId) return null;
-    return getOnboardingStorageKeys(userId);
-  }, [userId]);
+  // Storage keys computed inline where needed to avoid race conditions
 
   useEffect(() => {
     if (djangoLoading) return;
@@ -276,43 +273,66 @@ const Onboarding = () => {
       }
 
       // Authenticated user without org — allow onboarding
-      setUserId(djangoUser.id);
+      const uid = djangoUser.id;
+      setUserId(uid);
+
+      // Compute storage keys directly (can't rely on useMemo — state hasn't re-rendered yet)
+      const keys = getOnboardingStorageKeys(uid);
 
       // Pre-fill admin info
-      setData((prev) => ({
-        ...prev,
-        adminFirstName: prev.adminFirstName || djangoUser.first_name || '',
-        adminLastName: prev.adminLastName || djangoUser.last_name || '',
-        email: prev.email || djangoUser.email || '',
-      }));
+      const preFilled: Partial<OnboardingData> = {
+        adminFirstName: djangoUser.first_name || '',
+        adminLastName: djangoUser.last_name || '',
+        email: djangoUser.email || '',
+      };
 
-      // Try to restore onboarding session
+      // 1️⃣ Try restoring from Django backend first
+      let hydrated = false;
       try {
         const persisted = await loadOnboardingSession();
-        if (persisted && !didHydrateRef.current) {
+        if (persisted?.data && !didHydrateRef.current) {
           didHydrateRef.current = true;
+          hydrated = true;
+          const restored = persisted.data as Partial<OnboardingData>;
           setStep(Math.min(5, Math.max(1, persisted.step || 1)));
-          setData((prev) => ({ ...prev, ...(persisted.data as Partial<OnboardingData>) }));
+          setData((prev) => ({
+            ...prev,
+            ...preFilled,
+            ...restored,
+            // Keep admin name from profile if not in saved session
+            adminFirstName: restored.adminFirstName || preFilled.adminFirstName || prev.adminFirstName,
+            adminLastName: restored.adminLastName || preFilled.adminLastName || prev.adminLastName,
+          }));
+          console.log('[Onboarding] Restored session from backend, step:', persisted.step);
         }
       } catch (e) {
-        console.warn('Failed to load onboarding session from backend:', e);
+        console.warn('[Onboarding] Failed to load session from backend:', e);
       }
 
-      if (storageKeys && !didHydrateRef.current) {
+      // 2️⃣ Fallback: restore from localStorage
+      if (!hydrated && !didHydrateRef.current) {
         try {
-          const savedData = localStorage.getItem(storageKeys.data);
-          const savedStep = localStorage.getItem(storageKeys.step);
+          const savedData = localStorage.getItem(keys.data);
+          const savedStep = localStorage.getItem(keys.step);
           if (savedData) {
             didHydrateRef.current = true;
-            setData((prev) => ({ ...prev, ...JSON.parse(savedData) }));
+            hydrated = true;
+            const parsed = JSON.parse(savedData) as Partial<OnboardingData>;
+            setData((prev) => ({ ...prev, ...preFilled, ...parsed }));
+            console.log('[Onboarding] Restored session from localStorage');
           }
           if (savedStep) {
             const n = parseInt(savedStep, 10);
             if (!Number.isNaN(n)) setStep(Math.min(5, Math.max(1, n)));
           }
         } catch (e) {
-          console.warn('Failed to load onboarding session from localStorage:', e);
+          console.warn('[Onboarding] Failed to load session from localStorage:', e);
         }
+      }
+
+      // 3️⃣ No saved session — just apply pre-filled profile info
+      if (!hydrated) {
+        setData((prev) => ({ ...prev, ...preFilled }));
       }
 
       setIsAuthLoading(false);
@@ -323,26 +343,31 @@ const Onboarding = () => {
   }, [navigate, djangoLoading, djangoAuthenticated, djangoUser]);
 
   useEffect(() => {
-    if (!userId || !storageKeys || isAuthLoading) return;
+    if (!userId || isAuthLoading) return;
 
+    const keys = getOnboardingStorageKeys(userId);
+
+    // Persist to localStorage immediately
     try {
-      localStorage.setItem(storageKeys.data, JSON.stringify(data));
-      localStorage.setItem(storageKeys.step, String(step));
+      localStorage.setItem(keys.data, JSON.stringify(data));
+      localStorage.setItem(keys.step, String(step));
     } catch {
       // ignore
     }
 
+    // Debounced save to Django backend
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
+      console.log('[Onboarding] Saving session to backend, step:', step);
       saveOnboardingSession({ step, data: data as unknown as Record<string, unknown> }).catch((e) => {
-        console.warn('Failed to save onboarding session:', e);
+        console.warn('[Onboarding] Failed to save session:', e);
       });
     }, 500);
 
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [data, step, userId, storageKeys, isAuthLoading]);
+  }, [data, step, userId, isAuthLoading]);
 
   const handleTypeSelect = (type: OrganizationType) => {
     const defaultSchedules = defaultSchedulesByType[type] || [];
@@ -437,9 +462,10 @@ const Onboarding = () => {
       } catch {
         // ignore cleanup errors
       }
-      if (storageKeys) {
-        localStorage.removeItem(storageKeys.data);
-        localStorage.removeItem(storageKeys.step);
+      if (userId) {
+        const keys = getOnboardingStorageKeys(userId);
+        localStorage.removeItem(keys.data);
+        localStorage.removeItem(keys.step);
       }
 
       toast({
