@@ -276,43 +276,66 @@ const Onboarding = () => {
       }
 
       // Authenticated user without org — allow onboarding
-      setUserId(djangoUser.id);
+      const uid = djangoUser.id;
+      setUserId(uid);
+
+      // Compute storage keys directly (can't rely on useMemo — state hasn't re-rendered yet)
+      const keys = getOnboardingStorageKeys(uid);
 
       // Pre-fill admin info
-      setData((prev) => ({
-        ...prev,
-        adminFirstName: prev.adminFirstName || djangoUser.first_name || '',
-        adminLastName: prev.adminLastName || djangoUser.last_name || '',
-        email: prev.email || djangoUser.email || '',
-      }));
+      const preFilled: Partial<OnboardingData> = {
+        adminFirstName: djangoUser.first_name || '',
+        adminLastName: djangoUser.last_name || '',
+        email: djangoUser.email || '',
+      };
 
-      // Try to restore onboarding session
+      // 1️⃣ Try restoring from Django backend first
+      let hydrated = false;
       try {
         const persisted = await loadOnboardingSession();
-        if (persisted && !didHydrateRef.current) {
+        if (persisted?.data && !didHydrateRef.current) {
           didHydrateRef.current = true;
+          hydrated = true;
+          const restored = persisted.data as Partial<OnboardingData>;
           setStep(Math.min(5, Math.max(1, persisted.step || 1)));
-          setData((prev) => ({ ...prev, ...(persisted.data as Partial<OnboardingData>) }));
+          setData((prev) => ({
+            ...prev,
+            ...preFilled,
+            ...restored,
+            // Keep admin name from profile if not in saved session
+            adminFirstName: restored.adminFirstName || preFilled.adminFirstName || prev.adminFirstName,
+            adminLastName: restored.adminLastName || preFilled.adminLastName || prev.adminLastName,
+          }));
+          console.log('[Onboarding] Restored session from backend, step:', persisted.step);
         }
       } catch (e) {
-        console.warn('Failed to load onboarding session from backend:', e);
+        console.warn('[Onboarding] Failed to load session from backend:', e);
       }
 
-      if (storageKeys && !didHydrateRef.current) {
+      // 2️⃣ Fallback: restore from localStorage
+      if (!hydrated && !didHydrateRef.current) {
         try {
-          const savedData = localStorage.getItem(storageKeys.data);
-          const savedStep = localStorage.getItem(storageKeys.step);
+          const savedData = localStorage.getItem(keys.data);
+          const savedStep = localStorage.getItem(keys.step);
           if (savedData) {
             didHydrateRef.current = true;
-            setData((prev) => ({ ...prev, ...JSON.parse(savedData) }));
+            hydrated = true;
+            const parsed = JSON.parse(savedData) as Partial<OnboardingData>;
+            setData((prev) => ({ ...prev, ...preFilled, ...parsed }));
+            console.log('[Onboarding] Restored session from localStorage');
           }
           if (savedStep) {
             const n = parseInt(savedStep, 10);
             if (!Number.isNaN(n)) setStep(Math.min(5, Math.max(1, n)));
           }
         } catch (e) {
-          console.warn('Failed to load onboarding session from localStorage:', e);
+          console.warn('[Onboarding] Failed to load session from localStorage:', e);
         }
+      }
+
+      // 3️⃣ No saved session — just apply pre-filled profile info
+      if (!hydrated) {
+        setData((prev) => ({ ...prev, ...preFilled }));
       }
 
       setIsAuthLoading(false);
