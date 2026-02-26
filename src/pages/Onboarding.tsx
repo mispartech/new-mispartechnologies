@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client'; // still needed for onboarding session persistence
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+import { djangoApi } from '@/lib/api/client';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -408,77 +408,48 @@ const Onboarding = () => {
 
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) throw new Error('You are not logged in. Please sign in again and retry.');
+      // 1. Create organization via Django API
+      const orgResp = await djangoApi.createOrganization({
+        name: data.organizationName,
+        type: data.organizationType,
+        industry: data.industry,
+        size_range: data.sizeRange,
+      });
+      if (orgResp.error || !orgResp.data) throw new Error(orgResp.error || 'Failed to create organization');
 
-      const orgId = crypto.randomUUID();
+      const orgId = orgResp.data.id;
 
-      const { error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          id: orgId,
-          name: data.organizationName,
-          type: data.organizationType,
-          industry: data.industry,
-          size_range: data.sizeRange,
-          address: data.address,
-          city: data.city,
-          country: data.country,
-          phone: data.phone,
-          email: data.email,
-          website: data.website,
-          features_enabled: data.features,
-          onboarding_completed: true,
-        } as never);
-
-      if (orgError) throw orgError;
-
-      // Use upsert to handle both cases: profile exists or needs creation
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          organization_id: orgId,
+      // 2. Update profile with org + admin info via Django API
+      if (userId) {
+        const profileResp = await djangoApi.updateProfile(userId, {
           first_name: data.adminFirstName,
           last_name: data.adminLastName,
-          role: 'admin', // Legacy field for display purposes
-        }, { onConflict: 'id' });
-
-      if (profileError) throw profileError;
-
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          role: 'super_admin',
-          organization_id: orgId,
         });
+        if (profileResp.error) console.warn('Profile update warning:', profileResp.error);
+      }
 
-      if (roleError) throw roleError;
-
-      // Insert service schedules
+      // 3. Create schedules via Django API
       if (data.serviceSchedules.length > 0) {
-        const schedules = data.serviceSchedules.map(s => ({
-          organization_id: orgId,
-          name: s.name || getScheduleItemLabel(data.organizationType),
-          description: s.description,
-          day_of_week: s.dayOfWeek,
-          start_time: s.startTime,
-          end_time: s.endTime,
-          is_active: s.isActive,
-        }));
-
-        const { error: scheduleError } = await supabase
-          .from('service_schedules')
-          .insert(schedules as never);
-
-        if (scheduleError) {
-          console.warn('Failed to insert schedules:', scheduleError);
+        for (const s of data.serviceSchedules) {
+          await djangoApi.createSchedule({
+            organization_id: orgId,
+            name: s.name || getScheduleItemLabel(data.organizationType),
+            description: s.description,
+            day_of_week: s.dayOfWeek,
+            start_time: s.startTime,
+            end_time: s.endTime,
+            is_active: s.isActive,
+          });
         }
       }
 
+      // 4. Mark onboarding as complete via Django API
+      await djangoApi.saveOnboardingSession({
+        step: totalSteps,
+        data: { ...data, is_completed: true } as unknown as Record<string, unknown>,
+      });
+
+      // 5. Cleanup local storage
       try {
         await deleteOnboardingSession();
       } catch {
@@ -498,23 +469,9 @@ const Onboarding = () => {
     } catch (error: any) {
       console.error('Onboarding error:', error);
 
-      const code = error?.code as string | undefined;
-      const status = error?.status as number | undefined;
-
-      let description =
-        error?.message ||
-        'We could not complete setup. Please try again.';
-
-      if (code === '42501' || status === 403) {
-        description =
-          "Setup couldn't create your organization due to a permissions rule. "
-          + 'This usually happens if your session is missing/expired, or if the backend policy blocks the insert. '
-          + 'Please sign out and sign back in, then retry. If it still fails, contact support.';
-      }
-
       toast({
         title: 'Setup Failed',
-        description,
+        description: error?.message || 'We could not complete setup. Please try again.',
         variant: 'destructive',
       });
     } finally {
