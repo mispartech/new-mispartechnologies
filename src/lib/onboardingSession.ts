@@ -10,23 +10,34 @@ export const getOnboardingStorageKeys = (userId: string) => ({
   step: `mispar_onboarding_step:${userId}`,
 });
 
-export const loadOnboardingSession = async (userId: string) => {
-  const resp = await djangoApi.getOnboardingSession(userId);
-  // Treat 404 as "no session yet" — endpoint may not exist on backend
+/**
+ * Load onboarding session from Django backend.
+ * Uses JWT auth — no user ID needed.
+ */
+export const loadOnboardingSession = async () => {
+  const resp = await djangoApi.getOnboardingSession();
+  // Treat 404 as "no session yet"
   if (resp.status === 404) return null;
   if (resp.error) throw new Error(resp.error);
-  return resp.data as { step: number; data: Record<string, unknown> } | null;
+  return resp.data as { step: number; data: Record<string, unknown>; is_completed?: boolean } | null;
 };
 
-export const saveOnboardingSession = async (userId: string, payload: OnboardingSessionPayload) => {
-  const resp = await djangoApi.saveOnboardingSession(userId, payload);
-  // Silently ignore if endpoint doesn't exist yet
+/**
+ * Save onboarding session to Django backend.
+ * Uses JWT auth — no user ID needed.
+ */
+export const saveOnboardingSession = async (payload: OnboardingSessionPayload) => {
+  const resp = await djangoApi.saveOnboardingSession(payload);
   if (resp.status === 404) return;
   if (resp.error) throw new Error(resp.error);
 };
 
-export const deleteOnboardingSession = async (userId: string) => {
-  const resp = await djangoApi.deleteOnboardingSession(userId);
+/**
+ * Delete/reset onboarding session on Django backend.
+ * Uses JWT auth — no user ID needed.
+ */
+export const deleteOnboardingSession = async () => {
+  const resp = await djangoApi.deleteOnboardingSession();
   if (resp.status === 404) return;
   if (resp.error) throw new Error(resp.error);
 };

@@ -288,7 +288,7 @@ const Onboarding = () => {
 
       // Try to restore onboarding session
       try {
-        const persisted = await loadOnboardingSession(djangoUser.id);
+        const persisted = await loadOnboardingSession();
         if (persisted && !didHydrateRef.current) {
           didHydrateRef.current = true;
           setStep(Math.min(5, Math.max(1, persisted.step || 1)));
@@ -334,7 +334,7 @@ const Onboarding = () => {
 
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
-      saveOnboardingSession(userId, { step, data: data as unknown as Record<string, unknown> }).catch((e) => {
+      saveOnboardingSession({ step, data: data as unknown as Record<string, unknown> }).catch((e) => {
         console.warn('Failed to save onboarding session:', e);
       });
     }, 500);
@@ -480,7 +480,7 @@ const Onboarding = () => {
       }
 
       try {
-        await deleteOnboardingSession(user.id);
+        await deleteOnboardingSession();
       } catch {
         // ignore cleanup errors
       }
