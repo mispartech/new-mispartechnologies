@@ -9,6 +9,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { API_ROUTES } from './apiRoutes';
 
 const DJANGO_BASE_URL =
   import.meta.env.VITE_DJANGO_API_URL || 'https://api.mispartechnologies.com';
@@ -51,8 +52,7 @@ function getErrorNotification(status: number, serverMessage?: string): { title: 
     return { title: 'Server Error', description: 'Server error. Please try again later.' };
   }
   if (status === 0) {
-    // Network error or timeout — message is set by the caller
-    return null; // handled separately below
+    return null; // handled separately
   }
   return { title: 'Request Failed', description: serverMessage || 'An unexpected error occurred.' };
 }
@@ -61,12 +61,10 @@ async function handleAutoLogout() {
   try {
     await supabase.auth.signOut({ scope: 'local' });
   } catch {
-    // Clear Supabase keys manually as fallback
     Object.keys(localStorage)
       .filter(k => k.startsWith('sb-'))
       .forEach(k => localStorage.removeItem(k));
   }
-  // Navigate to auth page
   if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
     window.location.href = '/auth';
   }
@@ -75,14 +73,10 @@ async function handleAutoLogout() {
 // ────────────────────────── client ──────────────────────────
 
 class DjangoApiClient {
-  /* ── auth helper ── */
-
   private async getAccessToken(): Promise<string | null> {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ?? null;
   }
-
-  /* ── generic fetch wrapper ── */
 
   private async request<T>(
     endpoint: string,
@@ -156,7 +150,6 @@ class DjangoApiClient {
     }
   }
 
-  /** Show toast + dev log for HTTP errors */
   private notifyError(status: number, message: string, endpoint: string, silent?: boolean, details?: any) {
     if (IS_DEV) {
       console.error(`[DjangoApi] ${status} ${endpoint}:`, { message, details });
@@ -169,7 +162,6 @@ class DjangoApiClient {
       }
     }
 
-    // Auto-logout on 401
     if (status === 401) {
       handleAutoLogout();
     }
@@ -178,7 +170,7 @@ class DjangoApiClient {
   // ═══════════════════════════ PROFILE ═══════════════════════════
 
   async getProfile(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
-    return this.request('/api/profile/', { silent: options?.silent });
+    return this.request(API_ROUTES.PROFILE, { silent: options?.silent });
   }
 
   async updateProfile(
@@ -192,12 +184,11 @@ class DjangoApiClient {
       notification_preferences: any;
     }>,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/profile/${userId}/`, {
+    return this.request(API_ROUTES.PROFILE_UPDATE(userId), {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
-
 
   // ═══════════════════════════ MEMBERS ═══════════════════════════
 
@@ -210,11 +201,11 @@ class DjangoApiClient {
     const query = params
       ? '?' + new URLSearchParams(params as Record<string, string>).toString()
       : '';
-    return this.request(`/api/members/${query}`);
+    return this.request(`${API_ROUTES.MEMBERS}${query}`);
   }
 
   async getMember(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/api/members/${id}/`);
+    return this.request(API_ROUTES.MEMBER(id));
   }
 
   async createMember(data: {
@@ -226,7 +217,7 @@ class DjangoApiClient {
     department_id?: string;
     organization_id: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/members/', {
+    return this.request(API_ROUTES.MEMBERS, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -244,14 +235,14 @@ class DjangoApiClient {
       organization_id: string;
     }>,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/members/${id}/`, {
+    return this.request(API_ROUTES.MEMBER(id), {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
   async deleteMember(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/members/${id}/`, { method: 'DELETE' });
+    return this.request(API_ROUTES.MEMBER(id), { method: 'DELETE' });
   }
 
   async inviteMember(data: {
@@ -263,7 +254,7 @@ class DjangoApiClient {
     department_id?: string;
     organization_id: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/members/invite/', {
+    return this.request(API_ROUTES.MEMBER_INVITE, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -280,7 +271,7 @@ class DjangoApiClient {
     }>;
     organization_id: string;
   }): Promise<ApiResponse<{ success: number; failed: number }>> {
-    return this.request('/api/members/bulk-invite/', {
+    return this.request(API_ROUTES.MEMBER_BULK_INVITE, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -289,14 +280,12 @@ class DjangoApiClient {
   // ═══════════════════════════ DEPARTMENTS ═══════════════════════════
 
   async getDepartments(organizationId?: string): Promise<ApiResponse<any[]>> {
-    const query = organizationId
-      ? `?organization_id=${organizationId}`
-      : '';
-    return this.request(`/api/departments/${query}`);
+    const query = organizationId ? `?organization_id=${organizationId}` : '';
+    return this.request(`${API_ROUTES.DEPARTMENTS}${query}`);
   }
 
   async getDepartment(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/api/departments/${id}/`);
+    return this.request(API_ROUTES.DEPARTMENT(id));
   }
 
   async createDepartment(data: {
@@ -304,7 +293,7 @@ class DjangoApiClient {
     description?: string;
     organization_id: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/departments/', {
+    return this.request(API_ROUTES.DEPARTMENTS, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -314,14 +303,14 @@ class DjangoApiClient {
     id: string,
     data: Partial<{ name: string; description: string }>,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/departments/${id}/`, {
+    return this.request(API_ROUTES.DEPARTMENT(id), {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
   async deleteDepartment(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/departments/${id}/`, { method: 'DELETE' });
+    return this.request(API_ROUTES.DEPARTMENT(id), { method: 'DELETE' });
   }
 
   // ═══════════════════════════ ATTENDANCE ═══════════════════════════
@@ -342,7 +331,7 @@ class DjangoApiClient {
           ) as Record<string, string>,
         ).toString()
       : '';
-    return this.request(`/api/attendance/${query}`);
+    return this.request(`${API_ROUTES.ATTENDANCE}${query}`);
   }
 
   async markAttendance(data: {
@@ -350,7 +339,7 @@ class DjangoApiClient {
     confidence_score?: number;
     face_roi_url?: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/attendance/mark/', {
+    return this.request(API_ROUTES.ATTENDANCE_MARK, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -363,10 +352,9 @@ class DjangoApiClient {
     end_date?: string;
   }): Promise<ApiResponse<any[]>> {
     const query = params
-      ? '?' +
-        new URLSearchParams(params as Record<string, string>).toString()
+      ? '?' + new URLSearchParams(params as Record<string, string>).toString()
       : '';
-    return this.request(`/api/temp-attendance/${query}`);
+    return this.request(`${API_ROUTES.TEMP_ATTENDANCE}${query}`);
   }
 
   async claimVisitor(data: {
@@ -379,24 +367,23 @@ class DjangoApiClient {
     gender?: string;
     department_id?: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/temp-attendance/claim/', {
+    return this.request(API_ROUTES.TEMP_ATTENDANCE_CLAIM, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   // ═══════════════════════════ ORGANIZATIONS ═══════════════════════════
-  // createOrganization removed — onboarding writes via PUT /api/onboarding/
 
   async getOrganization(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/api/organizations/${id}/`);
+    return this.request(API_ROUTES.ORGANIZATION(id));
   }
 
   async updateOrganization(
     id: string,
     data: Partial<any>,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/organizations/${id}/`, {
+    return this.request(API_ROUTES.ORGANIZATION(id), {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -416,19 +403,19 @@ class DjangoApiClient {
           ) as Record<string, string>,
         ).toString()
       : '';
-    return this.request(`/api/notifications/${query}`);
+    return this.request(`${API_ROUTES.NOTIFICATIONS}${query}`);
   }
 
   async markNotificationRead(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/notifications/${id}/read/`, { method: 'PATCH' });
+    return this.request(API_ROUTES.NOTIFICATION_READ(id), { method: 'PATCH' });
   }
 
   async markAllNotificationsRead(): Promise<ApiResponse<void>> {
-    return this.request('/api/notifications/read-all/', { method: 'PATCH' });
+    return this.request(API_ROUTES.NOTIFICATIONS_READ_ALL, { method: 'PATCH' });
   }
 
   async deleteNotification(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/notifications/${id}/`, { method: 'DELETE' });
+    return this.request(API_ROUTES.NOTIFICATION_DELETE(id), { method: 'DELETE' });
   }
 
   // ═══════════════════════════ ACTIVITY LOGS ═══════════════════════════
@@ -445,7 +432,7 @@ class DjangoApiClient {
           ) as Record<string, string>,
         ).toString()
       : '';
-    return this.request(`/api/activity-logs/${query}`);
+    return this.request(`${API_ROUTES.ACTIVITY_LOGS}${query}`);
   }
 
   async createActivityLog(data: {
@@ -454,7 +441,7 @@ class DjangoApiClient {
     entity_id?: string;
     metadata?: Record<string, unknown>;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/activity-logs/', {
+    return this.request(API_ROUTES.ACTIVITY_LOGS, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -463,17 +450,17 @@ class DjangoApiClient {
   // ═══════════════════════════ USER ROLES ═══════════════════════════
 
   async getUserRole(): Promise<ApiResponse<{ role: string }>> {
-    return this.request('/api/user-role/');
+    return this.request(API_ROUTES.USER_ROLE);
   }
 
   async getAdminUsers(): Promise<ApiResponse<any[]>> {
-    return this.request('/api/user-roles/admins/');
+    return this.request(API_ROUTES.ADMIN_USERS);
   }
 
   // ═══════════════════════════ ADMIN INVITES ═══════════════════════════
 
   async getAdminInvites(): Promise<ApiResponse<any[]>> {
-    return this.request('/api/admin-invites/');
+    return this.request(API_ROUTES.ADMIN_INVITES);
   }
 
   async createAdminInvite(data: {
@@ -481,7 +468,7 @@ class DjangoApiClient {
     invited_role: string;
     organization_id?: string;
   }): Promise<ApiResponse<any>> {
-    return this.request('/api/admin-invites/', {
+    return this.request(API_ROUTES.ADMIN_INVITES, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -490,11 +477,11 @@ class DjangoApiClient {
   // ═══════════════════════════ INVITES (MEMBER) ═══════════════════════════
 
   async getInvite(token: string): Promise<ApiResponse<any>> {
-    return this.request(`/api/invites/${token}/`);
+    return this.request(API_ROUTES.INVITE(token));
   }
 
   async acceptInvite(inviteId: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/invites/${inviteId}/accept/`, {
+    return this.request(API_ROUTES.INVITE_ACCEPT(inviteId), {
       method: 'PATCH',
       body: JSON.stringify({ status: 'accepted' }),
     });
@@ -505,7 +492,7 @@ class DjangoApiClient {
   async checkFaceEnrollmentStatus(
     userId: string,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/face/enrollment-status/${userId}/`);
+    return this.request(API_ROUTES.FACE_ENROLLMENT_STATUS(userId));
   }
 
   async enrollFace(
@@ -513,7 +500,7 @@ class DjangoApiClient {
     imageBase64: string,
     userName?: string,
   ): Promise<ApiResponse<any>> {
-    return this.request('/api/face/enroll/', {
+    return this.request(API_ROUTES.FACE_ENROLL, {
       method: 'POST',
       body: JSON.stringify({
         image: imageBase64,
@@ -527,23 +514,13 @@ class DjangoApiClient {
     imageBase64: string,
     organizationId?: string,
   ): Promise<ApiResponse<any>> {
-    return this.request('/api/recognize-frame/', {
+    return this.request(API_ROUTES.FACE_RECOGNIZE, {
       method: 'POST',
       body: JSON.stringify({
         frame: imageBase64,
         mode: 'RECOGNIZE',
         organization_id: organizationId,
       }),
-    });
-  }
-
-  async uploadFaceImage(
-    userId: string,
-    imageBase64: string,
-  ): Promise<ApiResponse<{ url: string }>> {
-    return this.request('/api/face/upload/', {
-      method: 'POST',
-      body: JSON.stringify({ user_id: userId, image: imageBase64 }),
     });
   }
 
@@ -557,7 +534,7 @@ class DjangoApiClient {
     recent_attendance: any[];
     recent_members: any[];
   }>> {
-    return this.request('/api/dashboard/stats/');
+    return this.request(API_ROUTES.DASHBOARD_STATS);
   }
 
   async getMemberDashboardStats(userId: string): Promise<ApiResponse<{
@@ -567,7 +544,7 @@ class DjangoApiClient {
     attended_today: boolean;
     recent_attendance: any[];
   }>> {
-    return this.request(`/api/dashboard/member-stats/${userId}/`);
+    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS(userId));
   }
 
   // ═══════════════════════════ REPORTS ═══════════════════════════
@@ -579,35 +556,34 @@ class DjangoApiClient {
     const query =
       '?' +
       new URLSearchParams(params as Record<string, string>).toString();
-    return this.request(`/api/reports/attendance/${query}`);
+    return this.request(`${API_ROUTES.REPORTS_ATTENDANCE}${query}`);
   }
 
   // ═══════════════════════════ ONBOARDING ═══════════════════════════
 
   async getOnboardingSession(): Promise<ApiResponse<any>> {
-    return this.request('/api/onboarding/');
+    return this.request(API_ROUTES.ONBOARDING);
   }
 
   async saveOnboardingSession(
     payload: { step: number; data: Record<string, unknown> },
   ): Promise<ApiResponse<void>> {
-    return this.request('/api/onboarding/', {
+    return this.request(API_ROUTES.ONBOARDING, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
   }
 
-
   // ═══════════════════════════ SCHEDULES ═══════════════════════════
 
   async getSchedules(organizationId: string): Promise<ApiResponse<any[]>> {
     return this.request(
-      `/api/schedules/?organization_id=${organizationId}`,
+      `${API_ROUTES.SCHEDULES}?organization_id=${organizationId}`,
     );
   }
 
   async createSchedule(data: any): Promise<ApiResponse<any>> {
-    return this.request('/api/schedules/', {
+    return this.request(API_ROUTES.SCHEDULES, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -617,20 +593,20 @@ class DjangoApiClient {
     id: string,
     data: Partial<any>,
   ): Promise<ApiResponse<any>> {
-    return this.request(`/api/schedules/${id}/`, {
+    return this.request(API_ROUTES.SCHEDULE(id), {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
   async deleteSchedule(id: string): Promise<ApiResponse<void>> {
-    return this.request(`/api/schedules/${id}/`, { method: 'DELETE' });
+    return this.request(API_ROUTES.SCHEDULE(id), { method: 'DELETE' });
   }
 
   async bulkUpdateSchedules(
     updates: Array<{ id: string; [key: string]: any }>,
   ): Promise<ApiResponse<void>> {
-    return this.request('/api/schedules/bulk-update/', {
+    return this.request(API_ROUTES.SCHEDULES_BULK_UPDATE, {
       method: 'PATCH',
       body: JSON.stringify({ schedules: updates }),
     });
@@ -645,7 +621,7 @@ class DjangoApiClient {
     token: string;
     organization_name: string;
   }): Promise<ApiResponse<void>> {
-    return this.request('/api/admin-invites/send-email/', {
+    return this.request(API_ROUTES.ADMIN_INVITE_SEND_EMAIL, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -659,7 +635,7 @@ class DjangoApiClient {
     token: string;
     organization_name?: string;
   }): Promise<ApiResponse<void>> {
-    return this.request('/api/members/send-invite-email/', {
+    return this.request(API_ROUTES.MEMBER_SEND_INVITE_EMAIL, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -671,7 +647,7 @@ class DjangoApiClient {
     currentPassword: string,
     newPassword: string,
   ): Promise<ApiResponse<void>> {
-    return this.request('/api/auth/password/change/', {
+    return this.request(API_ROUTES.PASSWORD_CHANGE, {
       method: 'POST',
       body: JSON.stringify({
         current_password: currentPassword,
@@ -683,7 +659,7 @@ class DjangoApiClient {
   // ═══════════════════════════ HEALTH CHECK ═══════════════════════════
 
   async healthCheck(): Promise<ApiResponse<any>> {
-    return this.request('/api/health/');
+    return this.request(API_ROUTES.HEALTH);
   }
 }
 

@@ -67,7 +67,6 @@ export default function Register() {
 
   const fetchInviteData = async () => {
     try {
-      // Try Django first for invite validation
       const djangoResult = await djangoApi.getInvite(token!);
       
       if (djangoResult.data && !djangoResult.error) {
@@ -90,36 +89,8 @@ export default function Register() {
         return;
       }
 
-      // Fallback: Check Supabase for invite (Phase 1 bridge for existing invites)
-      console.log('[Register] Django invite endpoint unavailable, falling back to Supabase');
-      const { data, error } = await supabase
-        .from("member_invites")
-        .select("*")
-        .eq("token", token)
-        .single();
-
-      if (error || !data) {
-        setError("Invalid or expired registration link.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.status === "accepted") {
-        setError("This invitation has already been used.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (new Date(data.expires_at) < new Date()) {
-        setError("This invitation has expired. Please contact your administrator for a new one.");
-        setIsLoading(false);
-        return;
-      }
-
-      setInviteData(data);
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
-      setPhone(data.phone_number || "");
+      // Django endpoint failed — show error (no Supabase fallback)
+      setError("Invalid or expired registration link.");
       setIsLoading(false);
     } catch (err) {
       console.error("Error fetching invite:", err);
@@ -223,7 +194,7 @@ export default function Register() {
         throw new Error("Signup failed — no user returned");
       }
 
-      // 2. Enroll face via Django API (Django creates user lazily on first authenticated request)
+      // 2. Enroll face via Django API
       try {
         await djangoApi.enrollFace(
           authData.user.id,
@@ -235,18 +206,8 @@ export default function Register() {
         // Continue - face can be registered later via enrollment page
       }
 
-      // 4. Mark invite as accepted via Django (with Supabase fallback)
-      try {
-        await djangoApi.acceptInvite(inviteData.id);
-      } catch {
-        await supabase
-          .from("member_invites")
-          .update({ 
-            status: "accepted",
-            accepted_at: new Date().toISOString(),
-          })
-          .eq("id", inviteData.id);
-      }
+      // 3. Mark invite as accepted via Django
+      await djangoApi.acceptInvite(inviteData.id);
 
       setStep("complete");
       toast({
