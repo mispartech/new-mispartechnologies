@@ -10,8 +10,8 @@ interface UseEnrollmentGuardResult {
 
 /**
  * Guard hook that checks if user has completed face enrollment.
- * Uses Django API as the source of truth for enrollment status.
- * Falls back to checking Django user's face_image_url field.
+ * Uses Django API as the single source of truth for enrollment status.
+ * No fallbacks — if the endpoint fails, assume not enrolled.
  */
 export const useFaceEnrollmentGuard = (userId: string | undefined): UseEnrollmentGuardResult => {
   const [isEnrolled, setIsEnrolled] = useState<boolean | null>(null);
@@ -28,38 +28,24 @@ export const useFaceEnrollmentGuard = (userId: string | undefined): UseEnrollmen
     setIsLoading(true);
 
     try {
-      // Check via Django enrollment status endpoint
       const result = await djangoApi.checkFaceEnrollmentStatus(userId);
 
       if (result.data && !result.error && result.data.face_embedding_status) {
         const enrolled = result.data.face_image_uploaded === true && result.data.face_embedding_status === 'READY';
         setIsEnrolled(enrolled);
         setEnrollmentStatus(result.data.face_embedding_status);
-        console.log('[FaceEnrollmentGuard] Django status:', {
-          face_image_uploaded: result.data.face_image_uploaded,
-          face_embedding_status: result.data.face_embedding_status,
-          enrolled
-        });
+        if (import.meta.env.DEV) {
+          console.log('[FaceEnrollmentGuard] Status:', {
+            face_image_uploaded: result.data.face_image_uploaded,
+            face_embedding_status: result.data.face_embedding_status,
+            enrolled
+          });
+        }
         return;
       }
 
-      // Fallback: Check Django user profile for face_image_url
-      console.log('[FaceEnrollmentGuard] Enrollment status endpoint unavailable, checking Django user profile...');
-      const userResult = await djangoApi.getProfile();
-      
-      if (userResult.data && !userResult.error) {
-        const enrolled = !!userResult.data.face_image_url && userResult.data.face_image_url !== 'null';
-        setIsEnrolled(enrolled);
-        setEnrollmentStatus(enrolled ? 'READY' : 'PENDING');
-        console.log('[FaceEnrollmentGuard] Django user fallback:', {
-          face_image_url: userResult.data.face_image_url ? 'exists' : 'null',
-          enrolled
-        });
-        return;
-      }
-
-      // If Django is unreachable, assume not enrolled
-      console.warn('[FaceEnrollmentGuard] Django unreachable, assuming not enrolled');
+      // Endpoint failed or returned unexpected data — assume not enrolled
+      console.warn('[FaceEnrollmentGuard] Enrollment status check failed, assuming not enrolled');
       setIsEnrolled(false);
       setEnrollmentStatus(null);
     } catch (err) {
