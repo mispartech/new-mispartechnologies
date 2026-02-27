@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { djangoApi } from '@/lib/api/client';
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -120,20 +121,27 @@ const FaceEnrollment = () => {
     FAILED: 'Enrollment failed',
   };
 
-  const pollUntilEnrollmentReady = useCallback(async (userId: string): Promise<boolean> => {
+  const { refreshUser, user: authUser } = useDjangoAuth();
+
+  const pollUntilEnrollmentReady = useCallback(async (): Promise<boolean> => {
     const startedAt = Date.now();
 
     while (Date.now() - startedAt < ENROLLMENT_POLL_TIMEOUT_MS) {
       if (!isMountedRef.current) return false;
 
-      const statusResult = await djangoApi.checkFaceEnrollmentStatus(userId);
+      // Re-fetch the profile from /api/profile/
+      await refreshUser();
 
-      if (!statusResult.error && statusResult.data) {
+      // After refresh, we need to wait a tick for state to update,
+      // so we poll by fetching profile directly
+      const profileResult = await djangoApi.getProfile({ silent: true });
+      if (!profileResult.error && profileResult.data) {
         const ready =
-          statusResult.data.face_image_uploaded === true &&
-          statusResult.data.face_embedding_status === 'READY';
-
+          profileResult.data.face_image_uploaded === true &&
+          profileResult.data.face_embedding_status === 'READY';
         if (ready) {
+          // One final refresh to sync AuthContext
+          await refreshUser();
           return true;
         }
       }
@@ -142,7 +150,7 @@ const FaceEnrollment = () => {
     }
 
     return false;
-  }, []);
+  }, [refreshUser]);
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
@@ -261,7 +269,7 @@ const FaceEnrollment = () => {
 
       // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        const isReady = await pollUntilEnrollmentReady(user.id);
+        const isReady = await pollUntilEnrollmentReady();
 
         if (!isReady) {
           setEnrollmentStep('FAILED');
