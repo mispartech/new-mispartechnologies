@@ -44,7 +44,7 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = useCallback(async (): Promise<User | null> => {
     try {
       console.log('[DjangoAuth] Fetching profile from Django...');
-      const { data, error, status } = await djangoApi.getProfile();
+      const { data, error, status } = await djangoApi.getProfile({ silent: true });
       console.log('[DjangoAuth] Profile response:', { status, error, hasData: !!data });
       if (data && !error) {
         return data as User;

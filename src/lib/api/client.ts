@@ -8,12 +8,15 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const DJANGO_BASE_URL =
   import.meta.env.VITE_DJANGO_API_URL || 'https://api.mispartechnologies.com';
 
+const IS_DEV = import.meta.env.DEV;
+
 // Log the API URL on startup for debugging
-console.log('[DjangoApi] Base URL:', DJANGO_BASE_URL);
+if (IS_DEV) console.log('[DjangoApi] Base URL:', DJANGO_BASE_URL);
 
 // ────────────────────────── types ──────────────────────────
 
@@ -21,6 +24,52 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   status: number;
+}
+
+/** Options for individual requests */
+interface RequestOptions extends RequestInit {
+  /** If true, skip automatic toast notifications on error */
+  silent?: boolean;
+}
+
+// ────────────────────────── error notifications ──────────────────────────
+
+function getErrorNotification(status: number, serverMessage?: string): { title: string; description: string } | null {
+  if (status === 400) {
+    return { title: 'Validation Error', description: serverMessage || 'Please check your input and try again.' };
+  }
+  if (status === 401) {
+    return { title: 'Session Expired', description: 'Please login again.' };
+  }
+  if (status === 403) {
+    return { title: 'Access Denied', description: 'You do not have permission to perform this action.' };
+  }
+  if (status === 404) {
+    return { title: 'Not Found', description: 'Requested resource not found.' };
+  }
+  if (status >= 500) {
+    return { title: 'Server Error', description: 'Server error. Please try again later.' };
+  }
+  if (status === 0) {
+    // Network error or timeout — message is set by the caller
+    return null; // handled separately below
+  }
+  return { title: 'Request Failed', description: serverMessage || 'An unexpected error occurred.' };
+}
+
+async function handleAutoLogout() {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // Clear Supabase keys manually as fallback
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-'))
+      .forEach(k => localStorage.removeItem(k));
+  }
+  // Navigate to auth page
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+    window.location.href = '/auth';
+  }
 }
 
 // ────────────────────────── client ──────────────────────────
@@ -37,8 +86,9 @@ class DjangoApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
+    const { silent, ...fetchOptions } = options;
     const token = await this.getAccessToken();
 
     const headers: Record<string, string> = {
@@ -52,14 +102,14 @@ class DjangoApiClient {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         signal: controller.signal,
         headers: {
           ...headers,
-          ...((options.headers as Record<string, string>) || {}),
+          ...((fetchOptions.headers as Record<string, string>) || {}),
         },
       });
       clearTimeout(timeoutId);
@@ -70,33 +120,65 @@ class DjangoApiClient {
         data = JSON.parse(text);
       } catch {
         if (!response.ok) {
-          return { status: response.status, error: text || 'Request failed' };
+          const error = text || 'Request failed';
+          this.notifyError(response.status, error, endpoint, silent);
+          return { status: response.status, error };
         }
         return { data: text as unknown as T, status: response.status };
       }
 
       if (!response.ok) {
-        return {
-          status: response.status,
-          error:
-            data?.detail || data?.error || data?.message || 'Request failed',
-        };
+        const error = data?.detail || data?.error || data?.message || 'Request failed';
+        this.notifyError(response.status, error, endpoint, silent, data);
+        return { status: response.status, error };
       }
 
       return { data: data as T, status: response.status };
     } catch (err) {
-      console.error(`API request failed [${endpoint}]:`, err);
-      const message = err instanceof DOMException && err.name === 'AbortError'
-        ? 'Request timed out (15s)'
+      const isTimeout = err instanceof DOMException && err.name === 'AbortError';
+      const message = isTimeout
+        ? 'Request timed out. Please check your connection and try again.'
         : err instanceof Error ? err.message : 'Network error';
+
+      if (IS_DEV) {
+        console.error(`[DjangoApi] ${endpoint}:`, { error: err, timeout: isTimeout });
+      }
+
+      if (!silent) {
+        toast({
+          variant: 'destructive',
+          title: isTimeout ? 'Request Timeout' : 'Connection Error',
+          description: isTimeout ? message : 'Unable to connect to server. Please check your internet connection.',
+        });
+      }
+
       return { status: 0, error: message };
+    }
+  }
+
+  /** Show toast + dev log for HTTP errors */
+  private notifyError(status: number, message: string, endpoint: string, silent?: boolean, details?: any) {
+    if (IS_DEV) {
+      console.error(`[DjangoApi] ${status} ${endpoint}:`, { message, details });
+    }
+
+    if (!silent) {
+      const notification = getErrorNotification(status, message);
+      if (notification) {
+        toast({ variant: 'destructive', title: notification.title, description: notification.description });
+      }
+    }
+
+    // Auto-logout on 401
+    if (status === 401) {
+      handleAutoLogout();
     }
   }
 
   // ═══════════════════════════ PROFILE ═══════════════════════════
 
-  async getProfile(): Promise<ApiResponse<any>> {
-    return this.request('/api/profile/');
+  async getProfile(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
+    return this.request('/api/profile/', { silent: options?.silent });
   }
 
   async updateProfile(
