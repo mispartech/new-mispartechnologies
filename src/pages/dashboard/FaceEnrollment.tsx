@@ -33,6 +33,10 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_DIMENSION = 800; // Max width/height for compression
 const JPEG_QUALITY = 0.8;
+const ENROLLMENT_POLL_INTERVAL_MS = 2000;
+const ENROLLMENT_POLL_TIMEOUT_MS = 60000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Compress an image to reduce file size for API upload.
@@ -87,6 +91,7 @@ const FaceEnrollment = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
 
   const [method, setMethod] = useState<EnrollmentMethod>('upload');
   const [cameraActive, setCameraActive] = useState(false);
@@ -114,6 +119,30 @@ const FaceEnrollment = () => {
     VERIFIED: 'Face Verified!',
     FAILED: 'Enrollment failed',
   };
+
+  const pollUntilEnrollmentReady = useCallback(async (userId: string): Promise<boolean> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < ENROLLMENT_POLL_TIMEOUT_MS) {
+      if (!isMountedRef.current) return false;
+
+      const statusResult = await djangoApi.checkFaceEnrollmentStatus(userId);
+
+      if (!statusResult.error && statusResult.data) {
+        const ready =
+          statusResult.data.face_image_uploaded === true &&
+          statusResult.data.face_embedding_status === 'READY';
+
+        if (ready) {
+          return true;
+        }
+      }
+
+      await sleep(ENROLLMENT_POLL_INTERVAL_MS);
+    }
+
+    return false;
+  }, []);
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
@@ -230,17 +259,18 @@ const FaceEnrollment = () => {
         throw new Error(data.message || 'This face appears to be already enrolled for another user.');
       }
 
-      // Check for success - trust Django { status: "success" } response
+      // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        setEnrollmentStep('VERIFIED');
+        const isReady = await pollUntilEnrollmentReady(user.id);
 
-        // Refresh the auth context so the enrollment guard sees the updated face_image_url
-        // (The profile will be re-fetched from Django on next check)
-        
-        // Navigate to dashboard after brief success display
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+        if (!isReady) {
+          setEnrollmentStep('FAILED');
+          setErrorMessage('Face processing is taking longer than expected. Please refresh.');
+          return;
+        }
+
+        setEnrollmentStep('VERIFIED');
+        navigate('/dashboard');
       } else {
         throw new Error(data?.message || 'Face enrollment failed. Please try again.');
       }
@@ -249,7 +279,7 @@ const FaceEnrollment = () => {
       setEnrollmentStep('FAILED');
       setErrorMessage(err.message || 'Failed to enroll face. Please try again.');
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, navigate, pollUntilEnrollmentReady]);
 
   // Enroll with uploaded image
   const enrollWithUpload = useCallback(async () => {
@@ -342,7 +372,10 @@ const FaceEnrollment = () => {
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => stopCamera();
+    return () => {
+      isMountedRef.current = false;
+      stopCamera();
+    };
   }, [stopCamera]);
 
   // Block back navigation
