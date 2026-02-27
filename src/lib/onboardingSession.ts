@@ -32,12 +32,3 @@ export const saveOnboardingSession = async (payload: OnboardingSessionPayload) =
   if (resp.error) throw new Error(resp.error);
 };
 
-/**
- * Delete/reset onboarding session on Django backend.
- * Uses JWT auth — no user ID needed.
- */
-export const deleteOnboardingSession = async () => {
-  const resp = await djangoApi.deleteOnboardingSession();
-  if (resp.status === 404) return;
-  if (resp.error) throw new Error(resp.error);
-};

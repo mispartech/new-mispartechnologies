@@ -380,8 +380,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ USER ROLES ═══════════════════════════
 
-  async getUserRole(userId: string): Promise<ApiResponse<{ role: string }>> {
-    return this.request(`/api/user-roles/${userId}/`);
+  async getUserRole(): Promise<ApiResponse<{ role: string }>> {
+    return this.request('/api/user-role/');
   }
 
   async getAdminUsers(): Promise<ApiResponse<any[]>> {
@@ -515,9 +515,6 @@ class DjangoApiClient {
     });
   }
 
-  async deleteOnboardingSession(): Promise<ApiResponse<void>> {
-    return this.request('/api/onboarding/', { method: 'DELETE' });
-  }
 
   // ═══════════════════════════ SCHEDULES ═══════════════════════════
 
