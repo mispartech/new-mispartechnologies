@@ -177,8 +177,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ PROFILE ═══════════════════════════
 
-  async getProfile(): Promise<ApiResponse<any>> {
-    return this.request('/api/profile/');
+  async getProfile(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
+    return this.request('/api/profile/', { silent: options?.silent });
   }
 
   async updateProfile(
