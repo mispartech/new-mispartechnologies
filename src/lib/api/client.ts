@@ -447,11 +447,7 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ USER ROLES ═══════════════════════════
-
-  async getUserRole(): Promise<ApiResponse<{ role: string }>> {
-    return this.request(API_ROUTES.USER_ROLE);
-  }
+  // ═══════════════════════════ ADMIN USERS ═══════════════════════════
 
   async getAdminUsers(): Promise<ApiResponse<any[]>> {
     return this.request(API_ROUTES.ADMIN_USERS);
@@ -488,12 +484,6 @@ class DjangoApiClient {
   }
 
   // ═══════════════════════════ FACE ═══════════════════════════
-
-  async checkFaceEnrollmentStatus(
-    userId: string,
-  ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.FACE_ENROLLMENT_STATUS(userId));
-  }
 
   async enrollFace(
     userId: string,

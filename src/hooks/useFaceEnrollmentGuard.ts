@@ -1,70 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
-import { djangoApi } from '@/lib/api/client';
+import { useMemo } from 'react';
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+
+type EmbeddingStatus = 'NOT_STARTED' | 'PROCESSING' | 'READY' | 'FAILED';
 
 interface UseEnrollmentGuardResult {
   isEnrolled: boolean | null;
   isLoading: boolean;
-  enrollmentStatus: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED' | null;
+  enrollmentStatus: EmbeddingStatus | null;
   refetch: () => Promise<void>;
 }
 
 /**
- * Guard hook that checks if user has completed face enrollment.
- * Uses Django API as the single source of truth for enrollment status.
- * No fallbacks — if the endpoint fails, assume not enrolled.
+ * Guard hook that derives face enrollment status from the profile
+ * stored in AuthContext. No separate API call needed.
  */
-export const useFaceEnrollmentGuard = (userId: string | undefined): UseEnrollmentGuardResult => {
-  const [isEnrolled, setIsEnrolled] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [enrollmentStatus, setEnrollmentStatus] = useState<'PENDING' | 'PROCESSING' | 'READY' | 'FAILED' | null>(null);
+export const useFaceEnrollmentGuard = (_userId?: string): UseEnrollmentGuardResult => {
+  const { user, isLoading, refreshUser } = useDjangoAuth();
 
-  const checkEnrollment = useCallback(async () => {
-    if (!userId) {
-      setIsLoading(false);
-      setIsEnrolled(false);
-      return;
+  const result = useMemo((): Omit<UseEnrollmentGuardResult, 'refetch'> => {
+    if (isLoading || !user) {
+      return { isEnrolled: null, isLoading: true, enrollmentStatus: null };
     }
 
-    setIsLoading(true);
+    const status = (user.face_embedding_status as EmbeddingStatus) || 'NOT_STARTED';
+    const enrolled = user.face_image_uploaded === true && status === 'READY';
 
-    try {
-      const result = await djangoApi.checkFaceEnrollmentStatus(userId);
+    return { isEnrolled: enrolled, isLoading: false, enrollmentStatus: status };
+  }, [user, isLoading]);
 
-      if (result.data && !result.error && result.data.face_embedding_status) {
-        const enrolled = result.data.face_image_uploaded === true && result.data.face_embedding_status === 'READY';
-        setIsEnrolled(enrolled);
-        setEnrollmentStatus(result.data.face_embedding_status);
-        if (import.meta.env.DEV) {
-          console.log('[FaceEnrollmentGuard] Status:', {
-            face_image_uploaded: result.data.face_image_uploaded,
-            face_embedding_status: result.data.face_embedding_status,
-            enrolled
-          });
-        }
-        return;
-      }
-
-      // Endpoint failed or returned unexpected data — assume not enrolled
-      console.warn('[FaceEnrollmentGuard] Enrollment status check failed, assuming not enrolled');
-      setIsEnrolled(false);
-      setEnrollmentStatus(null);
-    } catch (err) {
-      console.error('[FaceEnrollmentGuard] Check failed:', err);
-      setIsEnrolled(false);
-      setEnrollmentStatus(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    checkEnrollment();
-  }, [checkEnrollment]);
-
-  return {
-    isEnrolled,
-    isLoading,
-    enrollmentStatus,
-    refetch: checkEnrollment,
-  };
+  return { ...result, refetch: refreshUser };
 };

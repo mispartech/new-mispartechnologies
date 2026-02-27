@@ -9,8 +9,11 @@ interface User {
   last_name: string;
   role: string;
   organization_id: string;
+  department?: string;
   department_id?: string;
   face_image_url?: string;
+  face_image_uploaded?: boolean;
+  face_embedding_status?: 'NOT_STARTED' | 'PROCESSING' | 'READY' | 'FAILED';
   phone_number?: string;
   gender?: string;
   is_onboarded?: boolean;
@@ -93,13 +96,9 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted) return;
       console.log('[DjangoAuth] Auth state change:', event);
 
-      // Skip INITIAL_SESSION — initialize() already handles it
-      if (event === 'INITIAL_SESSION') {
-        return;
-      }
+      if (event === 'INITIAL_SESSION') return;
 
       if (event === 'SIGNED_IN' && session) {
-        // Only fetch profile if initialize already completed (i.e. this is a real new login)
         if (initDone.current) {
           try {
             const profile = await fetchProfile();
@@ -112,7 +111,6 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         if (mounted) setUser(null);
       }
-      // TOKEN_REFRESHED — no action needed
     });
 
     return () => {
@@ -130,14 +128,12 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     }
     console.log('[DjangoAuth] Supabase login successful, fetching profile...');
     
-    // Eagerly fetch profile here instead of waiting for onAuthStateChange race
     const profile = await fetchProfile();
     if (profile) {
       setUser(profile);
       return {};
     }
     
-    // Profile fetch failed — backend is likely down
     console.error('[DjangoAuth] Profile fetch failed after login');
     return { error: 'Login succeeded but the server is temporarily unavailable. Please try again in a moment.' };
   }, [fetchProfile]);
