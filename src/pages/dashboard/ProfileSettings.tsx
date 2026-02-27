@@ -35,7 +35,7 @@ const ProfileSettings = () => {
 
   const fetchUserRole = async () => {
     if (!user) return;
-    const result = await djangoApi.getUserRole(user.id);
+    const result = await djangoApi.getUserRole();
     if (!result.error && result.data) setUserRole(result.data.role);
     else if (profile?.role) setUserRole(profile.role);
   };

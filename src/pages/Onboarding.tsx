@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import {
-  deleteOnboardingSession,
   getOnboardingStorageKeys,
   loadOnboardingSession,
   saveOnboardingSession,
@@ -457,11 +456,6 @@ const Onboarding = () => {
       });
 
       // 5. Cleanup local storage
-      try {
-        await deleteOnboardingSession();
-      } catch {
-        // ignore cleanup errors
-      }
       if (userId) {
         const keys = getOnboardingStorageKeys(userId);
         localStorage.removeItem(keys.data);

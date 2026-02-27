@@ -29,7 +29,7 @@ const DashboardRouter = () => {
       }
 
       try {
-        const { data, error } = await djangoApi.getUserRole(profile.id);
+        const { data, error } = await djangoApi.getUserRole();
         if (data && !error) {
           setUserRole(data.role);
         } else {
