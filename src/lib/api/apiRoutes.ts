@@ -43,8 +43,7 @@ export const API_ROUTES = {
   // ── Activity Logs ──
   ACTIVITY_LOGS: '/api/activity-logs/',
 
-  // ── User Roles ──
-  USER_ROLE: '/api/user-role/',
+  // ── Admin Users ──
   ADMIN_USERS: '/api/user-roles/admins/',
 
   // ── Admin Invites ──
@@ -56,7 +55,6 @@ export const API_ROUTES = {
   INVITE_ACCEPT: (id: string) => `/api/invites/${id}/accept/`,
 
   // ── Face Recognition ──
-  FACE_ENROLLMENT_STATUS: (userId: string) => `/api/face/enrollment-status/${userId}/`,
   FACE_ENROLL: '/api/face/enroll/',
   FACE_RECOGNIZE: '/api/recognize-frame/',
 

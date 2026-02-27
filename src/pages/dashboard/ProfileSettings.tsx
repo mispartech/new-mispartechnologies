@@ -20,7 +20,7 @@ const ProfileSettings = () => {
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [faceImageUrl, setFaceImageUrl] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const userRole = profile?.role || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -30,15 +30,7 @@ const ProfileSettings = () => {
       setProfileData({ first_name: profile.first_name || '', last_name: profile.last_name || '', email: profile.email || '', phone_number: profile.phone_number || '', gender: profile.gender || '' });
       setFaceImageUrl(profile.face_image_url);
     }
-    fetchUserRole();
   }, [profile]);
-
-  const fetchUserRole = async () => {
-    if (!user) return;
-    const result = await djangoApi.getUserRole();
-    if (!result.error && result.data) setUserRole(result.data.role);
-    else if (profile?.role) setUserRole(profile.role);
-  };
 
   const handleProfileUpdate = async () => {
     setIsLoading(true);
