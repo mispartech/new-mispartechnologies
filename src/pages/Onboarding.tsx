@@ -15,6 +15,10 @@ import {
   getOnboardingStorageKeys,
   loadOnboardingSession,
   saveOnboardingSession,
+  normalizeToCamelCase,
+  setOnboardingCookie,
+  getOnboardingCookie,
+  clearOnboardingCookie,
 } from '@/lib/onboardingSession';
 import {
   Building2,
@@ -289,16 +293,17 @@ const Onboarding = () => {
       let hydrated = false;
       try {
         const persisted = await loadOnboardingSession();
-        if (persisted?.data && !didHydrateRef.current) {
+        if (persisted?.data && !persisted.is_completed && !didHydrateRef.current) {
           didHydrateRef.current = true;
           hydrated = true;
-          const restored = persisted.data as Partial<OnboardingData>;
+          // Normalize snake_case keys back to camelCase (handles failed final submit data)
+          const normalized = normalizeToCamelCase(persisted.data);
+          const restored = normalized as Partial<OnboardingData>;
           setStep(Math.min(5, Math.max(1, persisted.step || 1)));
           setData((prev) => ({
             ...prev,
             ...preFilled,
             ...restored,
-            // Keep admin name from profile if not in saved session
             adminFirstName: restored.adminFirstName || preFilled.adminFirstName || prev.adminFirstName,
             adminLastName: restored.adminLastName || preFilled.adminLastName || prev.adminLastName,
           }));
@@ -354,12 +359,18 @@ const Onboarding = () => {
       // ignore
     }
 
-    // Debounced save to Django backend
+    // Set cookie marker so we can detect active onboarding even if localStorage is cleared
+    setOnboardingCookie(userId);
+
+    // Debounced save to Django backend (draft mode — camelCase, is_draft flag)
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
-      console.log('[Onboarding] Saving session to backend, step:', step);
-      saveOnboardingSession({ step, data: data as unknown as Record<string, unknown> }).catch((e) => {
-        console.warn('[Onboarding] Failed to save session:', e);
+      console.log('[Onboarding] Saving draft to backend, step:', step);
+      saveOnboardingSession({
+        step,
+        data: { ...(data as unknown as Record<string, unknown>), is_draft: true },
+      }).catch((e) => {
+        console.warn('[Onboarding] Failed to save draft:', e);
       });
     }, 500);
 
@@ -458,12 +469,13 @@ const Onboarding = () => {
       // Refresh profile so is_onboarded reflects backend truth immediately
       await refreshUser();
 
-      // 5. Cleanup local storage
+      // Only clear storage AFTER successful submission
       if (userId) {
         const keys = getOnboardingStorageKeys(userId);
         localStorage.removeItem(keys.data);
         localStorage.removeItem(keys.step);
       }
+      clearOnboardingCookie();
 
       toast({
         title: 'Setup Complete!',
@@ -474,6 +486,7 @@ const Onboarding = () => {
     } catch (error: any) {
       console.error('Onboarding error:', error);
 
+      // Data is SAFE in localStorage — do NOT clear anything on failure
       toast({
         title: 'Setup Failed',
         description: error?.message || 'We could not complete setup. Please try again.',
