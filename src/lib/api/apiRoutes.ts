@@ -56,6 +56,7 @@ export const API_ROUTES = {
 
   // ── Face Recognition ──
   FACE_ENROLL: '/api/face/enroll/',
+  FACE_ENROLLMENT_STATUS: '/api/face-enrollment-status/',
   FACE_RECOGNIZE: '/api/recognize-frame/',
 
   // ── Dashboard Stats ──

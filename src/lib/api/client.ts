@@ -485,6 +485,10 @@ class DjangoApiClient {
 
   // ═══════════════════════════ FACE ═══════════════════════════
 
+  async getFaceEnrollmentStatus(options?: { silent?: boolean }): Promise<ApiResponse<{ enrolled: boolean }>> {
+    return this.request(API_ROUTES.FACE_ENROLLMENT_STATUS, { silent: options?.silent });
+  }
+
   async enrollFace(
     userId: string,
     imageBase64: string,

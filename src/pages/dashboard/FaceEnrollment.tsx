@@ -129,21 +129,12 @@ const FaceEnrollment = () => {
     while (Date.now() - startedAt < ENROLLMENT_POLL_TIMEOUT_MS) {
       if (!isMountedRef.current) return false;
 
-      // Re-fetch the profile from /api/profile/
-      await refreshUser();
-
-      // After refresh, we need to wait a tick for state to update,
-      // so we poll by fetching profile directly
-      const profileResult = await djangoApi.getProfile({ silent: true });
-      if (!profileResult.error && profileResult.data) {
-        const ready =
-          profileResult.data.face_image_uploaded === true &&
-          profileResult.data.face_embedding_status === 'READY';
-        if (ready) {
-          // One final refresh to sync AuthContext
-          await refreshUser();
-          return true;
-        }
+      // Check enrollment status via dedicated endpoint
+      const statusResult = await djangoApi.getFaceEnrollmentStatus({ silent: true });
+      if (!statusResult.error && statusResult.data?.enrolled === true) {
+        // Sync AuthContext with latest profile
+        await refreshUser();
+        return true;
       }
 
       await sleep(ENROLLMENT_POLL_INTERVAL_MS);
