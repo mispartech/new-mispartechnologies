@@ -22,9 +22,15 @@ const DashboardLayout = () => {
     }
   }, [djangoLoading, isAuthenticated, djangoUser, navigate]);
 
-  // Redirect to enrollment if not enrolled (but not if already on enrollment page)
+  // Enforce onboarding + enrollment gates from profile
   useEffect(() => {
     if (djangoLoading || !djangoUser) return;
+
+    if (djangoUser.is_onboarded !== true) {
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+
     if (!isEnrolled && location.pathname !== '/dashboard/face-enrollment') {
       navigate('/dashboard/face-enrollment');
     }
