@@ -1,153 +1,152 @@
 
 
-# Fix Onboarding Data Persistence -- Root Cause Analysis and Plan
+## Problem Analysis
 
-## Root Cause: Why Your Onboarding Data Keeps Getting Lost
+There are **three interconnected issues** causing the broken logout and missing login button:
 
-After a thorough audit, there are **two critical bugs** causing this:
+### Issue 1: Logout page never actually signs out
 
-### Bug 1: Data Format Mismatch Between Save and Restore
-
-The auto-save (runs every time you change a field) sends **camelCase frontend data** to the backend:
-```text
-{ organizationType: "church", organizationName: "My Church", adminRole: "Pastor" }
+The console on `/logout` shows:
+```
+[DjangoAuth] Auth state change: SIGNED_IN
+[DjangoAuth] Fetching profile from Django...
 ```
 
-But the **final submit** sends **snake_case transformed data** to the **same endpoint**:
-```text
-{ organization_type: "church", organization_name: "My Church", is_completed: true }
-```
+This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
 
-When the final submit **fails** (due to an error), the backend has already received the snake_case data from that attempt. On the next page load, the restore logic tries to map `persisted.data` back into the frontend form, but the field names don't match -- so **everything appears blank**.
+The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
 
-### Bug 2: No Draft vs Final Distinction
+### Issue 2: Login button not showing on the navbar
 
-Both the auto-save and the final submit use `PUT /api/onboarding/` with no way for the backend to tell them apart. If the backend treats any `PUT` as a finalization attempt, it may clear or transform the stored data, corrupting the draft.
+The Navbar conditionally renders based on `isLoading`:
+- If `isLoading` is `true` -> shows a skeleton placeholder
+- If `isAuthenticated` is `true` -> shows user dropdown
+- If neither -> shows Login button
+
+Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
+
+The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
+
+### Issue 3: No Django logout endpoint needed
+
+**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
 
 ---
 
-## The Fix: Hybrid Persistence with Cookie Marker
+## Fix Plan
 
-### Architecture
+### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
 
-```text
-User fills form
-    |
-    v
-[1] Save to localStorage immediately (every field change)
-[2] Set a cookie marker: "onboarding_in_progress=userId" (survives browser cleanup)
-[3] Debounced save to backend (500ms) -- DRAFT format only (camelCase, no is_completed)
-    |
-    v
-User clicks "Complete Setup"
-    |
-    v
-[4] Final submit: snake_case transformed data with is_completed: true
-[5] On success: clear localStorage + clear cookie + refreshUser()
-[6] On failure: data is SAFE in localStorage -- user can resume
-```
+- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
+- Wrap in try/catch so it never throws
+- As a safety net, manually remove Supabase keys from localStorage if signOut fails
 
-### Changes Required
+### 2. Fix the `Logout.tsx` component
 
-#### 1. `src/lib/onboardingSession.ts` -- Add Cookie Helpers
+- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
+- Clear user state and redirect immediately
+- Don't rely on the auth context `logout()` which races with initialization
 
-- Add `setOnboardingCookie(userId)` -- sets a simple cookie `mispar_onboarding_active={userId}` with 30-day expiry
-- Add `getOnboardingCookie()` -- reads the cookie to detect if onboarding was in progress
-- Add `clearOnboardingCookie()` -- removes the cookie after successful completion
-- These are lightweight markers only -- all real data stays in localStorage
+### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
 
-#### 2. `src/pages/Onboarding.tsx` -- Fix Data Flow
+- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
+- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
 
-**Restore logic (on page load):**
-- Try backend first (existing behavior)
-- If backend data has snake_case keys, **transform them back** to camelCase before applying
-- Fall back to localStorage (existing behavior)
-- Fall back to cookie marker -- if cookie exists but no data found, show a "your previous session may have expired" message rather than a blank form
+### 4. Unify the `DashboardHeader.tsx` logout
 
-**Auto-save logic (on field change):**
-- Continue saving to localStorage immediately (existing)
-- Set cookie marker on first save (new)
-- Debounced backend save: send data **as-is in camelCase** with a `is_draft: true` flag so the backend knows NOT to process it as a finalization
-
-**Final submit logic:**
-- Transform to snake_case with `is_completed: true` (keep existing)
-- On **success only**: clear localStorage, clear cookie, call `refreshUser()`
-- On **failure**: do NOT clear anything -- data is safe in localStorage for next attempt
-
-#### 3. `src/lib/api/client.ts` -- No Changes Needed
-
-The `saveOnboardingSession` method already accepts any `Record<string, unknown>` payload. The differentiation happens in the data itself (`is_draft` vs `is_completed`).
-
-#### 4. `src/contexts/DjangoAuthContext.tsx` -- No Changes Needed
-
-The `refreshUser()` call after successful onboarding already syncs `is_onboarded` correctly.
+- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
 
 ---
 
 ## Technical Details
 
-### Cookie Format
-```text
-Name:  mispar_onboarding_active
-Value: {userId}
-Path:  /
-MaxAge: 30 days
-SameSite: Lax
-```
+### File: `src/contexts/DjangoAuthContext.tsx`
 
-This cookie contains NO sensitive data -- just the user ID as a marker that onboarding was in progress. Its only purpose is to detect "this user was doing onboarding" even if localStorage gets cleared.
-
-### Snake-to-Camel Transform Map
-
-When restoring from backend, if the data contains snake_case keys, map them:
-```text
-organization_type    -> organizationType
-organization_name    -> organizationName
-admin_first_name     -> adminFirstName
-admin_last_name      -> adminLastName
-service_schedules    -> serviceSchedules
-```
-
-This prevents the blank-form bug when a failed final submit overwrote the draft.
-
-### Auto-Save Payload (Draft)
-```json
-{
-  "step": 3,
-  "data": {
-    "organizationType": "church",
-    "organizationName": "Grace Church",
-    "is_draft": true
+Changes to the `logout` function:
+```typescript
+const logout = useCallback(async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    console.error('[DjangoAuth] signOut error, clearing manually:', err);
+    // Fallback: manually clear Supabase tokens from localStorage
+    const keys = Object.keys(localStorage).filter(k =>
+      k.startsWith('sb-')
+    );
+    keys.forEach(k => localStorage.removeItem(k));
   }
-}
+  setUser(null);
+}, []);
 ```
 
-### Final Submit Payload
-```json
-{
-  "step": 5,
-  "data": {
-    "organization_name": "Grace Church",
-    "organization_type": "church",
-    "is_completed": true
+Changes to `onAuthStateChange` to prevent double-fetch race:
+- Track whether `initialize()` has already completed
+- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
+- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+
+### File: `src/pages/Logout.tsx`
+
+Rewrite to bypass the auth context race condition:
+```typescript
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+const Logout = () => {
+  const hasRun = useRef(false);
+
+  useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    const doLogout = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (err) {
+        console.error('[Logout] signOut failed, clearing manually:', err);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+      } finally {
+        window.location.href = '/';
+      }
+    };
+
+    doLogout();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground">Signing out...</p>
+    </div>
+  );
+};
+```
+
+### File: `src/components/dashboard/DashboardHeader.tsx`
+
+Replace the direct Supabase call with the unified auth context:
+```typescript
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+// ...
+const { logout } = useDjangoAuth();
+
+const handleLogout = async () => {
+  setIsLoggingOut(true);
+  try {
+    await logout();
+    window.location.href = '/';
+  } catch {
+    // fallback
+    window.location.href = '/';
   }
-}
+};
 ```
 
----
+### Summary of changes
 
-## Files to Modify
-
-| File | Change |
+| File | What Changes |
 |---|---|
-| `src/lib/onboardingSession.ts` | Add cookie helpers, add snake-to-camel transformer |
-| `src/pages/Onboarding.tsx` | Fix restore logic to handle both formats, add cookie marker on save, add `is_draft` flag to auto-save, protect data on submit failure |
-
-## What This Solves
-
-- Data survives failed final submissions (localStorage is never cleared on error)
-- Data survives page refreshes mid-onboarding (localStorage + cookie marker)
-- Data survives browser storage cleanup (cookie marker detects lost session)
-- Backend draft data can be correctly restored even if format differs
-- No more filling out the same form 10 times
+| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
+| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
+| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
 
