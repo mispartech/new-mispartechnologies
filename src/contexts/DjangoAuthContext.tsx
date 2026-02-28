@@ -12,8 +12,7 @@ interface User {
   department?: string;
   department_id?: string;
   face_image_url?: string;
-  face_image_uploaded?: boolean;
-  face_embedding_status?: 'NOT_STARTED' | 'PROCESSING' | 'READY' | 'FAILED';
+  face_enrolled?: boolean;
   phone_number?: string;
   gender?: string;
   is_onboarded?: boolean;

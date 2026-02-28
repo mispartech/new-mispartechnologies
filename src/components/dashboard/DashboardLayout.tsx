@@ -13,8 +13,7 @@ const DashboardLayout = () => {
   const { user: djangoUser, isLoading: djangoLoading, isAuthenticated } = useDjangoAuth();
 
   // Derive enrollment status directly from profile
-  const enrollmentStatus = djangoUser?.face_embedding_status || 'NOT_STARTED';
-  const isEnrolled = djangoUser?.face_image_uploaded === true && enrollmentStatus === 'READY';
+  const isEnrolled = djangoUser?.face_enrolled === true;
 
   useEffect(() => {
     if (djangoLoading) return;
@@ -52,8 +51,7 @@ const DashboardLayout = () => {
     department: djangoUser.department,
     department_id: djangoUser.department_id,
     face_image_url: djangoUser.face_image_url,
-    face_image_uploaded: djangoUser.face_image_uploaded,
-    face_embedding_status: djangoUser.face_embedding_status,
+    face_enrolled: djangoUser.face_enrolled,
     phone_number: djangoUser.phone_number,
     gender: djangoUser.gender,
     is_onboarded: djangoUser.is_onboarded,
