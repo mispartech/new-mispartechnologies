@@ -39,7 +39,7 @@ const MemberDashboard = () => {
         setDepartment(deptData);
       }
 
-      const { data: memberStats } = await djangoApi.getMemberDashboardStats(profile.id);
+      const { data: memberStats } = await djangoApi.getMemberDashboardStats();
       if (memberStats) {
         setStats({
           totalAttendance: memberStats.total_attendance || 0,

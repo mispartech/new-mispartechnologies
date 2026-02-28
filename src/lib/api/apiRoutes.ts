@@ -61,7 +61,7 @@ export const API_ROUTES = {
 
   // ── Dashboard Stats ──
   DASHBOARD_STATS: '/api/dashboard/stats/',
-  MEMBER_DASHBOARD_STATS: (userId: string) => `/api/dashboard/member-stats/${userId}/`,
+  MEMBER_DASHBOARD_STATS: '/api/dashboard/member-stats/',
 
   // ── Reports ──
   REPORTS_ATTENDANCE: '/api/reports/attendance/',

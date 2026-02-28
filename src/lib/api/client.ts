@@ -531,14 +531,14 @@ class DjangoApiClient {
     return this.request(API_ROUTES.DASHBOARD_STATS);
   }
 
-  async getMemberDashboardStats(userId: string): Promise<ApiResponse<{
+  async getMemberDashboardStats(): Promise<ApiResponse<{
     total_attendance: number;
     this_month: number;
     this_week: number;
     attended_today: boolean;
     recent_attendance: any[];
   }>> {
-    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS(userId));
+    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS);
   }
 
   // ═══════════════════════════ REPORTS ═══════════════════════════
