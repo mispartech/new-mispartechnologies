@@ -265,8 +265,8 @@ const Onboarding = () => {
       }
 
       // Already onboarded — go to dashboard
-      const hasOrg = !!djangoUser.organization_id && djangoUser.organization_id !== 'null' && djangoUser.organization_id !== '';
-      if (hasOrg) {
+      const isOnboarded = djangoUser.is_onboarded === true;
+      if (isOnboarded) {
         navigate('/dashboard', { replace: true });
         return;
       }
