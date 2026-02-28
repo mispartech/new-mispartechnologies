@@ -245,7 +245,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const totalSteps = 5;
-  const { isAuthenticated: djangoAuthenticated, user: djangoUser, isLoading: djangoLoading } = useDjangoAuth();
+  const { isAuthenticated: djangoAuthenticated, user: djangoUser, isLoading: djangoLoading, refreshUser } = useDjangoAuth();
 
   const didHydrateRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
@@ -265,13 +265,13 @@ const Onboarding = () => {
       }
 
       // Already onboarded — go to dashboard
-      const hasOrg = !!djangoUser.organization_id && djangoUser.organization_id !== 'null' && djangoUser.organization_id !== '';
-      if (hasOrg) {
+      const isOnboarded = djangoUser.is_onboarded === true;
+      if (isOnboarded) {
         navigate('/dashboard', { replace: true });
         return;
       }
 
-      // Authenticated user without org — allow onboarding
+      // Authenticated user not yet onboarded — allow onboarding
       const uid = djangoUser.id;
       setUserId(uid);
 
@@ -454,6 +454,9 @@ const Onboarding = () => {
           is_completed: true,
         } as unknown as Record<string, unknown>,
       });
+
+      // Refresh profile so is_onboarded reflects backend truth immediately
+      await refreshUser();
 
       // 5. Cleanup local storage
       if (userId) {

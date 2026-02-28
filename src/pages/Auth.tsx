@@ -133,12 +133,8 @@ const Auth = () => {
   useEffect(() => {
     if (authLoading) return;
     if (isAuthenticated && user) {
-      const hasOrg = !!user.organization_id && user.organization_id !== 'null' && user.organization_id !== '';
-      if (hasOrg) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        navigate('/onboarding', { replace: true });
-      }
+      const isOnboarded = user.is_onboarded === true;
+      navigate(isOnboarded ? '/dashboard' : '/onboarding', { replace: true });
     }
   }, [isAuthenticated, user, authLoading, navigate]);
 
