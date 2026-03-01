@@ -1,63 +1,152 @@
 
 
-## Member/Employee Sidebar Navigation Enhancement
+## Problem Analysis
 
-### Problem
-Non-admin users (members/employees) currently see only 3 sidebar items: Dashboard, My Attendance, and My Profile. This is too sparse for an attendance system where members need to engage with their records, view analytics, and access various attendance-related features.
+There are **three interconnected issues** causing the broken logout and missing login button:
 
-### Current State
-The sidebar in `DashboardSidebar.tsx` filters menu items by role. The `member` role only has access to:
-- Dashboard (`/dashboard`)
-- My Attendance (`/dashboard/my-attendance`)
-- My Profile (`/dashboard/profile`)
+### Issue 1: Logout page never actually signs out
 
-### Proposed New Sidebar Items for Members
+The console on `/logout` shows:
+```
+[DjangoAuth] Auth state change: SIGNED_IN
+[DjangoAuth] Fetching profile from Django...
+```
 
-| Nav Item | Icon | Route | Purpose |
-|----------|------|-------|---------|
-| Dashboard | LayoutDashboard | `/dashboard` | Overview with stats, streaks, quick actions (existing) |
-| My Attendance | Calendar | `/dashboard/my-attendance` | Full attendance history table with filters (existing) |
-| Attendance Summary | TrendingUp | `/dashboard/attendance-summary` | Visual analytics: charts, heatmap, trends, monthly/weekly breakdowns |
-| My Streaks & Badges | Trophy | `/dashboard/streaks` | Gamified streak tracker, achievement badges, consistency metrics |
-| My Schedule | CalendarClock | `/dashboard/my-schedule` | View assigned schedules (services, shifts, classes depending on org type) |
-| My Profile | UserCheck | `/dashboard/profile` | Edit personal info, view face enrollment status (existing) |
+This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
 
-### New Pages to Create
+The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
 
-**1. Attendance Summary Page** (`src/pages/dashboard/AttendanceSummary.tsx`)
-- Reuses existing `AttendanceChart` and `AttendanceHeatmap` components already in the codebase
-- Adds monthly/weekly attendance percentage cards
-- Date range filtering
-- Organization-type-aware labels (e.g., "Services Attended" for church, "Days Present" for corporate)
+### Issue 2: Login button not showing on the navbar
 
-**2. Streaks & Badges Page** (`src/pages/dashboard/StreaksAndBadges.tsx`)
-- Expands the existing `AttendanceStreakTracker` component into a full page
-- Shows current streak, longest streak, all-time stats
-- Achievement badges grid with progress indicators
-- Milestone tracking
+The Navbar conditionally renders based on `isLoading`:
+- If `isLoading` is `true` -> shows a skeleton placeholder
+- If `isAuthenticated` is `true` -> shows user dropdown
+- If neither -> shows Login button
 
-**3. My Schedule Page** (`src/pages/dashboard/MySchedule.tsx`)
-- Read-only view of schedules assigned to the member's organization
-- Shows upcoming schedule entries (next service, next shift, etc.)
-- Uses organization type to display contextual labels (from the onboarding terminology system)
+Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
 
-### Files to Modify
+The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
 
-1. **`src/components/dashboard/DashboardSidebar.tsx`** -- Add 3 new nav items to the `menuItems` array with `member` in their roles array
+### Issue 3: No Django logout endpoint needed
 
-2. **`src/App.tsx`** -- Add 3 new child routes under `/dashboard`
+**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
 
-### Files to Create
+---
 
-3. **`src/pages/dashboard/AttendanceSummary.tsx`** -- Chart-focused analytics page reusing existing components
-4. **`src/pages/dashboard/StreaksAndBadges.tsx`** -- Full-page streak and badge view
-5. **`src/pages/dashboard/MySchedule.tsx`** -- Read-only schedule viewer
+## Fix Plan
 
-### Technical Notes
+### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
 
-- All new pages will use `useOutletContext` to access `profile` data, following the existing pattern
-- API calls will use `{ silent: true }` option to prevent 404 spam if backend endpoints are not yet ready
-- The `AttendanceHeatmap` component currently uses Supabase directly; the new pages will follow the same pattern with graceful fallback
-- No new API endpoints are required -- pages reuse existing `getAttendance` and `getSchedules` calls from the API client
-- Organization-type-aware labels will be derived from the profile's organization data (already fetched in `MemberDashboard`)
+- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
+- Wrap in try/catch so it never throws
+- As a safety net, manually remove Supabase keys from localStorage if signOut fails
+
+### 2. Fix the `Logout.tsx` component
+
+- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
+- Clear user state and redirect immediately
+- Don't rely on the auth context `logout()` which races with initialization
+
+### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
+
+- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
+- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
+
+### 4. Unify the `DashboardHeader.tsx` logout
+
+- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
+
+---
+
+## Technical Details
+
+### File: `src/contexts/DjangoAuthContext.tsx`
+
+Changes to the `logout` function:
+```typescript
+const logout = useCallback(async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    console.error('[DjangoAuth] signOut error, clearing manually:', err);
+    // Fallback: manually clear Supabase tokens from localStorage
+    const keys = Object.keys(localStorage).filter(k =>
+      k.startsWith('sb-')
+    );
+    keys.forEach(k => localStorage.removeItem(k));
+  }
+  setUser(null);
+}, []);
+```
+
+Changes to `onAuthStateChange` to prevent double-fetch race:
+- Track whether `initialize()` has already completed
+- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
+- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+
+### File: `src/pages/Logout.tsx`
+
+Rewrite to bypass the auth context race condition:
+```typescript
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+const Logout = () => {
+  const hasRun = useRef(false);
+
+  useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    const doLogout = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (err) {
+        console.error('[Logout] signOut failed, clearing manually:', err);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+      } finally {
+        window.location.href = '/';
+      }
+    };
+
+    doLogout();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground">Signing out...</p>
+    </div>
+  );
+};
+```
+
+### File: `src/components/dashboard/DashboardHeader.tsx`
+
+Replace the direct Supabase call with the unified auth context:
+```typescript
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+// ...
+const { logout } = useDjangoAuth();
+
+const handleLogout = async () => {
+  setIsLoggingOut(true);
+  try {
+    await logout();
+    window.location.href = '/';
+  } catch {
+    // fallback
+    window.location.href = '/';
+  }
+};
+```
+
+### Summary of changes
+
+| File | What Changes |
+|---|---|
+| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
+| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
+| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
 
