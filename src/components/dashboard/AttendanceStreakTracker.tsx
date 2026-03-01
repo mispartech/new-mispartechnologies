@@ -24,7 +24,8 @@ const AttendanceStreakTracker = ({ userId }: AttendanceStreakTrackerProps) => {
 
   const calculateStreak = async () => {
     try {
-      const { data, error } = await djangoApi.getAttendance({ user_id: userId });
+      const { data, error, status } = await djangoApi.getAttendance({ user_id: userId }, { silent: true });
+      if (status === 404) { setLoading(false); return; }
       if (error || !data || data.length === 0) { setLoading(false); return; }
 
       const uniqueDates = [...new Set(data.map((d: any) => d.date))].sort().reverse() as string[];

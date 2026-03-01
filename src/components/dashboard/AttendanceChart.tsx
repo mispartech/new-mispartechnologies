@@ -44,7 +44,8 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
       if (userId) params.user_id = userId;
       if (organizationId) params.organization_id = organizationId;
 
-      const { data: memberData } = await djangoApi.getAttendance(params);
+      const { data: memberData, status } = await djangoApi.getAttendance(params, { silent: true });
+      if (status === 404) { setIsLoading(false); return; }
 
       let visitorData: any[] = [];
       if (showVisitors && !userId) {

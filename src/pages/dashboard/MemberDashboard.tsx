@@ -40,7 +40,7 @@ const MemberDashboard = () => {
       }
 
       try {
-        const { data: memberStats, status } = await djangoApi.getMemberDashboardStats();
+        const { data: memberStats, status } = await djangoApi.getMemberDashboardStats({ silent: true });
         if (status !== 404 && memberStats) {
           setStats({
             totalAttendance: memberStats.total_attendance || 0,
