@@ -1,14 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
-import { isUuid } from '@/lib/isUuid';
+import { djangoApi } from '@/lib/api/client';
 import { 
   format, 
-  subMonths, 
-  startOfMonth, 
   endOfMonth,
-  eachDayOfInterval,
   getDay,
   startOfWeek,
   addDays,
@@ -65,31 +61,24 @@ const AttendanceHeatmap = ({ userId, organizationId }: AttendanceHeatmapProps) =
   const fetchYearData = async () => {
     setIsLoading(true);
     try {
-      // Skip if userId is a non-UUID (Django integer ID)
-      if (userId && !isUuid(userId)) {
+      const startDate = `${selectedYear}-01-01`;
+      const endDate = `${selectedYear}-12-31`;
+
+      const params: any = { start_date: startDate, end_date: endDate };
+      if (userId) params.user_id = userId;
+      if (organizationId) params.organization_id = organizationId;
+
+      const { data, status } = await djangoApi.getAttendance(params, { silent: true });
+
+      // Gracefully handle 404 (endpoint not implemented yet)
+      if (status === 404 || !data) {
         setIsLoading(false);
         return;
       }
 
-      const startDate = `${selectedYear}-01-01`;
-      const endDate = `${selectedYear}-12-31`;
-
-      let query = supabase
-        .from('attendance')
-        .select('date')
-        .gte('date', startDate)
-        .lte('date', endDate);
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
       // Count attendance per day
       const countMap = new Map<string, number>();
-      data?.forEach((record) => {
+      data.forEach((record: any) => {
         const count = countMap.get(record.date) || 0;
         countMap.set(record.date, count + 1);
       });

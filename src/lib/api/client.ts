@@ -219,7 +219,7 @@ class DjangoApiClient {
     department_id?: string;
     organization_id: string;
   }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.MEMBERS, {
+    return this.request(API_ROUTES.MEMBERS_CREATE, {
       method: 'POST',
       body: JSON.stringify(data),
     });
