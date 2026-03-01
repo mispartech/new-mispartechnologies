@@ -14,6 +14,7 @@ export const API_ROUTES = {
 
   // ── Members ──
   MEMBERS: '/api/members/',
+  MEMBERS_CREATE: '/api/members/create/',
   MEMBER: (id: string) => `/api/members/${id}/`,
   MEMBER_INVITE: '/api/members/invite/',
   MEMBER_BULK_INVITE: '/api/members/bulk-invite/',

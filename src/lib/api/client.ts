@@ -46,7 +46,9 @@ function getErrorNotification(status: number, serverMessage?: string): { title: 
     return { title: 'Access Denied', description: 'You do not have permission to perform this action.' };
   }
   if (status === 404) {
-    return { title: 'Not Found', description: 'Requested resource not found.' };
+    // Suppress 404 toasts globally — most endpoints are not yet implemented.
+    // Components should handle 404 status gracefully via response checking.
+    return null;
   }
   if (status >= 500) {
     return { title: 'Server Error', description: 'Server error. Please try again later.' };
