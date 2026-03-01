@@ -322,7 +322,7 @@ class DjangoApiClient {
     end_date?: string;
     limit?: number;
     include_profiles?: string;
-  }): Promise<ApiResponse<any[]>> {
+  }, options?: { silent?: boolean }): Promise<ApiResponse<any[]>> {
     const query = params
       ? '?' +
         new URLSearchParams(
@@ -331,7 +331,7 @@ class DjangoApiClient {
           ) as Record<string, string>,
         ).toString()
       : '';
-    return this.request(`${API_ROUTES.ATTENDANCE}${query}`);
+    return this.request(`${API_ROUTES.ATTENDANCE}${query}`, { silent: options?.silent });
   }
 
   async markAttendance(data: {
@@ -531,14 +531,14 @@ class DjangoApiClient {
     return this.request(API_ROUTES.DASHBOARD_STATS);
   }
 
-  async getMemberDashboardStats(): Promise<ApiResponse<{
+  async getMemberDashboardStats(options?: { silent?: boolean }): Promise<ApiResponse<{
     total_attendance: number;
     this_month: number;
     this_week: number;
     attended_today: boolean;
     recent_attendance: any[];
   }>> {
-    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS);
+    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS, { silent: options?.silent });
   }
 
   // ═══════════════════════════ REPORTS ═══════════════════════════
