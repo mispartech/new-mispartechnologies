@@ -53,7 +53,6 @@ const MemberDashboard = () => {
       } catch {
         // Endpoint may not exist yet — silently skip
       }
-      }
     } catch (error) {
       console.error('Error fetching member data:', error);
     } finally {
