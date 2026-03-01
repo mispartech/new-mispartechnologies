@@ -1,143 +1,152 @@
 
-Objective:
-Make onboarding drafts truly durable for logged-in admin users so progress is never lost on refresh/errors, and ensure completed users are not re-routed incorrectly.
 
-What I verified in the codebase (root causes):
-1) Final submit currently clears local draft even when backend save may have failed
-- File: src/pages/Onboarding.tsx
-- `handleSubmit` calls `djangoApi.saveOnboardingSession(...)` directly (line ~448) and does not check `resp.error` / `resp.status`.
-- `djangoApi.saveOnboardingSession` returns `{status,error}` and does not throw on 4xx/5xx.
-- Result: frontend can proceed to clear localStorage/cookie and navigate as if success, even if backend rejected or failed.
+## Problem Analysis
 
-2) Draft save path can silently ignore backend 404
-- File: src/lib/onboardingSession.ts
-- `saveOnboardingSession` currently does:
-  - `if (resp.status === 404) return;`
-- Result: UI logs “Saving draft…” but backend persistence may not exist and no hard failure is surfaced.
+There are **three interconnected issues** causing the broken logout and missing login button:
 
-3) Cookie fallback was added but not actually used in restore logic
-- File: src/pages/Onboarding.tsx
-- `getOnboardingCookie` is imported but never used.
-- Result: if localStorage is missing/corrupted and backend draft is unavailable, recovery path is incomplete.
+### Issue 1: Logout page never actually signs out
 
-4) Role mismatch can route newly onboarded admins into member dashboard, causing member-stats 404
-- Files: src/pages/Onboarding.tsx, src/pages/dashboard/DashboardRouter.tsx
-- Onboarding sends `admin_role` as human labels like “Parish Pastor”.
-- Dashboard router admin check expects snake_case values like `parish_pastor`.
-- Result: admin can be treated as member, calling `/api/dashboard/member-stats/` and triggering the 404 you are seeing.
+The console on `/logout` shows:
+```
+[DjangoAuth] Auth state change: SIGNED_IN
+[DjangoAuth] Fetching profile from Django...
+```
 
-5) I could not directly inspect your Django DB schema from this frontend project
-- `security--get_table_schema` failed because this project has no accessible Supabase schema context for that backend DB.
-- So “no onboarding draft table” cannot be confirmed from this repo alone, but frontend symptoms are fully consistent with missing or non-persisting backend draft storage.
+This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
 
-Why your data disappears after an error (exact failure chain):
-1. You fill onboarding (localStorage has data).
-2. You click Complete Setup.
-3. Final API returns non-success or partial backend failure (not properly validated in frontend).
-4. Frontend still executes success path and clears localStorage + cookie.
-5. Refresh occurs -> nothing to restore locally; backend may also have no draft -> form appears reset.
+The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
 
-Implementation plan (frontend + backend, in order):
+### Issue 2: Login button not showing on the navbar
 
-Phase 1 — Frontend hardening (must do first)
-A) Make onboarding API handling strict and explicit
-- File: src/lib/onboardingSession.ts
-- Change `saveOnboardingSession` to:
-  - throw on any non-2xx (including 404),
-  - return response payload/status so callers can verify.
-- Keep `loadOnboardingSession` 404-as-null for initial load only.
+The Navbar conditionally renders based on `isLoading`:
+- If `isLoading` is `true` -> shows a skeleton placeholder
+- If `isAuthenticated` is `true` -> shows user dropdown
+- If neither -> shows Login button
 
-B) Use the strict helper everywhere (no direct djangoApi call in submit)
-- File: src/pages/Onboarding.tsx
-- Replace direct `djangoApi.saveOnboardingSession(...)` in `handleSubmit` with strict helper.
-- On final submit:
-  1) cancel pending debounced draft timer,
-  2) send final payload,
-  3) refresh profile,
-  4) only clear localStorage/cookie if refreshed profile confirms `is_onboarded === true`.
-- If any step fails, do not clear anything.
+Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
 
-C) Prevent draft-vs-final race conditions
-- File: src/pages/Onboarding.tsx
-- Add guards:
-  - `isSubmittingRef` to block autosave while final submit is in progress,
-  - clear timeout before final submit,
-  - prevent trailing draft overwrite after final completion.
+The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
 
-D) Actually use cookie marker in restore path
-- File: src/pages/Onboarding.tsx
-- During hydration:
-  1) backend draft,
-  2) localStorage by user key,
-  3) cookie check (user match) to trigger recovery UX and keep user in onboarding with warning, not silent blank reset.
-- Keep normalizeToCamelCase for mixed backend payloads.
+### Issue 3: No Django logout endpoint needed
 
-E) Add deterministic admin-role normalization before routing
-- Files: src/pages/Onboarding.tsx, src/pages/dashboard/DashboardRouter.tsx
-- On submit: send canonical role values (e.g. `parish_pastor`) instead of display labels.
-- In DashboardRouter: normalize incoming role (`trim + lowercase + spaces->underscores`) before `ADMIN_ROLES.includes(...)`.
-- This removes false member routing and the `/api/dashboard/member-stats/` noise for admins.
+**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
 
-Phase 2 — Backend/Django contract + database persistence (required for true cross-session durability)
-A) Ensure `/api/onboarding/` draft persistence exists in DB
-- Create/verify a persistent draft store keyed by authenticated user (e.g. `onboarding_sessions` table/model):
-  - user_id (unique)
-  - step (int)
-  - data (jsonb/json)
-  - is_draft (bool)
-  - is_completed (bool)
-  - updated_at
+---
 
-B) Distinguish draft vs final on the backend
-- Draft request (`is_draft: true`):
-  - upsert draft only,
-  - never mark onboarding complete.
-- Final request (`is_completed: true`):
-  - run full completion transaction (org/profile/schedules/etc),
-  - set profile `is_onboarded=true`,
-  - mark draft completed,
-  - commit atomically.
+## Fix Plan
 
-C) Return explicit success contract
-- Response should include verifiable state, e.g.:
-  - `{ saved: true, mode: "draft" }` for draft
-  - `{ saved: true, mode: "final", is_onboarded: true }` for final
-- Frontend should only clear local draft when this contract is satisfied.
+### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
 
-Phase 3 — Validation and rollout checklist
-1) Network verification:
-- Draft typing triggers `PUT /api/onboarding/` with `is_draft: true`.
-- Final submit triggers `PUT /api/onboarding/` with `is_completed: true`.
-- No silent 404 acceptance.
+- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
+- Wrap in try/catch so it never throws
+- As a safety net, manually remove Supabase keys from localStorage if signOut fails
 
-2) Failure simulation:
-- Force backend error on final submit -> confirm local draft remains after refresh.
-- Force backend unavailable during draft save -> confirm local data still intact and user informed.
+### 2. Fix the `Logout.tsx` component
 
-3) Role/routing verification:
-- Newly onboarded admin lands on admin dashboard (not member dashboard).
-- No call to `/api/dashboard/member-stats/` for admin role.
+- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
+- Clear user state and redirect immediately
+- Don't rely on the auth context `logout()` which races with initialization
 
-4) DB verification on backend:
-- Confirm row exists/updates for draft during in-progress onboarding.
-- Confirm row finalized and profile `is_onboarded=true` after successful completion.
+### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
 
-Technical section (target file changes):
-- `src/lib/onboardingSession.ts`
-  - strict error semantics for save
-  - preserve normalize utility
-- `src/pages/Onboarding.tsx`
-  - strict submit flow with profile confirmation before clearing
-  - cancel/deconflict autosave timer on submit
-  - cookie-aware restore branch
-  - role value normalization in final payload
-- `src/pages/dashboard/DashboardRouter.tsx`
-  - normalize role before admin check
-- (Backend) Django onboarding endpoint/model
-  - persistent draft storage + explicit draft/final modes + atomic finalization
+- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
+- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
 
-Expected outcome after this plan:
-- Draft data survives refresh, API errors, and failed final submit.
-- Completed onboarding only clears local cache after backend truth confirms completion.
-- Admin users stop being misclassified as members, eliminating the member-stats 404 side effect.
-- You get the behavior you asked for: logged-in admin always sees prefilled in-progress onboarding until they truly complete it.
+### 4. Unify the `DashboardHeader.tsx` logout
+
+- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
+
+---
+
+## Technical Details
+
+### File: `src/contexts/DjangoAuthContext.tsx`
+
+Changes to the `logout` function:
+```typescript
+const logout = useCallback(async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    console.error('[DjangoAuth] signOut error, clearing manually:', err);
+    // Fallback: manually clear Supabase tokens from localStorage
+    const keys = Object.keys(localStorage).filter(k =>
+      k.startsWith('sb-')
+    );
+    keys.forEach(k => localStorage.removeItem(k));
+  }
+  setUser(null);
+}, []);
+```
+
+Changes to `onAuthStateChange` to prevent double-fetch race:
+- Track whether `initialize()` has already completed
+- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
+- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+
+### File: `src/pages/Logout.tsx`
+
+Rewrite to bypass the auth context race condition:
+```typescript
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+const Logout = () => {
+  const hasRun = useRef(false);
+
+  useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    const doLogout = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (err) {
+        console.error('[Logout] signOut failed, clearing manually:', err);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+      } finally {
+        window.location.href = '/';
+      }
+    };
+
+    doLogout();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground">Signing out...</p>
+    </div>
+  );
+};
+```
+
+### File: `src/components/dashboard/DashboardHeader.tsx`
+
+Replace the direct Supabase call with the unified auth context:
+```typescript
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+// ...
+const { logout } = useDjangoAuth();
+
+const handleLogout = async () => {
+  setIsLoggingOut(true);
+  try {
+    await logout();
+    window.location.href = '/';
+  } catch {
+    // fallback
+    window.location.href = '/';
+  }
+};
+```
+
+### Summary of changes
+
+| File | What Changes |
+|---|---|
+| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
+| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
+| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
+
