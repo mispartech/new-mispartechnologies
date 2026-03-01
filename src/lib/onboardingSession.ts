@@ -93,6 +93,8 @@ export const loadOnboardingSession = async () => {
  */
 export const saveOnboardingSession = async (payload: OnboardingSessionPayload) => {
   const resp = await djangoApi.saveOnboardingSession(payload);
-  if (resp.status === 404) return;
-  if (resp.error) throw new Error(resp.error);
+  if (resp.status < 200 || resp.status >= 300) {
+    throw new Error(resp.error || `Save failed with status ${resp.status}`);
+  }
+  return resp;
 };

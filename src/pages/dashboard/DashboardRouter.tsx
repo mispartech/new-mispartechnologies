@@ -9,9 +9,12 @@ const ADMIN_ROLES = [
   'ushering_head_admin', 'usher_admin', 'department_head'
 ];
 
+const normalizeRole = (role: string) =>
+  role.trim().toLowerCase().replace(/\s+/g, '_');
+
 const DashboardRouter = () => {
   const { profile } = useOutletContext<DashboardContext>();
-  const role = profile?.role || 'member';
+  const role = normalizeRole(profile?.role || 'member');
   const isAdmin = ADMIN_ROLES.includes(role);
 
   return isAdmin ? <DashboardHome /> : <MemberDashboard />;

@@ -253,6 +253,7 @@ const Onboarding = () => {
 
   const didHydrateRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // Storage keys computed inline where needed to avoid race conditions
 
