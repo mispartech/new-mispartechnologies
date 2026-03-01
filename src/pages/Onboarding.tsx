@@ -335,9 +335,19 @@ const Onboarding = () => {
         }
       }
 
-      // 3️⃣ No saved session — just apply pre-filled profile info
-      if (!hydrated) {
-        setData((prev) => ({ ...prev, ...preFilled }));
+      // 3️⃣ Cookie fallback: detect active onboarding session even if localStorage was cleared
+      if (!hydrated && !didHydrateRef.current) {
+        const cookieUserId = getOnboardingCookie();
+        if (cookieUserId === uid) {
+          // We know onboarding was in progress but data is gone — apply pre-filled only
+          // and let user continue from step 1 with a warning
+          didHydrateRef.current = true;
+          setData((prev) => ({ ...prev, ...preFilled }));
+          console.log('[Onboarding] Cookie marker found but no data — starting fresh with pre-filled info');
+        } else {
+          // No saved session — just apply pre-filled profile info
+          setData((prev) => ({ ...prev, ...preFilled }));
+        }
       }
 
       setIsAuthLoading(false);
@@ -363,9 +373,13 @@ const Onboarding = () => {
     // Set cookie marker so we can detect active onboarding even if localStorage is cleared
     setOnboardingCookie(userId);
 
+    // Skip backend draft save if final submit is in progress
+    if (isSubmittingRef.current) return;
+
     // Debounced save to Django backend (draft mode — camelCase, is_draft flag)
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
+      if (isSubmittingRef.current) return; // double-check
       console.log('[Onboarding] Saving draft to backend, step:', step);
       saveOnboardingSession({
         step,
@@ -443,10 +457,22 @@ const Onboarding = () => {
     }
 
     setIsLoading(true);
+    isSubmittingRef.current = true;
+
+    // Cancel any pending draft timer to prevent race conditions
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
     try {
+      // Normalize admin role to snake_case for backend
+      const normalizedRole = data.adminRole
+        ? data.adminRole.trim().toLowerCase().replace(/\s+/g, '_')
+        : '';
+
       // Save all onboarding data via Django PUT /api/onboarding/
-      // Django backend handles org creation, profile update, schedules internally
-      await djangoApi.saveOnboardingSession({
+      const resp = await saveOnboardingSession({
         step: totalSteps,
         data: {
           organization_name: data.organizationName,
@@ -455,6 +481,7 @@ const Onboarding = () => {
           size_range: data.sizeRange,
           admin_first_name: data.adminFirstName,
           admin_last_name: data.adminLastName,
+          admin_role: normalizedRole,
           service_schedules: data.serviceSchedules.map((s: any) => ({
             name: s.name || getScheduleItemLabel(data.organizationType),
             description: s.description,
@@ -470,13 +497,19 @@ const Onboarding = () => {
       // Refresh profile so is_onboarded reflects backend truth immediately
       await refreshUser();
 
-      // Only clear storage AFTER successful submission
+      // Only clear storage if profile confirms onboarding is complete
+      const profileConfirmed = djangoUser?.is_onboarded === true;
       if (userId) {
         const keys = getOnboardingStorageKeys(userId);
-        localStorage.removeItem(keys.data);
-        localStorage.removeItem(keys.step);
+        if (profileConfirmed) {
+          localStorage.removeItem(keys.data);
+          localStorage.removeItem(keys.step);
+          clearOnboardingCookie();
+        } else {
+          // Backend succeeded but profile not yet updated — keep data as safety net
+          console.warn('[Onboarding] Submit succeeded but is_onboarded not confirmed yet; keeping local data');
+        }
       }
-      clearOnboardingCookie();
 
       toast({
         title: 'Setup Complete!',
@@ -494,6 +527,7 @@ const Onboarding = () => {
         variant: 'destructive',
       });
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };
