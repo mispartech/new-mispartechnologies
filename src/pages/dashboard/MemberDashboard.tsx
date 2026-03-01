@@ -39,15 +39,19 @@ const MemberDashboard = () => {
         setDepartment(deptData);
       }
 
-      const { data: memberStats } = await djangoApi.getMemberDashboardStats();
-      if (memberStats) {
-        setStats({
-          totalAttendance: memberStats.total_attendance || 0,
-          thisMonth: memberStats.this_month || 0,
-          thisWeek: memberStats.this_week || 0,
-          attendedToday: memberStats.attended_today || false,
-        });
-        setRecentAttendance(memberStats.recent_attendance || []);
+      try {
+        const { data: memberStats, status } = await djangoApi.getMemberDashboardStats();
+        if (status !== 404 && memberStats) {
+          setStats({
+            totalAttendance: memberStats.total_attendance || 0,
+            thisMonth: memberStats.this_month || 0,
+            thisWeek: memberStats.this_week || 0,
+            attendedToday: memberStats.attended_today || false,
+          });
+          setRecentAttendance(memberStats.recent_attendance || []);
+        }
+      } catch {
+        // Endpoint may not exist yet — silently skip
       }
     } catch (error) {
       console.error('Error fetching member data:', error);
