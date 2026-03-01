@@ -28,6 +28,9 @@ import ActivityLogs from "./pages/dashboard/ActivityLogs";
 import ScheduleManagement from "./pages/dashboard/ScheduleManagement";
 import SiteManagement from "./pages/dashboard/SiteManagement";
 import FaceEnrollment from "./pages/dashboard/FaceEnrollment";
+import AttendanceSummary from "./pages/dashboard/AttendanceSummary";
+import StreaksAndBadges from "./pages/dashboard/StreaksAndBadges";
+import MySchedule from "./pages/dashboard/MySchedule";
 import PageWrapper from "./components/PageWrapper";
 
 const queryClient = new QueryClient();
@@ -51,6 +54,9 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardRouter />} />
                 <Route path="face-enrollment" element={<FaceEnrollment />} />
+                <Route path="attendance-summary" element={<AttendanceSummary />} />
+                <Route path="streaks" element={<StreaksAndBadges />} />
+                <Route path="my-schedule" element={<MySchedule />} />
                 <Route path="members" element={<MembersList />} />
                 <Route path="temp-members" element={<TempMembersList />} />
                 <Route path="attendance" element={<AttendanceCapture />} />

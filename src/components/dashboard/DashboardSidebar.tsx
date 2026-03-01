@@ -17,7 +17,9 @@ import {
   CalendarClock,
   Globe,
   Calendar,
-  History
+  History,
+  TrendingUp,
+  Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
@@ -39,6 +41,9 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['super_admin', 'admin', 'manager', 'member', 'parish_pastor', 'secretary', 'usher', 'department_head', 'ushering_head_admin', 'usher_admin'] },
     { label: 'My Attendance', icon: Calendar, href: '/dashboard/my-attendance', roles: ['member'] },
+    { label: 'Attendance Summary', icon: TrendingUp, href: '/dashboard/attendance-summary', roles: ['member'] },
+    { label: 'My Streaks & Badges', icon: Trophy, href: '/dashboard/streaks', roles: ['member'] },
+    { label: 'My Schedule', icon: CalendarClock, href: '/dashboard/my-schedule', roles: ['member'] },
     { label: 'Mark Attendance', icon: ScanFace, href: '/dashboard/attendance', roles: ['super_admin', 'admin', 'manager', 'usher', 'secretary', 'ushering_head_admin', 'usher_admin'] },
     { label: 'Attendance Logs', icon: ClipboardList, href: '/dashboard/attendance-logs', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'secretary', 'department_head'] },
     { label: 'Attendance History', icon: History, href: '/dashboard/attendance-history', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'secretary', 'department_head', 'ushering_head_admin', 'usher_admin'] },
