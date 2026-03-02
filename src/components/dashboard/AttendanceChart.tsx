@@ -31,52 +31,10 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
     }
   };
 
-  useEffect(() => { fetchChartData(); }, [timeRange, organizationId, userId]);
-
-  const fetchChartData = async () => {
-    setIsLoading(true);
-    try {
-      const { start, end } = getDateRange();
-      const startDate = format(start, 'yyyy-MM-dd');
-      const endDate = format(end, 'yyyy-MM-dd');
-
-      const params: any = { start_date: startDate, end_date: endDate };
-      if (userId) params.user_id = userId;
-      if (organizationId) params.organization_id = organizationId;
-
-      const { data: memberData, status } = await djangoApi.getAttendance(params, { silent: true });
-      if (status === 404) { setIsLoading(false); return; }
-
-      let visitorData: any[] = [];
-      if (showVisitors && !userId) {
-        const { data } = await djangoApi.getTempAttendance({ start_date: startDate, end_date: endDate });
-        visitorData = data || [];
-      }
-
-      const allDates = eachDayOfInterval({ start, end });
-      const memberCountMap = new Map<string, number>();
-      const visitorCountMap = new Map<string, number>();
-
-      memberData?.forEach((record: any) => { memberCountMap.set(record.date, (memberCountMap.get(record.date) || 0) + 1); });
-      visitorData.forEach((record: any) => { visitorCountMap.set(record.date, (visitorCountMap.get(record.date) || 0) + 1); });
-
-      const dailyData: DailyData[] = allDates.map((date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const members = memberCountMap.get(dateStr) || 0;
-        const visitors = visitorCountMap.get(dateStr) || 0;
-        return { date: dateStr, displayDate: format(date, timeRange === '7d' ? 'EEE' : 'MMM d'), members, visitors, total: members + visitors };
-      });
-
-      setChartData(dailyData);
-
-      const weekdayCounts = new Map<string, number>();
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      dayNames.forEach((day) => weekdayCounts.set(day, 0));
-      memberData?.forEach((record: any) => { const dayName = format(parseISO(record.date), 'EEE'); weekdayCounts.set(dayName, (weekdayCounts.get(dayName) || 0) + 1); });
-      setWeekdayData(dayNames.map((name) => ({ name, count: weekdayCounts.get(name) || 0 })));
-    } catch (error) { console.error('Error fetching chart data:', error); }
-    finally { setIsLoading(false); }
-  };
+  useEffect(() => {
+    // /api/attendance/ (GET) does not exist on backend yet — skip API call
+    setIsLoading(false);
+  }, [timeRange, organizationId, userId]);
 
   const totalStats = useMemo(() => {
     const totalMembers = chartData.reduce((sum, d) => sum + d.members, 0);

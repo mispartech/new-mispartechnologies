@@ -20,40 +20,10 @@ const AttendanceStreakTracker = ({ userId }: AttendanceStreakTrackerProps) => {
     { id: 'champion', label: 'Champion', days: 60, icon: <Award className="w-4 h-4" />, color: 'bg-yellow-500', achieved: currentStreak >= 60 },
   ];
 
-  useEffect(() => { if (userId) calculateStreak(); }, [userId]);
-
-  const calculateStreak = async () => {
-    try {
-      const { data, error, status } = await djangoApi.getAttendance({ user_id: userId }, { silent: true });
-      if (status === 404) { setLoading(false); return; }
-      if (error || !data || data.length === 0) { setLoading(false); return; }
-
-      const uniqueDates = [...new Set(data.map((d: any) => d.date))].sort().reverse() as string[];
-      
-      // Calculate current streak
-      let streak = 0;
-      const today = new Date().toISOString().slice(0, 10);
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      
-      if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
-        streak = 1;
-        for (let i = 1; i < uniqueDates.length; i++) {
-          const diff = (new Date(uniqueDates[i - 1]).getTime() - new Date(uniqueDates[i]).getTime()) / 86400000;
-          if (diff === 1) streak++; else break;
-        }
-      }
-
-      let maxStreak = 1, tempStreak = 1;
-      for (let i = 1; i < uniqueDates.length; i++) {
-        const diff = (new Date(uniqueDates[i - 1]).getTime() - new Date(uniqueDates[i]).getTime()) / 86400000;
-        if (diff === 1) { tempStreak++; maxStreak = Math.max(maxStreak, tempStreak); } else tempStreak = 1;
-      }
-
-      setCurrentStreak(streak);
-      setLongestStreak(Math.max(maxStreak, streak));
-    } catch (error) { console.error('Error calculating streak:', error); }
-    finally { setLoading(false); }
-  };
+  useEffect(() => {
+    // /api/attendance/ (GET) does not exist on backend yet — skip API call
+    setLoading(false);
+  }, [userId]);
 
   if (loading) return <Card><CardContent className="p-6"><div className="animate-pulse space-y-4"><div className="h-6 bg-muted rounded w-1/3"></div><div className="h-16 bg-muted rounded"></div></div></CardContent></Card>;
 
