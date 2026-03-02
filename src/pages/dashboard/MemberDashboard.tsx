@@ -39,20 +39,7 @@ const MemberDashboard = () => {
         setDepartment(deptData);
       }
 
-      try {
-        const { data: memberStats, status } = await djangoApi.getMemberDashboardStats({ silent: true });
-        if (status !== 404 && memberStats) {
-          setStats({
-            totalAttendance: memberStats.total_attendance || 0,
-            thisMonth: memberStats.this_month || 0,
-            thisWeek: memberStats.this_week || 0,
-            attendedToday: memberStats.attended_today || false,
-          });
-          setRecentAttendance(memberStats.recent_attendance || []);
-        }
-      } catch {
-        // Endpoint may not exist yet — silently skip
-      }
+      // /api/dashboard/member-stats/ does not exist on backend yet — skip API call
     } catch (error) {
       console.error('Error fetching member data:', error);
     } finally {

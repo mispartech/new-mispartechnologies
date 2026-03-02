@@ -55,41 +55,9 @@ const AttendanceHeatmap = ({ userId, organizationId }: AttendanceHeatmapProps) =
   }, [selectedYear]);
 
   useEffect(() => {
-    fetchYearData();
+    // /api/attendance/ (GET) does not exist on backend yet — skip API call
+    setIsLoading(false);
   }, [selectedYear, userId, organizationId]);
-
-  const fetchYearData = async () => {
-    setIsLoading(true);
-    try {
-      const startDate = `${selectedYear}-01-01`;
-      const endDate = `${selectedYear}-12-31`;
-
-      const params: any = { start_date: startDate, end_date: endDate };
-      if (userId) params.user_id = userId;
-      if (organizationId) params.organization_id = organizationId;
-
-      const { data, status } = await djangoApi.getAttendance(params, { silent: true });
-
-      // Gracefully handle 404 (endpoint not implemented yet)
-      if (status === 404 || !data) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Count attendance per day
-      const countMap = new Map<string, number>();
-      data.forEach((record: any) => {
-        const count = countMap.get(record.date) || 0;
-        countMap.set(record.date, count + 1);
-      });
-
-      setAttendanceData(countMap);
-    } catch (error) {
-      console.error('Error fetching heatmap data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const getMonthGrid = (monthIndex: number): DayData[][] => {
     const monthStart = new Date(selectedYear, monthIndex, 1);

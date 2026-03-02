@@ -29,15 +29,8 @@ const MyAttendanceHistory = () => {
   }, [profile?.id]);
 
   const fetchAttendance = async () => {
-    try {
-      const result = await djangoApi.getAttendance({ user_id: profile.id });
-      if (result.error) throw new Error(result.error);
-      setAttendance(result.data || []);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-    } finally {
-      setLoading(false);
-    }
+    // /api/attendance/ (GET) does not exist on backend yet — skip API call
+    setLoading(false);
   };
 
   const filteredAttendance = useMemo(() => {
