@@ -16,6 +16,7 @@ interface User {
   phone_number?: string;
   gender?: string;
   is_onboarded?: boolean;
+  job_title?: string;
 }
 
 interface AuthContextType {

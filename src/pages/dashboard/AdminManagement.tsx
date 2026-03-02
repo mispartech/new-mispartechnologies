@@ -18,10 +18,7 @@ interface Admin { id: string; email: string; first_name: string | null; last_nam
 
 const ADMIN_ROLES = [
   { value: 'admin', label: 'Admin' },
-  { value: 'parish_pastor', label: 'Parish Pastor' },
-  { value: 'department_head', label: 'Department Head' },
-  { value: 'ushering_head_admin', label: 'Ushering Head Admin' },
-  { value: 'usher_admin', label: 'Usher Admin' },
+  { value: 'manager', label: 'Manager' },
 ];
 
 const AdminManagement = () => {
@@ -31,6 +28,7 @@ const AdminManagement = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('admin');
+  const [inviteJobTitle, setInviteJobTitle] = useState('');
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
@@ -65,6 +63,7 @@ const AdminManagement = () => {
       const result = await djangoApi.createAdminInvite({
         email: inviteEmail.trim().toLowerCase(),
         invited_role: inviteRole,
+        job_title: inviteJobTitle.trim(),
       });
 
       if (result.error) throw new Error(result.error);
@@ -86,6 +85,7 @@ const AdminManagement = () => {
 
       setInviteEmail('');
       setInviteRole('admin');
+      setInviteJobTitle('');
       setInviteDialogOpen(false);
       fetchData();
     } catch (error: any) {
@@ -99,8 +99,7 @@ const AdminManagement = () => {
     switch (role) {
       case 'super_admin': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'admin': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'parish_pastor': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'department_head': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'manager': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
@@ -118,6 +117,7 @@ const AdminManagement = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label htmlFor="email">Email Address</Label><Input id="email" type="email" placeholder="admin@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="role">Role</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ADMIN_ROLES.map((role) => (<SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>))}</SelectContent></Select></div>
+              <div className="space-y-2"><Label htmlFor="jobTitle">Job Title (optional)</Label><Input id="jobTitle" placeholder="e.g., HR Manager, Head Usher" value={inviteJobTitle} onChange={(e) => setInviteJobTitle(e.target.value)} /></div>
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setInviteDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>

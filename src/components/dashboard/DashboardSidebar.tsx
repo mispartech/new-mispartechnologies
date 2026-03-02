@@ -46,23 +46,23 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
   const getTempMembersLabel = () => `Temporary ${getTerm('plural', true)}`;
 
   const menuItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['super_admin', 'admin', 'manager', 'member', 'parish_pastor', 'secretary', 'usher', 'department_head', 'ushering_head_admin', 'usher_admin'] },
+    { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['super_admin', 'admin', 'manager', 'member'] },
     { label: 'My Attendance', icon: Calendar, href: '/dashboard/my-attendance', roles: ['member'] },
     { label: 'Attendance Summary', icon: TrendingUp, href: '/dashboard/attendance-summary', roles: ['member'] },
     { label: 'My Streaks & Badges', icon: Trophy, href: '/dashboard/streaks', roles: ['member'] },
     { label: 'My Schedule', icon: CalendarClock, href: '/dashboard/my-schedule', roles: ['member'] },
-    { label: 'Mark Attendance', icon: ScanFace, href: '/dashboard/attendance', roles: ['super_admin', 'admin', 'manager', 'usher', 'secretary', 'ushering_head_admin', 'usher_admin'] },
-    { label: 'Attendance Logs', icon: ClipboardList, href: '/dashboard/attendance-logs', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'secretary', 'department_head'] },
-    { label: 'Attendance History', icon: History, href: '/dashboard/attendance-history', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'secretary', 'department_head', 'ushering_head_admin', 'usher_admin'] },
-    { label: getMembersLabel(), icon: Users, href: '/dashboard/members', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'secretary', 'department_head'], isDynamic: true },
-    { label: getTempMembersLabel(), icon: UserPlus, href: '/dashboard/temp-members', roles: ['super_admin', 'admin', 'manager', 'secretary'], isDynamic: true },
-    { label: 'Departments', icon: Building2, href: '/dashboard/departments', roles: ['super_admin', 'admin', 'parish_pastor'] },
-    { label: 'Face Gallery', icon: Image, href: '/dashboard/face-gallery', roles: ['super_admin', 'admin', 'parish_pastor'] },
-    { label: 'Reports', icon: FileText, href: '/dashboard/reports', roles: ['super_admin', 'admin', 'manager', 'parish_pastor', 'department_head'] },
-    { label: 'My Profile', icon: UserCheck, href: '/dashboard/profile', roles: ['super_admin', 'admin', 'manager', 'member', 'parish_pastor', 'secretary', 'usher', 'department_head', 'ushering_head_admin', 'usher_admin'] },
-    { label: 'Admin Management', icon: Shield, href: '/dashboard/admin-management', roles: ['super_admin'] },
+    { label: 'Mark Attendance', icon: ScanFace, href: '/dashboard/attendance', roles: ['super_admin', 'admin', 'manager'] },
+    { label: 'Attendance Logs', icon: ClipboardList, href: '/dashboard/attendance-logs', roles: ['super_admin', 'admin', 'manager'] },
+    { label: 'Attendance History', icon: History, href: '/dashboard/attendance-history', roles: ['super_admin', 'admin', 'manager'] },
+    { label: getMembersLabel(), icon: Users, href: '/dashboard/members', roles: ['super_admin', 'admin', 'manager'], isDynamic: true },
+    { label: getTempMembersLabel(), icon: UserPlus, href: '/dashboard/temp-members', roles: ['super_admin', 'admin'], isDynamic: true },
+    { label: 'Departments', icon: Building2, href: '/dashboard/departments', roles: ['super_admin', 'admin'] },
+    { label: 'Face Gallery', icon: Image, href: '/dashboard/face-gallery', roles: ['super_admin', 'admin'] },
+    { label: 'Reports', icon: FileText, href: '/dashboard/reports', roles: ['super_admin', 'admin', 'manager'] },
+    { label: 'My Profile', icon: UserCheck, href: '/dashboard/profile', roles: ['super_admin', 'admin', 'manager', 'member'] },
+    { label: 'Admin Management', icon: Shield, href: '/dashboard/admin-management', roles: ['super_admin', 'admin'] },
     { label: 'Activity Logs', icon: Activity, href: '/dashboard/activity-logs', roles: ['super_admin', 'admin'] },
-    { label: 'Schedules', icon: CalendarClock, href: '/dashboard/schedules', roles: ['super_admin', 'admin', 'parish_pastor'] },
+    { label: 'Schedules', icon: CalendarClock, href: '/dashboard/schedules', roles: ['super_admin', 'admin'] },
     { label: 'Site Management', icon: Globe, href: '/dashboard/site-management', roles: ['super_admin', 'admin'] },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings', roles: ['super_admin', 'admin'] },
   ];
@@ -126,6 +126,9 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
             <div className="bg-muted rounded-lg p-3">
               <p className="text-xs text-muted-foreground">Logged in as</p>
               <p className="text-sm font-medium text-foreground capitalize">{userRole.replace(/_/g, ' ')}</p>
+              {profile?.job_title && (
+                <p className="text-xs text-muted-foreground mt-0.5">{profile.job_title}</p>
+              )}
             </div>
           </div>
         )}
@@ -167,6 +170,9 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
           <div className="bg-muted rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Logged in as</p>
             <p className="text-sm font-medium text-foreground capitalize">{userRole.replace(/_/g, ' ')}</p>
+            {profile?.job_title && (
+              <p className="text-xs text-muted-foreground mt-0.5">{profile.job_title}</p>
+            )}
           </div>
         </div>
       </aside>

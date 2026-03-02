@@ -4,10 +4,7 @@ import MemberDashboard from './MemberDashboard';
 
 interface DashboardContext { user: any; profile: any; session: any; }
 
-const ADMIN_ROLES = [
-  'super_admin', 'admin', 'manager', 'parish_pastor', 'secretary',
-  'ushering_head_admin', 'usher_admin', 'department_head'
-];
+const ADMIN_ROLES = ['super_admin', 'admin', 'manager'];
 
 const normalizeRole = (role: string) =>
   role.trim().toLowerCase().replace(/\s+/g, '_');

@@ -61,6 +61,7 @@ const DashboardLayout = () => {
     phone_number: djangoUser.phone_number,
     gender: djangoUser.gender,
     is_onboarded: djangoUser.is_onboarded,
+    job_title: djangoUser.job_title,
   };
 
   const mockUser = {
