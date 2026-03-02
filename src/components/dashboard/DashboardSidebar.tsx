@@ -31,8 +31,15 @@ interface DashboardSidebarProps {
   profile: any;
 }
 
+const normalizeRole = (role: string) => {
+  const normalized = role.trim().toLowerCase().replace(/\s+/g, '_');
+  // Map common aliases to canonical sidebar roles
+  if (['employee', 'staff', 'user'].includes(normalized)) return 'member';
+  return normalized;
+};
+
 const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardSidebarProps) => {
-  const userRole = profile?.role || 'member';
+  const userRole = normalizeRole(profile?.role || 'member');
   const { getTerm } = useTerminology();
 
   const getMembersLabel = () => getTerm('plural', true);
