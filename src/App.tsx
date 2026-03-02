@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Logout from "./pages/Logout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DjangoAuthProvider } from "@/contexts/DjangoAuthContext";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/logout" element={<Logout />} />
               
               {/* Dashboard Routes */}
