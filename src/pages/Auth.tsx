@@ -206,6 +206,53 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try { emailSchema.parse(email); } catch (err) {
+      if (err instanceof z.ZodError) {
+        setErrors({ email: err.errors[0].message });
+        setTouched({ email: true });
+        triggerShake('email');
+      }
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Check your email', description: 'A password reset link has been sent to your email.' });
+        setIsForgotPassword(false);
+      }
+    } catch {
+      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) {
+        toast({ title: 'Google sign-in failed', description: error.message, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const emailValid = touched.email && !errors.email && email.length > 0;
   const passwordValid = touched.password && !errors.password && password.length > 0;
 
