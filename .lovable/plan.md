@@ -1,101 +1,152 @@
 
 
-## User Roles Overhaul: Unified, Organization-Agnostic Role System
+## Problem Analysis
 
-### Problem Analysis
+There are **three interconnected issues** causing the broken logout and missing login button:
 
-The current role system conflates **access-control roles** (who can do what) with **organization-specific job titles** (Parish Pastor, CEO, etc.). This causes several issues:
+### Issue 1: Logout page never actually signs out
 
-1. **Django `ROLE_CHOICES`** are church-specific (`parish_pastor`, `ushering_head_admin`, `usher_admin`) -- unusable for corporate, school, hospital orgs
-2. **Onboarding Step 5** lets the admin pick a job title (e.g., "Parish Pastor", "HR Manager") and stores it as their `role` -- but this is a title, not an access level
-3. **Frontend hardcodes church roles** in `DashboardRouter.tsx`, `DashboardSidebar.tsx`, and `AdminManagement.tsx`
-4. Users who register and complete onboarding should automatically become `admin`, but currently get whatever title they picked (e.g., `parish_pastor`)
-
-### Solution: Two-Field Model
-
-Separate the concept into two distinct fields:
-
-| Field | Purpose | Examples |
-|-------|---------|---------|
-| `role` | Access control (determines dashboard, sidebar, permissions) | `admin`, `manager`, `member` |
-| `job_title` | Display-only label chosen during onboarding or by admin | "Parish Pastor", "HR Manager", "Head Teacher" |
-
-### Unified Role Set (3 roles only)
-
-| Role | Who gets it | Dashboard |
-|------|-------------|-----------|
-| `admin` | User who registers + completes onboarding | Full admin dashboard |
-| `manager` | Invited by admin with elevated access | Admin dashboard (limited) |
-| `member` | Invited employees/members | Member dashboard |
-
-### Changes Required
-
-#### A. Django Backend Changes (instructions for you to implement)
-
-1. **Update `CustomUser` model**:
-```python
-ROLE_CHOICES = [
-    ('super_admin', 'Super Admin'),
-    ('admin', 'Admin'),
-    ('manager', 'Manager'),
-    ('member', 'Member'),
-]
-
-role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='member')
-job_title = models.CharField(max_length=100, blank=True, default='')
+The console on `/logout` shows:
+```
+[DjangoAuth] Auth state change: SIGNED_IN
+[DjangoAuth] Fetching profile from Django...
 ```
 
-2. **Migration**: Add `job_title` field, migrate existing church-specific roles:
-   - `parish_pastor` -> role=`admin`, job_title=`Parish Pastor`
-   - `department_head` -> role=`manager`, job_title=`Department Head`
-   - `ushering_head_admin` -> role=`manager`, job_title=`Ushering Head Admin`
-   - `usher_admin` -> role=`manager`, job_title=`Usher Admin`
-   - `secretary` -> role=`manager`, job_title=`Secretary`
-   - `member` -> role=`member`, job_title stays empty
+This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
 
-3. **Onboarding view** (`PUT /api/onboarding/`): When processing `is_completed=true`, set `role='admin'` and store `admin_role` value into `job_title`
+The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
 
-4. **Profile view** (`GET /api/profile/`): Include `job_title` in response
+### Issue 2: Login button not showing on the navbar
 
-5. **Member invite flow**: Accept a `role` field (admin/manager/member) + optional `job_title`
+The Navbar conditionally renders based on `isLoading`:
+- If `isLoading` is `true` -> shows a skeleton placeholder
+- If `isAuthenticated` is `true` -> shows user dropdown
+- If neither -> shows Login button
 
-#### B. Frontend Changes (what we will implement)
+Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
 
-**1. `src/contexts/DjangoAuthContext.tsx`** -- Add `job_title` to User interface
+The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
 
-**2. `src/pages/dashboard/DashboardRouter.tsx`** -- Simplify ADMIN_ROLES to just `['super_admin', 'admin', 'manager']`
+### Issue 3: No Django logout endpoint needed
 
-**3. `src/components/dashboard/DashboardSidebar.tsx`** -- Replace the long church-specific role arrays with the 3 unified roles. Map sidebar visibility:
-   - `admin` / `super_admin`: All admin items
-   - `manager`: Subset of admin items (attendance, members, reports, departments)
-   - `member`: Member-only items (existing)
+**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
 
-**4. `src/pages/dashboard/AdminManagement.tsx`** -- Replace church-specific `ADMIN_ROLES` dropdown with unified roles (`admin`, `manager`) + a free-text `job_title` field
+---
 
-**5. `src/pages/Onboarding.tsx`** -- The `adminRole` field remains as-is in the UI (it selects a job title like "Parish Pastor"), but the submission payload changes: `admin_role` becomes `job_title`, and the backend sets `role='admin'` automatically
+## Fix Plan
 
-**6. `src/components/dashboard/DashboardLayout.tsx`** -- Display `job_title` where applicable (e.g., sidebar footer shows "Admin - Parish Pastor")
+### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
 
-**7. `src/components/dashboard/DashboardSidebar.tsx` footer** -- Show both role and job title: "Admin" with subtitle "Parish Pastor"
+- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
+- Wrap in try/catch so it never throws
+- As a safety net, manually remove Supabase keys from localStorage if signOut fails
 
-### File-by-File Changes
+### 2. Fix the `Logout.tsx` component
 
-| File | Change |
-|------|--------|
-| `src/contexts/DjangoAuthContext.tsx` | Add `job_title?: string` to `User` interface |
-| `src/pages/dashboard/DashboardRouter.tsx` | Simplify `ADMIN_ROLES` to `['super_admin', 'admin', 'manager']` |
-| `src/components/dashboard/DashboardSidebar.tsx` | Replace all role arrays with unified 3-role system; update footer to show job title |
-| `src/pages/dashboard/AdminManagement.tsx` | Replace church-specific roles with `admin`/`manager` + job_title text input |
-| `src/pages/Onboarding.tsx` | Rename `admin_role` to `job_title` in submission payload |
-| `src/components/dashboard/DashboardLayout.tsx` | Pass `job_title` through profile object |
+- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
+- Clear user state and redirect immediately
+- Don't rely on the auth context `logout()` which races with initialization
 
-### Django Backend Checklist (for you to implement server-side)
+### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
 
-1. Add `job_title = CharField(max_length=100, blank=True, default='')` to `CustomUser`
-2. Update `ROLE_CHOICES` to `super_admin`, `admin`, `manager`, `member`
-3. Create data migration to remap existing roles and populate `job_title`
-4. Update `PUT /api/onboarding/` to set `role='admin'` + `job_title` from `admin_role` field
-5. Update `GET /api/profile/` to include `job_title` in response
-6. Update member creation / invite endpoints to accept `role` (from unified set) + `job_title`
-7. Update admin invite endpoint to accept `role` + `job_title`
+- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
+- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
+
+### 4. Unify the `DashboardHeader.tsx` logout
+
+- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
+
+---
+
+## Technical Details
+
+### File: `src/contexts/DjangoAuthContext.tsx`
+
+Changes to the `logout` function:
+```typescript
+const logout = useCallback(async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    console.error('[DjangoAuth] signOut error, clearing manually:', err);
+    // Fallback: manually clear Supabase tokens from localStorage
+    const keys = Object.keys(localStorage).filter(k =>
+      k.startsWith('sb-')
+    );
+    keys.forEach(k => localStorage.removeItem(k));
+  }
+  setUser(null);
+}, []);
+```
+
+Changes to `onAuthStateChange` to prevent double-fetch race:
+- Track whether `initialize()` has already completed
+- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
+- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+
+### File: `src/pages/Logout.tsx`
+
+Rewrite to bypass the auth context race condition:
+```typescript
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+const Logout = () => {
+  const hasRun = useRef(false);
+
+  useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    const doLogout = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (err) {
+        console.error('[Logout] signOut failed, clearing manually:', err);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+      } finally {
+        window.location.href = '/';
+      }
+    };
+
+    doLogout();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground">Signing out...</p>
+    </div>
+  );
+};
+```
+
+### File: `src/components/dashboard/DashboardHeader.tsx`
+
+Replace the direct Supabase call with the unified auth context:
+```typescript
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
+// ...
+const { logout } = useDjangoAuth();
+
+const handleLogout = async () => {
+  setIsLoggingOut(true);
+  try {
+    await logout();
+    window.location.href = '/';
+  } catch {
+    // fallback
+    window.location.href = '/';
+  }
+};
+```
+
+### Summary of changes
+
+| File | What Changes |
+|---|---|
+| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
+| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
+| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
 

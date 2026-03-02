@@ -464,6 +464,7 @@ class DjangoApiClient {
   async createAdminInvite(data: {
     email: string;
     invited_role: string;
+    job_title?: string;
     organization_id?: string;
   }): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.ADMIN_INVITES, {

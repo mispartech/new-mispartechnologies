@@ -466,12 +466,8 @@ const Onboarding = () => {
     }
 
     try {
-      // Normalize admin role to snake_case for backend
-      const normalizedRole = data.adminRole
-        ? data.adminRole.trim().toLowerCase().replace(/\s+/g, '_')
-        : '';
-
       // Save all onboarding data via Django PUT /api/onboarding/
+      // admin_role is sent as job_title; backend sets role='admin' automatically
       const resp = await saveOnboardingSession({
         step: totalSteps,
         data: {
@@ -481,7 +477,7 @@ const Onboarding = () => {
           size_range: data.sizeRange,
           admin_first_name: data.adminFirstName,
           admin_last_name: data.adminLastName,
-          admin_role: normalizedRole,
+          job_title: data.adminRole,
           service_schedules: data.serviceSchedules.map((s: any) => ({
             name: s.name || getScheduleItemLabel(data.organizationType),
             description: s.description,
@@ -905,7 +901,7 @@ const Onboarding = () => {
                     <Users className="w-4 h-4 text-primary" />
                     Admin Setup
                   </CardTitle>
-                  <CardDescription className="text-xs">Set up your administrator profile</CardDescription>
+                   <CardDescription className="text-xs">Set up your administrator profile</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -932,7 +928,7 @@ const Onboarding = () => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <Label className="text-sm font-medium">Your Role *</Label>
+                      <Label className="text-sm font-medium">Your Job Title *</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {rolesByType[data.organizationType].map(role => (
                           <Button
