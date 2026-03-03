@@ -30,11 +30,10 @@ const RoadmapSection = () => {
   }, []);
 
   const milestones = [
-    { title: "System Launch", date: "Jan 2023", description: "Initial release of our core facial recognition attendance tracking solution. Pioneering automated biometric check-ins across Nigeria.", icon: Rocket, isCompleted: true },
-    { title: "Education Integration", date: "Jun 2023", description: "Specialized features for schools and universities—automated class attendance, exam verification, and campus security.", icon: GraduationCap, isCompleted: true },
-    { title: "Enhanced Security", date: "Dec 2023", description: "Advanced multi-factor authentication, watchlist screening, and enterprise-grade access control systems.", icon: Shield, isCurrent: true },
-    { title: "Healthcare Systems", date: "Mar 2024", description: "Patient identification, medical record access, and pharmacy verification for hospitals and clinics.", icon: Heart },
-    { title: "Global Expansion", date: "Sep 2024", description: "Mobile applications, API platform, and international market expansion across Africa and beyond.", icon: Globe },
+    { title: "System Launch", date: "Jan 2026", description: "Initial release of our core facial recognition platform. Pioneering automated biometric identification across Nigeria.", icon: Rocket, isCompleted: true },
+    { title: "Smart Attendance Solution", date: "Mar 2026", description: "Automated attendance tracking for organizations, schools, and enterprises using real-time facial recognition check-ins.", icon: GraduationCap, isCurrent: true },
+    { title: "Smart Security Solution", date: "Sep 2026", description: "Real-time surveillance, authentication & access control for restricted areas using face recognition, plus real-time monitoring and emotional detection against biometric coercion.", icon: Shield },
+    { title: "Smart Health Solution", date: "Jan 2027", description: "Instant access to medical records via facial identification, plus emotion and mood recognition for facial symptom detection in clinical settings.", icon: Heart },
   ];
 
   const selected = milestones[selectedIndex];
