@@ -208,7 +208,7 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
             Request Demo
           </Button>
 
-          <div className="mt-auto pt-6 space-y-2">
+          <div className="mt-auto pt-6 pb-20 space-y-2">
             {isLoading ? (
               <div className="w-full h-12 bg-white/5 animate-pulse rounded-xl" />
             ) : isAuthenticated ? (
