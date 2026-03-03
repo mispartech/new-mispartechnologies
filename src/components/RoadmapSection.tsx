@@ -101,16 +101,16 @@ const RoadmapSection = () => {
 
         {/* Mobile: Vertical Timeline */}
         <div className={`md:hidden mb-8 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="relative pl-8">
+          <div className="relative pl-12">
             {/* Vertical line */}
-            <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-white/5">
+            <div className="absolute left-[18px] top-0 bottom-0 w-0.5 bg-white/5 z-0">
               <div
                 className="w-full bg-gradient-to-b from-mint via-cyan to-cyan-light rounded-full transition-none"
                 style={{ height: `${Math.min(scrollProgress, 100)}%` }}
               />
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {milestones.map((milestone, index) => {
                 const Icon = milestone.icon;
                 const isSelected = selectedIndex === index;
@@ -120,8 +120,8 @@ const RoadmapSection = () => {
                     className="relative cursor-pointer"
                     onClick={() => setSelectedIndex(index)}
                   >
-                    {/* Dot on vertical line */}
-                    <div className={`absolute -left-5 top-1 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500 ${
+                    {/* Dot on vertical line - positioned outside the card */}
+                    <div className={`absolute -left-12 top-4 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
                       isSelected
                         ? 'bg-cyan shadow-[0_0_20px_hsl(190_90%_50%/0.4)] scale-110'
                         : milestone.isCompleted
@@ -132,6 +132,11 @@ const RoadmapSection = () => {
                     }`}>
                       {milestone.isCompleted ? <CheckCircle2 size={14} className="text-navy-dark" /> : <Icon size={14} className={milestone.isCurrent ? 'text-navy-dark' : 'text-white/40'} />}
                     </div>
+
+                    {/* Connector line from dot to card */}
+                    <div className={`absolute -left-4 top-[26px] w-4 h-px ${
+                      isSelected ? 'bg-cyan/40' : milestone.isCompleted ? 'bg-mint/30' : 'bg-white/10'
+                    }`} />
 
                     {/* Card content */}
                     <div className={`glass-card p-4 transition-all duration-300 ${isSelected ? 'border-cyan/30 shadow-[0_0_20px_hsl(190_90%_50%/0.1)]' : ''}`}>
