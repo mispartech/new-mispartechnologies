@@ -9,7 +9,7 @@ const departments = [
   { icon: Cpu, name: 'AI & Research', description: 'Our machine learning engineers and data scientists push the boundaries of facial recognition accuracy, working on models optimized for diverse African datasets.' },
   { icon: Code, name: 'Engineering', description: 'Full-stack engineers who build the platforms, APIs, and integrations that bring our AI to life in real-world deployments.' },
   { icon: Users, name: 'Product & Design', description: 'Designers and product managers who ensure every touchpoint is intuitive, accessible, and delightful to use.' },
-  { icon: Headphones, name: 'Customer Success', description: 'Dedicated support team that helps organizations onboard, deploy, and get the most out of Mispar's solutions.' },
+  { icon: Headphones, name: 'Customer Success', description: 'Dedicated support team that helps organizations onboard, deploy, and get the most out of Mispar\'s solutions.' },
 ];
 
 const OurTeam = () => {
