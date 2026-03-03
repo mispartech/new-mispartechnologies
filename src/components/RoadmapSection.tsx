@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Rocket, GraduationCap, Shield, Heart, Globe, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { Rocket, GraduationCap, Shield, Heart, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 
 const RoadmapSection = () => {
-  const [selectedIndex, setSelectedIndex] = useState(2);
+  const [selectedIndex, setSelectedIndex] = useState(1);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
