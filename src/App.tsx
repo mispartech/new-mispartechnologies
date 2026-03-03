@@ -34,6 +34,21 @@ import StreaksAndBadges from "./pages/dashboard/StreaksAndBadges";
 import MySchedule from "./pages/dashboard/MySchedule";
 import PageWrapper from "./components/PageWrapper";
 
+// Content pages
+import SmartAttendance from "./pages/SmartAttendance";
+import SecuritySystems from "./pages/SecuritySystems";
+import HealthcareIntegration from "./pages/HealthcareIntegration";
+import EducationalSolutions from "./pages/EducationalSolutions";
+import CorporateAccess from "./pages/CorporateAccess";
+import AboutUs from "./pages/AboutUs";
+import OurTeam from "./pages/OurTeam";
+import Careers from "./pages/Careers";
+import PressMedia from "./pages/PressMedia";
+import Blog from "./pages/Blog";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -51,6 +66,21 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/logout" element={<Logout />} />
+              
+              {/* Content Pages */}
+              <Route path="/smart-attendance" element={<SmartAttendance />} />
+              <Route path="/security-systems" element={<SecuritySystems />} />
+              <Route path="/healthcare-integration" element={<HealthcareIntegration />} />
+              <Route path="/educational-solutions" element={<EducationalSolutions />} />
+              <Route path="/corporate-access" element={<CorporateAccess />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/team" element={<OurTeam />} />
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/press" element={<PressMedia />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
               
               {/* Dashboard Routes */}
               <Route path="/dashboard" element={<DashboardLayout />}>
