@@ -57,7 +57,7 @@ const CTASection = ({ onRequestDemo }: CTASectionProps) => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="border-white/20 text-white hover:bg-white/5 hover:border-cyan/30 text-base md:text-lg px-6 md:px-8 h-14 md:py-6 tap-target group w-full sm:w-auto"
+              className="bg-transparent border-white/20 text-white hover:bg-white/5 hover:border-cyan/30 text-base md:text-lg px-6 md:px-8 h-14 md:py-6 tap-target group w-full sm:w-auto"
               onClick={onRequestDemo}
             >
               <MessageCircle className="mr-2 h-5 w-5" />

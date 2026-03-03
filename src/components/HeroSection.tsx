@@ -104,7 +104,7 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="border-white/20 text-white hover:bg-white/5 hover:border-cyan/40 text-base px-8 h-14 sm:h-13 group transition-all duration-300 tap-target w-full sm:w-auto"
+                className="bg-transparent border-white/20 text-white hover:bg-white/5 hover:border-cyan/40 text-base px-8 h-14 sm:h-13 group transition-all duration-300 tap-target w-full sm:w-auto"
                 onClick={scrollToHowItWorks}
               >
                 See Enterprise Solutions
