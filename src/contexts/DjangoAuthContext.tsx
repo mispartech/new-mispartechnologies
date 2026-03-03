@@ -72,49 +72,63 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let lastAccessToken: string | null = null;
 
-    const initialize = async () => {
+    const handleSession = async (session: any) => {
+      if (!session) {
+        if (mounted) setUser(null);
+        return;
+      }
+      // Deduplicate by access token to avoid double profile fetches
+      const token = session.access_token;
+      if (token && token === lastAccessToken) {
+        console.log('[DjangoAuth] Skipping duplicate session handling');
+        return;
+      }
+      lastAccessToken = token;
+
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && mounted) {
-          const profile = await fetchProfile();
-          if (mounted) setUser(profile);
-        }
+        const profile = await fetchProfile();
+        if (mounted) setUser(profile);
       } catch (err) {
-        console.error('[DjangoAuth] Initialize error:', err);
-      } finally {
-        if (mounted) {
-          initDone.current = true;
-          setIsLoading(false);
-        }
+        console.error('[DjangoAuth] Profile fetch failed:', err);
+        if (mounted) setUser(null);
       }
     };
 
-    initialize();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      console.log('[DjangoAuth] Auth state change:', event);
+      console.log('[DjangoAuth] Auth state change:', event, !!session);
 
-      if (event === 'INITIAL_SESSION') return;
-
-      if (event === 'SIGNED_IN' && session) {
-        if (initDone.current) {
-          try {
-            const profile = await fetchProfile();
-            if (mounted) setUser(profile);
-          } catch (err) {
-            console.error('[DjangoAuth] Profile fetch after sign-in failed:', err);
-            if (mounted) setUser(null);
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        // Fire-and-forget to avoid blocking the callback
+        handleSession(session).finally(() => {
+          if (!initDone.current && mounted) {
+            initDone.current = true;
+            setIsLoading(false);
           }
-        }
+        });
       } else if (event === 'SIGNED_OUT') {
+        lastAccessToken = null;
         if (mounted) setUser(null);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Update token reference without re-fetching profile
+        lastAccessToken = session.access_token;
       }
     });
 
+    // Safety fallback: if INITIAL_SESSION never fires, stop loading
+    const fallbackTimer = setTimeout(() => {
+      if (mounted && !initDone.current) {
+        console.warn('[DjangoAuth] Fallback: resolving loading state');
+        initDone.current = true;
+        setIsLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
