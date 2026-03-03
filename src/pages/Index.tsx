@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
@@ -11,9 +12,32 @@ import CTASection from '@/components/CTASection';
 import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
 import DemoRequestModal from '@/components/DemoRequestModal';
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 
 const Index = () => {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, user, isLoading } = useDjangoAuth();
+
+  // If user lands on / with an auth hash (email confirmation redirect), 
+  // or is already authenticated, redirect appropriately
+  useEffect(() => {
+    // Check for auth hash fragment from email confirmation
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token') && hash.includes('type=signup')) {
+      // Supabase will process the hash. Once auth resolves, redirect.
+      return;
+    }
+  }, []);
+
+  // Redirect authenticated users who land on home page
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated && user) {
+      const isOnboarded = user.is_onboarded === true;
+      navigate(isOnboarded ? '/dashboard' : '/onboarding', { replace: true });
+    }
+  }, [isAuthenticated, user, isLoading, navigate]);
 
   useEffect(() => {
     // Update document title
