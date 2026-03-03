@@ -215,7 +215,7 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
               <>
                 <Button 
                   variant="outline" 
-                  className="w-full gap-2 border-white/10 text-white hover:bg-white/5 tap-target"
+                  className="w-full gap-2 bg-transparent border-white/10 text-white hover:bg-white/5 tap-target"
                   onClick={() => { navigate('/dashboard'); closeMenu(); }}
                 >
                   <LayoutDashboard className="w-4 h-4" /> Dashboard
@@ -231,7 +231,7 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
             ) : (
               <Button 
                 variant="outline" 
-                className="w-full gap-2 border-white/10 text-white hover:bg-white/5 tap-target"
+                className="w-full gap-2 bg-transparent border-white/10 text-white hover:bg-white/5 tap-target"
                 onClick={() => { navigate('/auth'); closeMenu(); }}
               >
                 <LogIn className="w-4 h-4" /> Login
