@@ -490,27 +490,20 @@ const Onboarding = () => {
         } as unknown as Record<string, unknown>,
       });
 
-      // Backend confirmed onboarding — check response directly
-      const backendConfirmed = (resp as any)?.data?.is_onboarded === true;
-
-      // Refresh profile so auth context reflects the new state
+      // Refresh profile so is_onboarded reflects backend truth immediately
       await refreshUser();
 
-      // Clear local draft storage since backend confirmed completion
+      // Only clear storage if profile confirms onboarding is complete
+      const profileConfirmed = djangoUser?.is_onboarded === true;
       if (userId) {
         const keys = getOnboardingStorageKeys(userId);
-        if (backendConfirmed) {
+        if (profileConfirmed) {
           localStorage.removeItem(keys.data);
           localStorage.removeItem(keys.step);
           clearOnboardingCookie();
-          console.log('[Onboarding] Backend confirmed is_onboarded; cleared local data');
         } else {
-          // Fallback: still clear if refreshUser updated the profile
-          // (won't help in this closure, but the navigate will work regardless)
-          localStorage.removeItem(keys.data);
-          localStorage.removeItem(keys.step);
-          clearOnboardingCookie();
-          console.log('[Onboarding] Submission succeeded; cleared local data');
+          // Backend succeeded but profile not yet updated — keep data as safety net
+          console.warn('[Onboarding] Submit succeeded but is_onboarded not confirmed yet; keeping local data');
         }
       }
 
