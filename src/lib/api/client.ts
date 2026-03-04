@@ -60,9 +60,25 @@ function getErrorNotification(status: number, serverMessage?: string): { title: 
 }
 
 async function handleAutoLogout() {
+  // Check if Supabase still has a valid session (token may have been refreshed)
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      // Session is still valid — the 401 was likely a transient race condition.
+      // Do NOT sign out or clear storage.
+      if (IS_DEV) {
+        console.warn('[DjangoApi] 401 received but Supabase session still valid; skipping auto-logout');
+      }
+      return;
+    }
+  } catch {
+    // getSession failed — proceed with logout
+  }
+
   try {
     await supabase.auth.signOut({ scope: 'local' });
   } catch {
+    // Only clear Supabase auth keys as a last resort
     Object.keys(localStorage)
       .filter(k => k.startsWith('sb-'))
       .forEach(k => localStorage.removeItem(k));
