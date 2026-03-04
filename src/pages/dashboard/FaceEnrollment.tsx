@@ -237,6 +237,40 @@ const FaceEnrollment = () => {
     setCameraActive(false);
   }, []);
 
+  // Upload face image to Supabase storage and update profile
+  const saveFaceImageToStorage = useCallback(async (base64Image: string) => {
+    try {
+      // Convert base64 to Blob
+      const byteString = atob(base64Image);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: 'image/jpeg' });
+      
+      const fileName = `${user.id}/face.jpg`;
+      
+      // Upload to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('face-images')
+        .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+      
+      if (uploadError) {
+        console.error('[FaceEnrollment] Storage upload error:', uploadError);
+        return; // Non-blocking — enrollment still succeeded
+      }
+      
+      // Get public URL and update profile
+      const { data: { publicUrl } } = supabase.storage.from('face-images').getPublicUrl(fileName);
+      await djangoApi.updateProfile(user.id, { face_image_url: publicUrl });
+      console.log('[FaceEnrollment] Face image saved to storage and profile updated');
+    } catch (err) {
+      console.error('[FaceEnrollment] Failed to save face image to storage:', err);
+      // Non-blocking — face enrollment already succeeded
+    }
+  }, [user?.id]);
+
   // Process enrollment with base64 image
   const processEnrollment = useCallback(async (base64Image: string) => {
     setEnrollmentStep('PROCESSING');
@@ -260,6 +294,9 @@ const FaceEnrollment = () => {
 
       // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
+        // Save face image to storage in parallel with polling
+        saveFaceImageToStorage(base64Image);
+        
         const isReady = await pollUntilEnrollmentReady();
 
         if (!isReady) {
@@ -278,7 +315,7 @@ const FaceEnrollment = () => {
       setEnrollmentStep('FAILED');
       setErrorMessage(err.message || 'Failed to enroll face. Please try again.');
     }
-  }, [user, profile, navigate, pollUntilEnrollmentReady]);
+  }, [user, profile, navigate, pollUntilEnrollmentReady, saveFaceImageToStorage]);
 
   // Enroll with uploaded image
   const enrollWithUpload = useCallback(async () => {
