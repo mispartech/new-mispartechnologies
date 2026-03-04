@@ -116,7 +116,11 @@ class DjangoApiClient {
         data = JSON.parse(text);
       } catch {
         if (!response.ok) {
-          const error = text || 'Request failed';
+          // Never expose raw HTML/text error pages to the UI — use a generic message
+          const isHtml = text.trimStart().startsWith('<') || text.includes('<!DOCTYPE');
+          const error = isHtml
+            ? 'Something went wrong. Please try again later.'
+            : (text.slice(0, 200) || 'Request failed');
           this.notifyError(response.status, error, endpoint, silent);
           return { status: response.status, error };
         }
