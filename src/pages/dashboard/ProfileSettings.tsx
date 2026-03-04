@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { djangoApi } from '@/lib/api/client';
+import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,33 +16,47 @@ import NotificationSettings from '@/components/dashboard/NotificationSettings';
 
 const ProfileSettings = () => {
   const { user, profile } = useOutletContext<{ user: any; profile: any }>();
+  const { user: authUser, refreshUser } = useDjangoAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [profileData, setProfileData] = useState({ first_name: '', last_name: '', email: '', phone_number: '', gender: '' });
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [faceImageUrl, setFaceImageUrl] = useState<string | null>(null);
-  const userRole = profile?.role || null;
+  const userRole = profile?.role || authUser?.role || null;
+  const jobTitle = profile?.job_title || authUser?.job_title || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
+  // Use authUser as fallback if profile from outlet context is sparse
+  const effectiveProfile = profile || authUser;
+
   useEffect(() => {
-    if (profile) {
-      setProfileData({ first_name: profile.first_name || '', last_name: profile.last_name || '', email: profile.email || '', phone_number: profile.phone_number || '', gender: profile.gender || '' });
-      setFaceImageUrl(profile.face_image_url);
+    if (effectiveProfile) {
+      setProfileData({
+        first_name: effectiveProfile.first_name || '',
+        last_name: effectiveProfile.last_name || '',
+        email: effectiveProfile.email || '',
+        phone_number: effectiveProfile.phone_number || '',
+        gender: effectiveProfile.gender || '',
+      });
+      setFaceImageUrl(effectiveProfile.face_image_url || null);
     }
-  }, [profile]);
+  }, [effectiveProfile]);
 
   const handleProfileUpdate = async () => {
     setIsLoading(true);
     try {
-      const result = await djangoApi.updateProfile(user.id, {
+      const userId = effectiveProfile?.id || user?.id;
+      if (!userId) throw new Error('User ID not available');
+      const result = await djangoApi.updateProfile(userId, {
         first_name: profileData.first_name,
         last_name: profileData.last_name,
         phone_number: profileData.phone_number,
         gender: profileData.gender,
       });
       if (result.error) throw new Error(result.error);
+      await refreshUser();
       toast({ title: 'Profile Updated', description: 'Your profile has been updated successfully.' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to update profile.', variant: 'destructive' });
@@ -55,7 +70,6 @@ const ProfileSettings = () => {
     if (passwords.new.length < 6) { toast({ title: 'Weak Password', description: 'Password must be at least 6 characters.', variant: 'destructive' }); return; }
     setIsLoading(true);
     try {
-      // Use Supabase auth for password change (auth operation, not business data)
       const { error } = await supabase.auth.updateUser({ password: passwords.new });
       if (error) throw error;
       setPasswords({ current: '', new: '', confirm: '' });
@@ -73,21 +87,22 @@ const ProfileSettings = () => {
     setIsLoading(true);
     setUploadProgress('Preparing upload...');
     try {
+      const userId = effectiveProfile?.id || user?.id;
+      if (!userId) throw new Error('User ID not available');
       toast({ title: 'Uploading Image', description: 'Please wait while your photo is being uploaded...' });
       setUploadProgress('Uploading to storage...');
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/face.${fileExt}`;
-      // Storage upload stays with Supabase (Auth + Storage)
+      const fileName = `${userId}/face.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('face-images').upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
       setUploadProgress('Processing image...');
       const { data: { publicUrl } } = supabase.storage.from('face-images').getPublicUrl(fileName);
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
       setUploadProgress('Updating profile...');
-      // Update profile via Django
-      const result = await djangoApi.updateProfile(user.id, { face_image_url: publicUrl });
+      const result = await djangoApi.updateProfile(userId, { face_image_url: publicUrl });
       if (result.error) throw new Error(result.error);
       setFaceImageUrl(urlWithTimestamp);
+      await refreshUser();
       setUploadProgress(null);
       toast({ title: 'Face Image Updated', description: 'Your face image has been uploaded successfully.' });
     } catch (error: any) {
@@ -117,7 +132,14 @@ const ProfileSettings = () => {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="w-20 h-20"><AvatarImage src={faceImageUrl || undefined} /><AvatarFallback className="text-xl">{getInitials()}</AvatarFallback></Avatar>
-                <div><h3 className="font-semibold">{profileData.first_name} {profileData.last_name}</h3><p className="text-sm text-muted-foreground">{profileData.email}</p>{userRole && <Badge variant="secondary" className="mt-1 capitalize">{userRole.replace('_', ' ')}</Badge>}</div>
+                <div>
+                  <h3 className="font-semibold">{profileData.first_name} {profileData.last_name}</h3>
+                  <p className="text-sm text-muted-foreground">{profileData.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {userRole && <Badge variant="secondary" className="capitalize">{userRole.replace('_', ' ')}</Badge>}
+                    {jobTitle && <Badge variant="outline" className="capitalize">{jobTitle}</Badge>}
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={profileData.first_name} onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))} className="mt-1" /></div>
@@ -163,7 +185,7 @@ const ProfileSettings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications"><NotificationSettings userId={user.id} /></TabsContent>
+        <TabsContent value="notifications"><NotificationSettings userId={effectiveProfile?.id || user?.id} /></TabsContent>
       </Tabs>
     </div>
   );
