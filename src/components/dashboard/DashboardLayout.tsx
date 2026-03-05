@@ -4,15 +4,16 @@ import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHeader from './DashboardHeader';
 import { TerminologyProvider } from '@/contexts/TerminologyContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { DashboardPreloader } from './PreloaderPreview';
 
-const DashboardLayout = () => {
+const DashboardLayoutInner = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   
   const { user: djangoUser, isLoading: djangoLoading, isAuthenticated } = useDjangoAuth();
 
-  // Derive enrollment status directly from profile
   const isEnrolled = djangoUser?.face_enrolled === true;
 
   useEffect(() => {
@@ -22,7 +23,6 @@ const DashboardLayout = () => {
     }
   }, [djangoLoading, isAuthenticated, djangoUser, navigate]);
 
-  // Enforce onboarding + enrollment gates from profile
   useEffect(() => {
     if (djangoLoading || !djangoUser) return;
 
@@ -36,7 +36,29 @@ const DashboardLayout = () => {
     }
   }, [isEnrolled, djangoLoading, djangoUser, location.pathname, navigate]);
 
+  // Access theme for preloader customization
+  let themePreloader: { style: any; color: string; logo: string } | null = null;
+  try {
+    const { branding } = useTheme();
+    themePreloader = {
+      style: branding.preloader_style,
+      color: branding.primary_color,
+      logo: branding.logo_url,
+    };
+  } catch {
+    // ThemeProvider not ready yet
+  }
+
   if (djangoLoading) {
+    if (themePreloader) {
+      return (
+        <DashboardPreloader
+          style={themePreloader.style}
+          primaryColor={themePreloader.color}
+          logoUrl={themePreloader.logo}
+        />
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -46,7 +68,6 @@ const DashboardLayout = () => {
 
   if (!djangoUser) return null;
 
-  // Build profile object from djangoUser (single source of truth)
   const profile = {
     id: djangoUser.id,
     email: djangoUser.email,
@@ -76,46 +97,62 @@ const DashboardLayout = () => {
     created_at: '',
   };
 
-  // Simplified layout for enrollment page
   if (location.pathname === '/dashboard/face-enrollment') {
     return (
-      <TerminologyProvider organizationId={profile.organization_id}>
-        <div className="min-h-screen bg-muted/30">
-          <DashboardHeader 
-            user={mockUser as any} 
-            profile={profile}
-            onMenuToggle={() => {}}
-          />
-          <main className="p-4 lg:p-6 mt-16">
-            <Outlet context={{ user: mockUser, profile, session: null }} />
-          </main>
-        </div>
-      </TerminologyProvider>
+      <div className="min-h-screen bg-muted/30 dashboard-themed">
+        <DashboardHeader 
+          user={mockUser as any} 
+          profile={profile}
+          onMenuToggle={() => {}}
+        />
+        <main className="p-4 lg:p-6 mt-16">
+          <Outlet context={{ user: mockUser, profile, session: null }} />
+        </main>
+      </div>
     );
   }
 
   return (
-    <TerminologyProvider organizationId={profile.organization_id}>
-      <div className="min-h-screen bg-muted/30">
-        <DashboardSidebar 
-          isOpen={sidebarOpen} 
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
-          currentPath={location.pathname}
+    <div className="min-h-screen bg-muted/30 dashboard-themed">
+      <DashboardSidebar 
+        isOpen={sidebarOpen} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        currentPath={location.pathname}
+        profile={profile}
+      />
+      
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
+        <DashboardHeader 
+          user={mockUser as any} 
           profile={profile}
+          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
         
-        <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-          <DashboardHeader 
-            user={mockUser as any} 
-            profile={profile}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-          
-          <main className="p-4 lg:p-6 mt-16">
-            <Outlet context={{ user: mockUser, profile, session: null }} />
-          </main>
-        </div>
+        <main className="p-4 lg:p-6 mt-16">
+          <Outlet context={{ user: mockUser, profile, session: null }} />
+        </main>
       </div>
+    </div>
+  );
+};
+
+const DashboardLayout = () => {
+  const { user: djangoUser } = useDjangoAuth();
+
+  const normalizeRole = (role: string) => {
+    const normalized = role.trim().toLowerCase().replace(/\s+/g, '_');
+    if (['employee', 'staff', 'user'].includes(normalized)) return 'member';
+    return normalized;
+  };
+
+  return (
+    <TerminologyProvider organizationId={djangoUser?.organization_id}>
+      <ThemeProvider
+        organizationId={djangoUser?.organization_id}
+        userRole={djangoUser?.role ? normalizeRole(djangoUser.role) : 'member'}
+      >
+        <DashboardLayoutInner />
+      </ThemeProvider>
     </TerminologyProvider>
   );
 };
