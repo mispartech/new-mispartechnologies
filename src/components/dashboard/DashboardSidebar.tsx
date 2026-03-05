@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardSidebarProps {
   isOpen: boolean;
@@ -42,16 +43,8 @@ const normalizeRole = (role: string) => {
 const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardSidebarProps) => {
   const userRole = normalizeRole(profile?.role || 'member');
   const { getTerm } = useTerminology();
-
-  // Try to get branding for logo
-  let logoUrl = '';
-  try {
-    const { useTheme } = require('@/contexts/ThemeContext');
-    const { branding } = useTheme();
-    logoUrl = branding?.logo_url || '';
-  } catch {
-    // ThemeContext not available
-  }
+  const { branding } = useTheme();
+  const logoUrl = branding?.logo_url || '';
 
   const getMembersLabel = () => getTerm('plural', true);
   const getTempMembersLabel = () => `Temporary ${getTerm('plural', true)}`;
