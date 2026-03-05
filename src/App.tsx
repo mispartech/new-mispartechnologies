@@ -32,6 +32,7 @@ import FaceEnrollment from "./pages/dashboard/FaceEnrollment";
 import AttendanceSummary from "./pages/dashboard/AttendanceSummary";
 import StreaksAndBadges from "./pages/dashboard/StreaksAndBadges";
 import MySchedule from "./pages/dashboard/MySchedule";
+import BrandingSettings from "./pages/dashboard/BrandingSettings";
 import PageWrapper from "./components/PageWrapper";
 
 // Content pages
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="activity-logs" element={<ActivityLogs />} />
                 <Route path="schedules" element={<ScheduleManagement />} />
                 <Route path="site-management" element={<SiteManagement />} />
+                <Route path="branding" element={<BrandingSettings />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

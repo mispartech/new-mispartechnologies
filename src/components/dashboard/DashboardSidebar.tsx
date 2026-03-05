@@ -19,10 +19,12 @@ import {
   Calendar,
   History,
   TrendingUp,
-  Trophy
+  Trophy,
+  Palette
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardSidebarProps {
   isOpen: boolean;
@@ -41,6 +43,8 @@ const normalizeRole = (role: string) => {
 const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardSidebarProps) => {
   const userRole = normalizeRole(profile?.role || 'member');
   const { getTerm } = useTerminology();
+  const { branding } = useTheme();
+  const logoUrl = branding?.logo_url || '';
 
   const getMembersLabel = () => getTerm('plural', true);
   const getTempMembersLabel = () => `Temporary ${getTerm('plural', true)}`;
@@ -64,6 +68,7 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
     { label: 'Activity Logs', icon: Activity, href: '/dashboard/activity-logs', roles: ['super_admin', 'admin'] },
     { label: 'Schedules', icon: CalendarClock, href: '/dashboard/schedules', roles: ['super_admin', 'admin'] },
     { label: 'Site Management', icon: Globe, href: '/dashboard/site-management', roles: ['super_admin', 'admin'] },
+    { label: 'Branding', icon: Palette, href: '/dashboard/branding', roles: ['super_admin', 'admin'] },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings', roles: ['super_admin', 'admin'] },
   ];
 
@@ -83,12 +88,20 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
         <div className="flex items-center justify-between h-16 px-4 border-b border-border">
           {isOpen ? (
             <Link to="/dashboard" className="flex items-center gap-2">
-              <ScanFace className="w-8 h-8 text-primary" />
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain rounded" />
+              ) : (
+                <ScanFace className="w-8 h-8 text-primary" />
+              )}
               <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
             </Link>
           ) : (
             <Link to="/dashboard" className="mx-auto">
-              <ScanFace className="w-8 h-8 text-primary" />
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain rounded" />
+              ) : (
+                <ScanFace className="w-8 h-8 text-primary" />
+              )}
             </Link>
           )}
         </div>
