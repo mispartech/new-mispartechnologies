@@ -150,6 +150,7 @@ const DashboardLayout = () => {
       <ThemeProvider
         organizationId={djangoUser?.organization_id}
         userRole={djangoUser?.role ? normalizeRole(djangoUser.role) : 'member'}
+        initialBranding={djangoUser?.organization_branding}
       >
         <DashboardLayoutInner />
       </ThemeProvider>

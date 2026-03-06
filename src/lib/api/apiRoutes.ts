@@ -32,9 +32,7 @@ export const API_ROUTES = {
   TEMP_ATTENDANCE: '/api/temp-attendance/',
   TEMP_ATTENDANCE_CLAIM: '/api/temp-attendance/claim/',
 
-  // ── Organizations ──
-  ORGANIZATION: (id: string) => `/api/organizations/${id}/`,
-
+  // ── Organizations (removed — use profile + /api/organization-settings/) ──
   // ── Notifications ──
   NOTIFICATIONS: '/api/notifications/',
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read/`,
