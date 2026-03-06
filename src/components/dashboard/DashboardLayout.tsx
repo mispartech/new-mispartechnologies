@@ -148,7 +148,6 @@ const DashboardLayout = () => {
   return (
     <TerminologyProvider
       organizationType={djangoUser?.organization_type}
-      organizationIndustry={djangoUser?.organization_industry}
       organizationName={djangoUser?.organization_name}
     >
       <ThemeProvider
