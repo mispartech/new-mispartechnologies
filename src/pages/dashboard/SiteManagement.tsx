@@ -39,7 +39,7 @@ const SiteManagement = () => {
   const fetchSettings = async () => {
     if (!profile?.organization_id) { setIsLoading(false); return; }
     try {
-      const result = await djangoApi.getOrganization(profile.organization_id);
+      const result = await djangoApi.getOrgSettings({ silent: true });
       if (result.error) throw new Error(result.error);
       if (result.data?.settings && typeof result.data.settings === 'object') {
         const orgSettings = result.data.settings as Record<string, any>;
@@ -70,11 +70,11 @@ const SiteManagement = () => {
       if (logoDarkFile) updatedSettings.logo_dark_url = await uploadFile(logoDarkFile, `${profile.organization_id}/logo-dark.${logoDarkFile.name.split('.').pop()}`);
 
       // Get existing settings from Django
-      const existingResult = await djangoApi.getOrganization(profile.organization_id);
+      const existingResult = await djangoApi.getOrgSettings({ silent: true });
       const existingSettings = existingResult.data?.settings && typeof existingResult.data.settings === 'object' ? existingResult.data.settings as Record<string, any> : {};
 
       // Update via Django
-      const result = await djangoApi.updateOrganization(profile.organization_id, { settings: { ...existingSettings, site_settings: updatedSettings } });
+      const result = await djangoApi.updateOrgSettings(profile.organization_id, { settings: { ...existingSettings, site_settings: updatedSettings } });
       if (result.error) throw new Error(result.error);
 
       setSettings(updatedSettings);
