@@ -75,7 +75,7 @@ const AttendanceHistory = () => {
       const toDate = format(endOfDay(dateTo), 'yyyy-MM-dd');
 
       const [memberResult, tempResult] = await Promise.all([
-        djangoApi.getAttendance({ start_date: fromDate, end_date: toDate, include_profiles: 'true' }),
+        djangoApi.getAttendance({ start_date: fromDate, end_date: toDate }),
         djangoApi.getTempAttendance({ start_date: fromDate, end_date: toDate }),
       ]);
 

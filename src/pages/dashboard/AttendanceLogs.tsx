@@ -56,7 +56,6 @@ const AttendanceLogs = () => {
       const { data, error } = await djangoApi.getAttendance({
         start_date: dateFilter,
         end_date: dateFilter,
-        include_profiles: 'true',
       });
 
       if (error) throw new Error(error);

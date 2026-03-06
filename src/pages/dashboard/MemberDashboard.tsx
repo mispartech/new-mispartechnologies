@@ -29,7 +29,7 @@ const MemberDashboard = () => {
     try {
       // Fetch attendance for current user — backend filters by JWT
       const { data } = await djangoApi.getAttendance(
-        { user_id: profile.id, include_profiles: 'true' },
+        { user_id: profile.id },
         { silent: true }
       );
       if (data) setAttendanceRecords(data);
