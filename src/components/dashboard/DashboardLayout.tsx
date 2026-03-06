@@ -146,7 +146,10 @@ const DashboardLayout = () => {
   };
 
   return (
-    <TerminologyProvider organizationId={djangoUser?.organization_id}>
+    <TerminologyProvider
+      organizationType={djangoUser?.organization_type}
+      organizationName={djangoUser?.organization_name}
+    >
       <ThemeProvider
         organizationId={djangoUser?.organization_id}
         userRole={djangoUser?.role ? normalizeRole(djangoUser.role) : 'member'}

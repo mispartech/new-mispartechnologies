@@ -40,7 +40,7 @@ const DashboardHome = () => {
     try {
       // Fetch attendance, members, and departments in parallel
       const [attendanceRes, membersRes, departmentsRes] = await Promise.all([
-        djangoApi.getAttendance({ include_profiles: 'true', limit: 100 }, { silent: true }),
+        djangoApi.getAttendance({ limit: 100 }, { silent: true }),
         djangoApi.getMembers({ limit: 50 }),
         djangoApi.getDepartments(),
       ]);

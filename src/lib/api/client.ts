@@ -323,11 +323,9 @@ class DjangoApiClient {
 
   async getAttendance(params?: {
     user_id?: string;
-    organization_id?: string;
     start_date?: string;
     end_date?: string;
     limit?: number;
-    include_profiles?: string;
   }, options?: { silent?: boolean }): Promise<ApiResponse<any[]>> {
     const query = params
       ? '?' +

@@ -37,7 +37,7 @@ const Reports = () => {
       const endDate = format(new Date(), 'yyyy-MM-dd');
 
       // Fetch via Django
-      const result = await djangoApi.getAttendance({ start_date: startDate, end_date: endDate, include_profiles: 'true' });
+      const result = await djangoApi.getAttendance({ start_date: startDate, end_date: endDate });
       if (result.error) throw new Error(result.error);
 
       const attendance = result.data || [];

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 // Define terminology mappings based on organization type/industry
 const TERMINOLOGY_MAP: Record<string, { singular: string; plural: string; title: string }> = {
@@ -30,23 +29,14 @@ const TERMINOLOGY_MAP: Record<string, { singular: string; plural: string; title:
 };
 
 interface TerminologyContextType {
-  // Core terms
-  personSingular: string;  // member, employee, student, staff
-  personPlural: string;    // members, employees, students, staff
-  personTitle: string;     // Member, Employee, Student, Staff
-  
-  // Organization info
+  personSingular: string;
+  personPlural: string;
+  personTitle: string;
   organizationType: string;
   organizationIndustry: string;
   organizationName: string;
-  
-  // Helper function to get term with proper casing
   getTerm: (type: 'singular' | 'plural' | 'title', capitalize?: boolean) => string;
-  
-  // Loading state
   isLoading: boolean;
-  
-  // Refresh function for when organization changes
   refreshTerminology: () => Promise<void>;
 }
 
@@ -78,147 +68,71 @@ export const useTerminology = () => {
 interface TerminologyProviderProps {
   children: ReactNode;
   organizationId?: string;
+  /** Organization type from profile — avoids Supabase query */
+  organizationType?: string;
+  /** Organization industry from profile */
+  organizationIndustry?: string;
+  /** Organization name from profile */
+  organizationName?: string;
 }
 
 export const TerminologyProvider: React.FC<TerminologyProviderProps> = ({ 
   children, 
-  organizationId 
+  organizationType = 'other',
+  organizationIndustry = '',
+  organizationName = '',
 }) => {
-  const [terminology, setTerminology] = useState({
-    personSingular: 'member',
-    personPlural: 'members',
-    personTitle: 'Member',
-  });
-  const [organizationInfo, setOrganizationInfo] = useState({
-    type: 'other',
-    industry: '',
-    name: '',
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
   const determineTerminology = (type: string, industry: string) => {
-    // First check by industry (more specific)
     const industryLower = industry?.toLowerCase() || '';
     const typeLower = type?.toLowerCase() || 'other';
     
-    // Check industry keywords
     for (const [key, terms] of Object.entries(TERMINOLOGY_MAP)) {
       if (industryLower.includes(key) || industryLower === key) {
         return terms;
       }
     }
     
-    // Fall back to organization type
     return TERMINOLOGY_MAP[typeLower] || TERMINOLOGY_MAP.other;
   };
 
-  const fetchOrganizationData = async () => {
-    if (!organizationId) {
-      setIsLoading(false);
-      return;
-    }
+  const terms = determineTerminology(organizationType, organizationIndustry);
 
-    try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('type, industry, name')
-        .eq('id', organizationId)
-        .maybeSingle();
+  const [terminology] = useState(() => ({
+    personSingular: terms.singular,
+    personPlural: terms.plural,
+    personTitle: terms.title,
+  }));
 
-      if (error) {
-        console.error('Error fetching organization for terminology:', error);
-        setIsLoading(false);
-        return;
-      }
-
-      if (data) {
-        const terms = determineTerminology(data.type, data.industry || '');
-        setTerminology({
-          personSingular: terms.singular,
-          personPlural: terms.plural,
-          personTitle: terms.title,
-        });
-        setOrganizationInfo({
-          type: data.type,
-          industry: data.industry || '',
-          name: data.name,
-        });
-      }
-    } catch (error) {
-      console.error('Error in fetchOrganizationData:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Re-derive when props change
+  const [currentTerms, setCurrentTerms] = useState(terminology);
 
   useEffect(() => {
-    fetchOrganizationData();
-  }, [organizationId]);
-
-  // Subscribe to organization changes for real-time updates
-  useEffect(() => {
-    if (!organizationId) return;
-
-    const channel = supabase
-      .channel(`org-changes-${organizationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'organizations',
-          filter: `id=eq.${organizationId}`,
-        },
-        (payload) => {
-          const newData = payload.new as any;
-          const terms = determineTerminology(newData.type, newData.industry || '');
-          setTerminology({
-            personSingular: terms.singular,
-            personPlural: terms.plural,
-            personTitle: terms.title,
-          });
-          setOrganizationInfo({
-            type: newData.type,
-            industry: newData.industry || '',
-            name: newData.name,
-          });
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('Organization realtime subscription error:', err?.message || status);
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [organizationId]);
+    const t = determineTerminology(organizationType, organizationIndustry);
+    setCurrentTerms({
+      personSingular: t.singular,
+      personPlural: t.plural,
+      personTitle: t.title,
+    });
+  }, [organizationType, organizationIndustry]);
 
   const getTerm = (type: 'singular' | 'plural' | 'title', capitalize = false): string => {
     let term = '';
     switch (type) {
-      case 'singular':
-        term = terminology.personSingular;
-        break;
-      case 'plural':
-        term = terminology.personPlural;
-        break;
-      case 'title':
-        term = terminology.personTitle;
-        break;
+      case 'singular': term = currentTerms.personSingular; break;
+      case 'plural': term = currentTerms.personPlural; break;
+      case 'title': term = currentTerms.personTitle; break;
     }
     return capitalize ? term.charAt(0).toUpperCase() + term.slice(1) : term;
   };
 
   const value: TerminologyContextType = {
-    ...terminology,
-    organizationType: organizationInfo.type,
-    organizationIndustry: organizationInfo.industry,
-    organizationName: organizationInfo.name,
+    ...currentTerms,
+    organizationType,
+    organizationIndustry,
+    organizationName,
     getTerm,
-    isLoading,
-    refreshTerminology: fetchOrganizationData,
+    isLoading: false,
+    refreshTerminology: async () => {},
   };
 
   return (
