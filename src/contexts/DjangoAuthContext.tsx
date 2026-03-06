@@ -9,6 +9,10 @@ interface User {
   last_name: string;
   role: string;
   organization_id: string;
+  organization_name?: string;
+  organization_type?: string;
+  organization_size_range?: string;
+  organization_branding?: Record<string, any>;
   department?: string;
   department_id?: string;
   face_image_url?: string;
@@ -79,7 +83,6 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) setUser(null);
         return;
       }
-      // Deduplicate by access token to avoid double profile fetches
       const token = session.access_token;
       if (token && token === lastAccessToken) {
         console.log('[DjangoAuth] Skipping duplicate session handling');
@@ -101,7 +104,6 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('[DjangoAuth] Auth state change:', event, !!session);
 
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        // Fire-and-forget to avoid blocking the callback
         handleSession(session).finally(() => {
           if (!initDone.current && mounted) {
             initDone.current = true;
@@ -112,12 +114,10 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
         lastAccessToken = null;
         if (mounted) setUser(null);
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        // Update token reference without re-fetching profile
         lastAccessToken = session.access_token;
       }
     });
 
-    // Safety fallback: if INITIAL_SESSION never fires, stop loading
     const fallbackTimer = setTimeout(() => {
       if (mounted && !initDone.current) {
         console.warn('[DjangoAuth] Fallback: resolving loading state');

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { useTerminology } from '@/contexts/TerminologyContext';
 import { 
   Users, UserCheck, Building2, Clock, TrendingUp, Calendar as CalendarIcon
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday, startOfWeek, isWithinInterval } from 'date-fns';
 
 interface DashboardContext {
   user: any;
@@ -21,47 +21,79 @@ interface DashboardContext {
 
 const DashboardHome = () => {
   const { profile } = useOutletContext<DashboardContext>();
-  const [stats, setStats] = useState({
-    totalMembers: 0, totalAdmins: 0, totalDepartments: 0, attendedToday: 0, averageAttendance: 0,
-  });
-  const [organization, setOrganization] = useState<any>(null);
-  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
-  const [recentMembers, setRecentMembers] = useState<any[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { personPlural, getTerm } = useTerminology();
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [profile?.organization_id]);
 
   const fetchDashboardData = async () => {
-    try {
-      // Fetch organization
-      if (profile?.organization_id) {
-        const { data: orgData } = await djangoApi.getOrganization(profile.organization_id);
-        setOrganization(orgData);
-      }
+    if (!profile?.organization_id) {
+      setLoading(false);
+      return;
+    }
 
-      // Fetch dashboard stats from Django
-      const { data: dashStats } = await djangoApi.getDashboardStats();
-      
-      if (dashStats) {
-        setStats({
-          totalMembers: dashStats.total_members || 0,
-          totalAdmins: dashStats.total_admins || 0,
-          totalDepartments: dashStats.total_departments || 0,
-          attendedToday: dashStats.attended_today || 0,
-          averageAttendance: 0,
-        });
-        setRecentAttendance(dashStats.recent_attendance || []);
-        setRecentMembers(dashStats.recent_members || []);
-      }
+    try {
+      // Fetch attendance, members, and departments in parallel
+      const [attendanceRes, membersRes, departmentsRes] = await Promise.all([
+        djangoApi.getAttendance({ include_profiles: 'true', limit: '100' }, { silent: true }),
+        djangoApi.getMembers({ limit: 50 }),
+        djangoApi.getDepartments(),
+      ]);
+
+      if (attendanceRes.data) setAttendanceRecords(attendanceRes.data);
+      if (membersRes.data) setMembers(membersRes.data);
+      if (departmentsRes.data) setDepartments(departmentsRes.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Compute stats client-side from attendance data
+  const stats = useMemo(() => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+
+    const attendedToday = attendanceRecords.filter(r => {
+      try { return isToday(new Date(r.date || r.created_at)); } catch { return false; }
+    }).length;
+
+    const attendedThisWeek = attendanceRecords.filter(r => {
+      try {
+        const d = new Date(r.date || r.created_at);
+        return isWithinInterval(d, { start: weekStart, end: today });
+      } catch { return false; }
+    }).length;
+
+    const totalMembers = members.length;
+    const totalDepartments = departments.length;
+    const totalAdmins = members.filter(m => 
+      ['admin', 'super_admin'].includes(m.role?.toLowerCase?.())
+    ).length;
+
+    return { totalMembers, totalAdmins, totalDepartments, attendedToday, attendedThisWeek };
+  }, [attendanceRecords, members, departments]);
+
+  // Recent records for display
+  const recentAttendance = useMemo(() => 
+    [...attendanceRecords]
+      .sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime())
+      .slice(0, 5),
+    [attendanceRecords]
+  );
+
+  const recentMembers = useMemo(() => 
+    [...members]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 5),
+    [members]
+  );
 
   if (loading) {
     return (
@@ -84,16 +116,18 @@ const DashboardHome = () => {
               Here's what's happening with your attendance system today.
             </p>
           </div>
-          {organization && (
+          {profile?.organization_name && (
             <div className="flex flex-col items-start md:items-end gap-1">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-primary" />
-                <span className="font-semibold text-foreground">{organization.name}</span>
+                <span className="font-semibold text-foreground">{profile.organization_name}</span>
               </div>
               <div className="flex gap-2">
-                <Badge variant="secondary" className="capitalize">{organization.type?.replace('_', ' ')}</Badge>
-                {organization.size_range && (
-                  <Badge variant="outline">{organization.size_range}</Badge>
+                {profile.organization_type && (
+                  <Badge variant="secondary" className="capitalize">{profile.organization_type.replace('_', ' ')}</Badge>
+                )}
+                {profile.organization_size_range && (
+                  <Badge variant="outline">{profile.organization_size_range}</Badge>
                 )}
               </div>
             </div>
@@ -125,7 +159,11 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent>
             {recentAttendance.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No attendance records yet</p>
+              <div className="text-center py-12">
+                <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="font-medium text-foreground mb-1">No attendance records yet</p>
+                <p className="text-sm text-muted-foreground">Records will appear here once attendance is marked.</p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {recentAttendance.map((record: any) => (
@@ -164,7 +202,11 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent>
             {recentMembers.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No {personPlural} registered yet</p>
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="font-medium text-foreground mb-1">No {personPlural} registered yet</p>
+                <p className="text-sm text-muted-foreground">Add {personPlural} to start tracking attendance.</p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {recentMembers.map((member: any) => (

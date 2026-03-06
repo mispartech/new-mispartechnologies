@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,16 +12,13 @@ import AttendanceHeatmap from '@/components/dashboard/AttendanceHeatmap';
 import { 
   Calendar, Clock, CheckCircle2, XCircle, User, Building2, TrendingUp, CalendarDays, History
 } from 'lucide-react';
-import { format, isToday } from 'date-fns';
+import { format, isToday, startOfMonth, startOfWeek, isWithinInterval } from 'date-fns';
 
 interface DashboardContext { user: any; profile: any; session: any; }
 
 const MemberDashboard = () => {
   const { profile } = useOutletContext<DashboardContext>();
-  const [stats, setStats] = useState({ totalAttendance: 0, thisMonth: 0, thisWeek: 0, attendedToday: false });
-  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
-  const [organization, setOrganization] = useState<any>(null);
-  const [department, setDepartment] = useState<any>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,22 +27,58 @@ const MemberDashboard = () => {
 
   const fetchMemberData = async () => {
     try {
-      if (profile?.organization_id) {
-        const { data: orgData } = await djangoApi.getOrganization(profile.organization_id);
-        setOrganization(orgData);
-      }
-      if (profile?.department_id) {
-        const { data: deptData } = await djangoApi.getDepartment(profile.department_id);
-        setDepartment(deptData);
-      }
-
-      // /api/dashboard/member-stats/ does not exist on backend yet — skip API call
+      // Fetch attendance for current user — backend filters by JWT
+      const { data } = await djangoApi.getAttendance(
+        { user_id: profile.id, include_profiles: 'true' },
+        { silent: true }
+      );
+      if (data) setAttendanceRecords(data);
     } catch (error) {
       console.error('Error fetching member data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Compute stats client-side
+  const stats = useMemo(() => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(today);
+
+    const attendedToday = attendanceRecords.some(r => {
+      try { return isToday(new Date(r.date || r.created_at)); } catch { return false; }
+    });
+
+    const thisWeek = attendanceRecords.filter(r => {
+      try {
+        const d = new Date(r.date || r.created_at);
+        return isWithinInterval(d, { start: weekStart, end: today });
+      } catch { return false; }
+    }).length;
+
+    const thisMonth = attendanceRecords.filter(r => {
+      try {
+        const d = new Date(r.date || r.created_at);
+        return isWithinInterval(d, { start: monthStart, end: today });
+      } catch { return false; }
+    }).length;
+
+    return {
+      totalAttendance: attendanceRecords.length,
+      thisMonth,
+      thisWeek,
+      attendedToday,
+    };
+  }, [attendanceRecords]);
+
+  // Recent records for display
+  const recentAttendance = useMemo(() =>
+    [...attendanceRecords]
+      .sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime())
+      .slice(0, 5),
+    [attendanceRecords]
+  );
 
   if (loading) {
     return (
@@ -70,8 +103,12 @@ const MemberDashboard = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Welcome back, {profile?.first_name || 'Member'}! 👋</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Track your attendance and view your records.</p>
             <div className="flex flex-wrap gap-2 mt-2">
-              {organization && <Badge variant="secondary" className="text-xs"><Building2 className="w-3 h-3 mr-1" />{organization.name}</Badge>}
-              {department && <Badge variant="outline" className="text-xs">{department.name}</Badge>}
+              {profile?.organization_name && (
+                <Badge variant="secondary" className="text-xs"><Building2 className="w-3 h-3 mr-1" />{profile.organization_name}</Badge>
+              )}
+              {profile?.department && (
+                <Badge variant="outline" className="text-xs">{profile.department}</Badge>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2">
@@ -116,12 +153,13 @@ const MemberDashboard = () => {
             {recentAttendance.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No attendance records yet</p>
+                <p className="font-medium text-foreground mb-1">No attendance records yet</p>
+                <p className="text-sm text-muted-foreground">Your attendance will appear here once marked.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {recentAttendance.map((record: any) => {
-                  const recordDate = new Date(record.date);
+                  const recordDate = new Date(record.date || record.created_at);
                   const isRecordToday = isToday(recordDate);
                   return (
                     <div key={record.id} className={`flex items-center justify-between p-3 rounded-lg border ${isRecordToday ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'}`}>
@@ -160,7 +198,7 @@ const MemberDashboard = () => {
             <div className="space-y-3 pt-4 border-t">
               <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Phone</span><span className="font-medium">{profile?.phone_number || 'Not set'}</span></div>
               <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Gender</span><span className="font-medium capitalize">{profile?.gender || 'Not set'}</span></div>
-              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Department</span><span className="font-medium">{department?.name || 'Not assigned'}</span></div>
+              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Department</span><span className="font-medium">{profile?.department || 'Not assigned'}</span></div>
               <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Face Registered</span><span className="font-medium">{profile?.face_image_url ? <Badge className="bg-green-500/10 text-green-600 text-xs">Yes</Badge> : <Badge variant="outline" className="text-xs">No</Badge>}</span></div>
             </div>
             <Button variant="outline" className="w-full mt-4" asChild><a href="/dashboard/profile"><User className="w-4 h-4 mr-2" />Edit Profile</a></Button>
