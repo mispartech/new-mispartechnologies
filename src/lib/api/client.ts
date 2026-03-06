@@ -379,17 +379,27 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ ORGANIZATIONS ═══════════════════════════
+  // ═══════════════════════════ ORGANIZATION SETTINGS ═══════════════════════════
 
-  async getOrganization(id: string): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.ORGANIZATION(id));
+  /**
+   * GET /api/organization-settings/
+   * Returns the full organization settings for the authenticated user's org.
+   * Backend identifies the org via JWT — no ID in URL.
+   */
+  async getOrgSettings(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.ORG_SETTINGS, { silent: options?.silent });
   }
 
-  async updateOrganization(
-    id: string,
+  /**
+   * PATCH /api/organization-settings/
+   * Updates organization settings (branding, features, attendance config, etc.).
+   * Backend identifies the org via JWT — no ID in URL.
+   */
+  async updateOrgSettings(
+    _orgId: string,
     data: Partial<any>,
   ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.ORGANIZATION(id), {
+    return this.request(API_ROUTES.ORG_SETTINGS, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -525,28 +535,7 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ DASHBOARD STATS ═══════════════════════════
-
-  async getDashboardStats(): Promise<ApiResponse<{
-    total_members: number;
-    total_admins: number;
-    total_departments: number;
-    attended_today: number;
-    recent_attendance: any[];
-    recent_members: any[];
-  }>> {
-    return this.request(API_ROUTES.DASHBOARD_STATS);
-  }
-
-  async getMemberDashboardStats(options?: { silent?: boolean }): Promise<ApiResponse<{
-    total_attendance: number;
-    this_month: number;
-    this_week: number;
-    attended_today: boolean;
-    recent_attendance: any[];
-  }>> {
-    return this.request(API_ROUTES.MEMBER_DASHBOARD_STATS, { silent: options?.silent });
-  }
+  // Dashboard stats are now computed client-side from attendance data.
 
   // ═══════════════════════════ REPORTS ═══════════════════════════
 

@@ -32,9 +32,7 @@ export const API_ROUTES = {
   TEMP_ATTENDANCE: '/api/temp-attendance/',
   TEMP_ATTENDANCE_CLAIM: '/api/temp-attendance/claim/',
 
-  // ── Organizations ──
-  ORGANIZATION: (id: string) => `/api/organizations/${id}/`,
-
+  // ── Organizations (removed — use profile + /api/organization-settings/) ──
   // ── Notifications ──
   NOTIFICATIONS: '/api/notifications/',
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read/`,
@@ -60,9 +58,8 @@ export const API_ROUTES = {
   FACE_ENROLLMENT_STATUS: '/api/face-enrollment-status/',
   FACE_RECOGNIZE: '/api/recognize-frame/',
 
-  // ── Dashboard Stats ──
-  DASHBOARD_STATS: '/api/dashboard/stats/',
-  MEMBER_DASHBOARD_STATS: '/api/dashboard/member-stats/',
+  // ── Organization Settings ──
+  ORG_SETTINGS: '/api/organization-settings/',
 
   // ── Reports ──
   REPORTS_ATTENDANCE: '/api/reports/attendance/',

@@ -56,7 +56,7 @@ const OrganizationSettings = () => {
   const fetchOrganization = async () => {
     if (!profile?.organization_id) { setIsLoading(false); return; }
     try {
-      const result = await djangoApi.getOrganization(profile.organization_id);
+      const result = await djangoApi.getOrgSettings({ silent: true });
       if (result.error) throw new Error(result.error);
       const data = result.data;
       const orgData = { ...data, settings: (typeof data.settings === 'object' && data.settings !== null) ? data.settings : {} };
@@ -75,7 +75,7 @@ const OrganizationSettings = () => {
     if (!organization) return;
     setIsSaving(true);
     try {
-      const result = await djangoApi.updateOrganization(organization.id, {
+      const result = await djangoApi.updateOrgSettings(organization.id, {
         name: organization.name, industry: organization.industry, address: organization.address, city: organization.city, country: organization.country, phone: organization.phone, email: organization.email, website: organization.website, settings,
       });
       if (result.error) throw new Error(result.error);

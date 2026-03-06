@@ -111,7 +111,6 @@ function hslString(hex: string): string {
   return `${hsl.h} ${hsl.s}% ${hsl.l}%`;
 }
 
-// Compute a foreground color (light or dark) based on background luminance
 function autoForeground(bgHex: string): string {
   const hsl = hexToHSL(bgHex);
   if (!hsl) return '0 0% 100%';
@@ -149,36 +148,37 @@ interface ThemeProviderProps {
   children: ReactNode;
   organizationId?: string;
   userRole?: string;
+  /** Branding data from the user profile — avoids a separate API call */
+  initialBranding?: Record<string, any>;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, organizationId, userRole }) => {
-  const [branding, setBranding] = useState<OrgBranding>(DEFAULT_BRANDING);
-  const [savedBranding, setSavedBranding] = useState<OrgBranding>(DEFAULT_BRANDING);
-  const [isLoading, setIsLoading] = useState(true);
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({
+  children,
+  organizationId,
+  userRole,
+  initialBranding,
+}) => {
+  const [branding, setBranding] = useState<OrgBranding>(() => {
+    if (initialBranding && Object.keys(initialBranding).length > 0) {
+      return { ...DEFAULT_BRANDING, ...initialBranding };
+    }
+    return DEFAULT_BRANDING;
+  });
+  const [savedBranding, setSavedBranding] = useState<OrgBranding>(branding);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const shouldApply = isAdmin || branding.member_theme_enabled;
 
-  // Fetch branding from org
+  // Sync if initialBranding changes (e.g. after profile refresh)
   useEffect(() => {
-    if (!organizationId) {
-      setIsLoading(false);
-      return;
+    if (initialBranding && Object.keys(initialBranding).length > 0) {
+      const merged = { ...DEFAULT_BRANDING, ...initialBranding };
+      setBranding(merged);
+      setSavedBranding(merged);
     }
-
-    const fetch = async () => {
-      const res = await djangoApi.getOrganization(organizationId);
-      if (res.data?.branding && Object.keys(res.data.branding).length > 0) {
-        const merged = { ...DEFAULT_BRANDING, ...res.data.branding };
-        setBranding(merged);
-        setSavedBranding(merged);
-      }
-      setIsLoading(false);
-    };
-
-    fetch();
-  }, [organizationId]);
+  }, [initialBranding]);
 
   // Inject CSS variables when branding changes
   useEffect(() => {
@@ -186,7 +186,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, organiza
 
     const root = document.documentElement;
 
-    // Colors
     root.style.setProperty('--primary', hslString(branding.primary_color));
     root.style.setProperty('--primary-foreground', autoForeground(branding.primary_color));
     root.style.setProperty('--secondary', hslString(branding.secondary_color));
@@ -194,20 +193,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, organiza
     root.style.setProperty('--accent', hslString(branding.accent_color));
     root.style.setProperty('--accent-foreground', autoForeground(branding.accent_color));
 
-    // Sidebar & header
     root.style.setProperty('--sidebar-bg', hslString(branding.sidebar_bg));
     root.style.setProperty('--sidebar-text', hslString(branding.sidebar_text));
     root.style.setProperty('--header-bg', hslString(branding.header_bg));
     root.style.setProperty('--header-text', autoForeground(branding.header_bg));
 
-    // Border radius
     root.style.setProperty('--radius', RADIUS_MAP[branding.border_radius] || '0.5rem');
-
-    // Ring color follows accent
     root.style.setProperty('--ring', hslString(branding.accent_color));
 
     return () => {
-      // Clean up custom properties on unmount
       const props = [
         '--primary', '--primary-foreground', '--secondary', '--secondary-foreground',
         '--accent', '--accent-foreground', '--sidebar-bg', '--sidebar-text',
@@ -231,7 +225,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, organiza
     });
   }, [branding.font_family, branding.heading_font]);
 
-  // Apply font families to dashboard root
+  // Apply font families
   useEffect(() => {
     if (!shouldApply) return;
     const root = document.documentElement;
@@ -269,7 +263,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, organiza
   const saveBranding = useCallback(async (): Promise<boolean> => {
     if (!organizationId) return false;
     setIsSaving(true);
-    const res = await djangoApi.updateOrganization(organizationId, { branding });
+    const res = await djangoApi.updateOrgSettings(organizationId, { branding });
     setIsSaving(false);
     if (res.status < 300) {
       setSavedBranding(branding);
