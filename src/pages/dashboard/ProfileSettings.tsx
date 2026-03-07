@@ -47,9 +47,7 @@ const ProfileSettings = () => {
   const handleProfileUpdate = async () => {
     setIsLoading(true);
     try {
-      const userId = effectiveProfile?.id || user?.id;
-      if (!userId) throw new Error('User ID not available');
-      const result = await djangoApi.updateProfile(userId, {
+      const result = await djangoApi.updateProfile({
         first_name: profileData.first_name,
         last_name: profileData.last_name,
         phone_number: profileData.phone_number,
@@ -100,7 +98,7 @@ const ProfileSettings = () => {
       const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
       setUploadProgress('Updating profile...');
-      const result = await djangoApi.updateProfile(userId, { face_image_url: publicUrl });
+      const result = await djangoApi.updateProfile({ face_image_url: publicUrl });
       if (result.error) throw new Error(result.error);
       setFaceImageUrl(urlWithTimestamp);
       await refreshUser();

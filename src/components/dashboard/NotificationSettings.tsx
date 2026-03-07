@@ -32,7 +32,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const updatePreferences = async (newPreferences: NotificationPreferences) => {
     setIsLoading(true);
     try {
-      const { error } = await djangoApi.updateProfile(userId, { notification_preferences: newPreferences });
+      const { error } = await djangoApi.updateProfile({ notification_preferences: newPreferences });
       if (error) throw new Error(error);
       setPreferences(newPreferences);
       toast({ title: 'Settings Updated', description: 'Your notification preferences have been saved.' });
