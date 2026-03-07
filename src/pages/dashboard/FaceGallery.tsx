@@ -46,11 +46,11 @@ const FaceGallery = () => {
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${selectedMember.id}/face.${fileExt}`;
-      // Storage stays with Supabase
-      const { error: uploadError } = await supabase.storage.from('face-images').upload(fileName, file, { upsert: true });
+      const orgId = profile?.organization_id || 'default';
+      const fileName = `${orgId}/${selectedMember.id}/face.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('faces').upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('face-images').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
       // Update profile via Django
       await djangoApi.updateMember(selectedMember.id, { face_image_url: publicUrl });
       // Register face with Django

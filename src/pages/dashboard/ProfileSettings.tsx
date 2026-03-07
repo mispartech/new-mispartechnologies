@@ -92,11 +92,12 @@ const ProfileSettings = () => {
       toast({ title: 'Uploading Image', description: 'Please wait while your photo is being uploaded...' });
       setUploadProgress('Uploading to storage...');
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/face.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('face-images').upload(fileName, file, { upsert: true });
+      const orgId = effectiveProfile?.organization_id || user?.organization_id || 'default';
+      const fileName = `${orgId}/${userId}/face.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('faces').upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
       setUploadProgress('Processing image...');
-      const { data: { publicUrl } } = supabase.storage.from('face-images').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
       setUploadProgress('Updating profile...');
       const result = await djangoApi.updateProfile(userId, { face_image_url: publicUrl });

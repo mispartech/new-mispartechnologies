@@ -249,11 +249,13 @@ const FaceEnrollment = () => {
       }
       const blob = new Blob([ab], { type: 'image/jpeg' });
       
-      const fileName = `${user.id}/face.jpg`;
+      // Use org-scoped path: faces/{org_id}/{user_id}/enrollment.jpg
+      const orgId = profile?.organization_id || 'default';
+      const fileName = `${orgId}/${user.id}/enrollment.jpg`;
       
-      // Upload to Supabase storage
+      // Upload to Supabase storage (faces bucket)
       const { error: uploadError } = await supabase.storage
-        .from('face-images')
+        .from('faces')
         .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
       
       if (uploadError) {
@@ -262,7 +264,7 @@ const FaceEnrollment = () => {
       }
       
       // Get public URL and update profile
-      const { data: { publicUrl } } = supabase.storage.from('face-images').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
       await djangoApi.updateProfile(user.id, { face_image_url: publicUrl });
       console.log('[FaceEnrollment] Face image saved to storage and profile updated');
     } catch (err) {
