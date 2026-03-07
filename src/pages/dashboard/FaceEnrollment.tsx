@@ -305,9 +305,16 @@ const FaceEnrollment = () => {
 
       // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        // Save face image to storage in parallel with polling
-        saveFaceImageToStorage(base64Image);
+        // Step 1: Upload to storage AND PATCH profile (blocking)
+        try {
+          await saveFaceImageToStorage(base64Image);
+        } catch (storageErr: any) {
+          setEnrollmentStep('FAILED');
+          setErrorMessage(storageErr.message || 'Failed to save face image. Please retry.');
+          return;
+        }
         
+        // Step 2: Poll until backend confirms enrollment
         const isReady = await pollUntilEnrollmentReady();
 
         if (!isReady) {
