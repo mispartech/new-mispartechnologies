@@ -237,8 +237,9 @@ const FaceEnrollment = () => {
     setCameraActive(false);
   }, []);
 
-  // Upload face image to Supabase storage and update profile
-  const saveFaceImageToStorage = useCallback(async (base64Image: string) => {
+  // Upload face image to Supabase storage and update profile via PATCH
+  // Returns true if both storage upload AND profile PATCH succeed.
+  const saveFaceImageToStorage = useCallback(async (base64Image: string): Promise<boolean> => {
     try {
       // Convert base64 to Blob
       const byteString = atob(base64Image);
@@ -253,25 +254,33 @@ const FaceEnrollment = () => {
       const orgId = profile?.organization_id || 'default';
       const fileName = `${orgId}/${user.id}/enrollment.jpg`;
       
-      // Upload to Supabase storage (faces bucket)
+      // Step 1: Upload to Supabase storage (faces bucket)
       const { error: uploadError } = await supabase.storage
         .from('faces')
         .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
       
       if (uploadError) {
         console.error('[FaceEnrollment] Storage upload error:', uploadError);
-        return; // Non-blocking — enrollment still succeeded
+        throw new Error('Failed to upload face image to storage.');
       }
       
-      // Get public URL and update profile
+      // Step 2: Get public URL
       const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
-      await djangoApi.updateProfile({ face_image_url: publicUrl });
+      
+      // Step 3: PATCH /api/profile/ with face_image_url — this MUST succeed
+      const patchResult = await djangoApi.updateProfile({ face_image_url: publicUrl });
+      if (patchResult.error) {
+        console.error('[FaceEnrollment] Profile PATCH failed:', patchResult.error);
+        throw new Error(patchResult.error || 'Failed to save face image URL to server.');
+      }
+      
       console.log('[FaceEnrollment] Face image saved to storage and profile updated');
-    } catch (err) {
-      console.error('[FaceEnrollment] Failed to save face image to storage:', err);
-      // Non-blocking — face enrollment already succeeded
+      return true;
+    } catch (err: any) {
+      console.error('[FaceEnrollment] saveFaceImageToStorage failed:', err);
+      throw err;
     }
-  }, [user?.id]);
+  }, [user?.id, profile?.organization_id]);
 
   // Process enrollment with base64 image
   const processEnrollment = useCallback(async (base64Image: string) => {
@@ -296,9 +305,16 @@ const FaceEnrollment = () => {
 
       // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        // Save face image to storage in parallel with polling
-        saveFaceImageToStorage(base64Image);
+        // Step 1: Upload to storage AND PATCH profile (blocking)
+        try {
+          await saveFaceImageToStorage(base64Image);
+        } catch (storageErr: any) {
+          setEnrollmentStep('FAILED');
+          setErrorMessage(storageErr.message || 'Failed to save face image. Please retry.');
+          return;
+        }
         
+        // Step 2: Poll until backend confirms enrollment
         const isReady = await pollUntilEnrollmentReady();
 
         if (!isReady) {
