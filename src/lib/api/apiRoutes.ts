@@ -10,7 +10,7 @@
 // ── Profile ──
 export const API_ROUTES = {
   PROFILE: '/api/profile/',
-  PROFILE_UPDATE: (userId: string) => `/api/profile/${userId}/`,
+  PROFILE_UPDATE: '/api/profile/',
 
   // ── Members ──
   MEMBERS: '/api/members/',

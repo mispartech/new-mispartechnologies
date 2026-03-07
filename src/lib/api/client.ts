@@ -180,7 +180,6 @@ class DjangoApiClient {
   }
 
   async updateProfile(
-    userId: string,
     data: Partial<{
       first_name: string;
       last_name: string;
@@ -190,7 +189,7 @@ class DjangoApiClient {
       notification_preferences: any;
     }>,
   ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.PROFILE_UPDATE(userId), {
+    return this.request(API_ROUTES.PROFILE_UPDATE, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
