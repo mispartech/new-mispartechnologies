@@ -283,13 +283,23 @@ const FaceEnrollment = () => {
   }, [user?.id, profile?.organization_id]);
 
   // Process enrollment with base64 image
+  // Correct sequence: 1) Upload to Storage → 2) PATCH profile → 3) POST enroll → 4) Poll status
   const processEnrollment = useCallback(async (base64Image: string) => {
     setEnrollmentStep('PROCESSING');
 
     try {
+      // Step 1 & 2: Upload to Supabase Storage and PATCH /api/profile/ with face_image_url
+      try {
+        await saveFaceImageToStorage(base64Image);
+        console.log('[FaceEnrollment] Step 1+2 complete: image uploaded & profile patched');
+      } catch (storageErr: any) {
+        setEnrollmentStep('FAILED');
+        setErrorMessage(storageErr.message || 'Failed to save face image. Please retry.');
+        return;
+      }
+
+      // Step 3: POST /api/face/enroll/ — triggers backend face processing
       const userName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || user.email;
-      
-      // Call Django API directly for face enrollment
       const result = await djangoApi.enrollFace(user.id, base64Image, userName);
 
       if (result.error) {
@@ -303,18 +313,10 @@ const FaceEnrollment = () => {
         throw new Error(data.message || 'This face appears to be already enrolled for another user.');
       }
 
-      // After POST succeeds, poll until backend confirms embedding is READY
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        // Step 1: Upload to storage AND PATCH profile (blocking)
-        try {
-          await saveFaceImageToStorage(base64Image);
-        } catch (storageErr: any) {
-          setEnrollmentStep('FAILED');
-          setErrorMessage(storageErr.message || 'Failed to save face image. Please retry.');
-          return;
-        }
-        
-        // Step 2: Poll until backend confirms enrollment
+        console.log('[FaceEnrollment] Step 3 complete: enroll API succeeded, starting polling');
+
+        // Step 4: Poll GET /api/face-enrollment-status/ only AFTER enroll succeeds
         const isReady = await pollUntilEnrollmentReady();
 
         if (!isReady) {
