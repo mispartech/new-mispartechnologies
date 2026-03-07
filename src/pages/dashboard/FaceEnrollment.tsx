@@ -265,7 +265,7 @@ const FaceEnrollment = () => {
       
       // Get public URL and update profile
       const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
-      await djangoApi.updateProfile(user.id, { face_image_url: publicUrl });
+      await djangoApi.updateProfile({ face_image_url: publicUrl });
       console.log('[FaceEnrollment] Face image saved to storage and profile updated');
     } catch (err) {
       console.error('[FaceEnrollment] Failed to save face image to storage:', err);
