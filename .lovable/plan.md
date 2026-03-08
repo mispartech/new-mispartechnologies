@@ -1,152 +1,98 @@
 
 
-## Problem Analysis
+# User (Member) Dashboard Design Revamp — Phased Plan
 
-There are **three interconnected issues** causing the broken logout and missing login button:
+## Current State
 
-### Issue 1: Logout page never actually signs out
+The member dashboard has 6 pages accessible via the "My Space" sidebar group. They use basic Card layouts, plain spinner loaders, minimal visual personality, and no org-specific theming beyond the branding CSS variables. The pages are functional but generic — they don't feel personalized to the user or their organization.
 
-The console on `/logout` shows:
-```
-[DjangoAuth] Auth state change: SIGNED_IN
-[DjangoAuth] Fetching profile from Django...
-```
+## Design Philosophy
 
-This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
-
-The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
-
-### Issue 2: Login button not showing on the navbar
-
-The Navbar conditionally renders based on `isLoading`:
-- If `isLoading` is `true` -> shows a skeleton placeholder
-- If `isAuthenticated` is `true` -> shows user dropdown
-- If neither -> shows Login button
-
-Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
-
-The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
-
-### Issue 3: No Django logout endpoint needed
-
-**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
+Every page should feel **personal** — the user's name, org branding colors, department, and dynamic attendance data should shape what they see. The org's `branding` object (already in ThemeContext) provides colors, logo, and terminology that should be woven throughout. Empty states should feel encouraging, not sterile.
 
 ---
 
-## Fix Plan
+## Phase 0 — Member Design Primitives
 
-### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
+Shared components used across all member pages:
 
-- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
-- Wrap in try/catch so it never throws
-- As a safety net, manually remove Supabase keys from localStorage if signOut fails
-
-### 2. Fix the `Logout.tsx` component
-
-- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
-- Clear user state and redirect immediately
-- Don't rely on the auth context `logout()` which races with initialization
-
-### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
-
-- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
-- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
-
-### 4. Unify the `DashboardHeader.tsx` logout
-
-- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
+- **MemberPageHeader**: Reuse the admin `PageHeader` but with a softer, more personal tone — smaller gradient accent, optional greeting text, and org logo watermark.
+- **MemberSkeleton**: Content-shaped skeleton loaders replacing all spinners across the 6 pages.
+- **MotivationalEmptyState**: Empty states with contextual encouragement (e.g., "Your streak starts with one day!" instead of "No data found").
+- **GlassStatCard**: A member-specific stat card variant with glassmorphism, subtle gradient backgrounds keyed to the stat type, and animated count-up values.
 
 ---
 
-## Technical Details
+## Phase 1 — Member Dashboard Home (`MemberDashboard.tsx`)
 
-### File: `src/contexts/DjangoAuthContext.tsx`
+The main landing page — should feel like a personal command center.
 
-Changes to the `logout` function:
-```typescript
-const logout = useCallback(async () => {
-  try {
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch (err) {
-    console.error('[DjangoAuth] signOut error, clearing manually:', err);
-    // Fallback: manually clear Supabase tokens from localStorage
-    const keys = Object.keys(localStorage).filter(k =>
-      k.startsWith('sb-')
-    );
-    keys.forEach(k => localStorage.removeItem(k));
-  }
-  setUser(null);
-}, []);
-```
+- **Welcome banner**: Full-width gradient banner using org branding colors. Time-of-day greeting ("Good morning, James"). Show org logo, department, and today's date prominently. Animated attendance status indicator (pulsing green check or amber alert).
+- **Stats row**: Replace `StatsCard` with `GlassStatCard` — 4 cards (Total, This Month, This Week, Today) with gradient icon backgrounds, animated counters, and subtle trend arrows.
+- **Today's focus strip**: A new horizontal strip below stats showing: current streak flame + count, next badge progress mini-bar, and today's schedule (if any) — all in one scannable row.
+- **Recent attendance list**: Richer row design with relative timestamps ("2 hours ago"), subtle left-border color coding, and smooth entrance animations.
+- **Quick actions**: Icon cards with hover glow instead of plain outline buttons. Add "Face Enrollment" action if not enrolled.
+- **Profile card**: Glassmorphism style, larger avatar with enrollment status ring (green = enrolled, amber = pending).
+- **Skeleton loaders**: Replace the spinner with content-shaped skeletons matching the final layout.
 
-Changes to `onAuthStateChange` to prevent double-fetch race:
-- Track whether `initialize()` has already completed
-- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
-- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+---
 
-### File: `src/pages/Logout.tsx`
+## Phase 2 — My Attendance History (`MyAttendanceHistory.tsx`)
 
-Rewrite to bypass the auth context race condition:
-```typescript
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+- **Page header**: Use `MemberPageHeader` with export button in actions slot.
+- **Summary strip**: A row of 3 mini stat pills above the table (Total Records, This Month, Attendance Rate %).
+- **Date filter bar**: Pill-style date range selector with preset options (This Week, This Month, Last 30 Days) alongside the calendar pickers. Active filters shown as dismissible pills.
+- **Table redesign**: Alternating row backgrounds, status dot (green circle) instead of badge, confidence shown as a slim progress bar in the cell. Mobile cards get a cleaner layout with date prominence.
+- **Chart**: Apply branded chart theme (gradient fills, rounded bars, custom tooltip cards).
+- **Empty state**: Motivational message with calendar illustration.
 
-const Logout = () => {
-  const hasRun = useRef(false);
+---
 
-  useEffect(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
+## Phase 3 — Attendance Summary (`AttendanceSummary.tsx`)
 
-    const doLogout = async () => {
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch (err) {
-        console.error('[Logout] signOut failed, clearing manually:', err);
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-'))
-          .forEach(k => localStorage.removeItem(k));
-      } finally {
-        window.location.href = '/';
-      }
-    };
+Currently very bare — needs the most work.
 
-    doLogout();
-  }, []);
+- **KPI cards row**: 4 cards at top — Attendance Rate (%), Best Month, Most Active Day of Week, Average Check-in Time. Each with an icon and trend indicator.
+- **Chart section**: Branded Recharts theme — gradient area fills, rounded bars, custom tooltip with card styling. Add a toggle between bar and line view.
+- **Heatmap**: Better color scale using org brand primary color, proper legend, hover tooltips showing date and count.
+- **Insights card**: A "Your Patterns" card showing auto-generated text insights (e.g., "You're most consistent on Tuesdays" or "Your attendance improved 12% this month").
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-muted-foreground">Signing out...</p>
-    </div>
-  );
-};
-```
+---
 
-### File: `src/components/dashboard/DashboardHeader.tsx`
+## Phase 4 — Streaks & Badges (`StreaksAndBadges.tsx`)
 
-Replace the direct Supabase call with the unified auth context:
-```typescript
-import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
-// ...
-const { logout } = useDjangoAuth();
+The gamification page — should be the most visually exciting.
 
-const handleLogout = async () => {
-  setIsLoggingOut(true);
-  try {
-    await logout();
-    window.location.href = '/';
-  } catch {
-    // fallback
-    window.location.href = '/';
-  }
-};
-```
+- **Streak hero**: Large animated flame with particle effects (CSS-only). Current streak as a massive number with glow effect. Pulsing animation when streak is active.
+- **Progress to next badge**: A prominent arc/ring progress indicator instead of a flat bar. Show the next badge icon at the end of the arc.
+- **Stats row**: 3 glass cards (Current Streak, Longest Streak, Total Days) with animated counters and subtle gradient backgrounds.
+- **Badge grid**: Card-per-badge with locked/unlocked states. Unlocked badges get a shimmer animation and colored glow. Locked badges are grayscale with a lock overlay and "X days to go" label. Hover reveals description.
+- **Milestone timeline**: A vertical timeline on the left showing when badges were unlocked (date), creating a visual achievement history.
 
-### Summary of changes
+---
 
-| File | What Changes |
-|---|---|
-| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
-| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
-| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
+## Phase 5 — My Schedule (`MySchedule.tsx`)
+
+- **Page header**: Org-aware terminology (Services, Classes, or Shifts based on org type).
+- **Today's schedule card**: A prominent card at top showing today's schedule (if any) with countdown timer ("Starts in 2h 15m") or "No events today".
+- **Upcoming list**: Cards with left color border (primary for upcoming), time shown prominently, location with map pin icon. Subtle entrance animation for each card.
+- **Past schedules**: Collapsed by default, muted styling, with a "Show past" toggle.
+- **Empty state**: Org-aware message ("No services scheduled" for church, "No classes assigned" for school).
+- **Calendar mini-view**: Optional small month calendar with dots on scheduled days.
+
+---
+
+## Phase 6 — Profile Settings (`ProfileSettings.tsx`)
+
+- **Profile hero**: Large card at top with avatar (with enrollment ring indicator), name, role badge, department, and org name — styled with glassmorphism.
+- **Tab styling**: Pill-style tabs instead of default underline. Each tab gets an icon and label.
+- **Form sections**: Clean dividers between field groups, subtle section labels, and improved input styling with focus rings matching brand color.
+- **Face ID tab**: Better upload area with drag-and-drop zone, preview with face detection overlay hint, and clearer enrollment status messaging.
+- **Security tab**: Password strength meter with visual bar and requirements checklist.
+
+---
+
+## Implementation Approach
+
+Each phase ships as one focused prompt. Phase 0 primitives ship with Phase 1. No API or data model changes — purely visual and UX. All pages use existing data from the profile context and attendance API.
 
