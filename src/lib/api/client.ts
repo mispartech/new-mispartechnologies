@@ -503,19 +503,52 @@ class DjangoApiClient {
     return this.request(API_ROUTES.FACE_ENROLLMENT_STATUS, { silent: options?.silent });
   }
 
-  async enrollFace(
-    userId: string,
-    imageBase64: string,
-    userName?: string,
-  ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.FACE_ENROLL, {
-      method: 'POST',
-      body: JSON.stringify({
-        image: imageBase64,
-        user_id: userId,
-        name: userName,
-      }),
-    });
+  /**
+   * POST /api/face/enroll/ with multipart/form-data.
+   * The backend handles face detection, embedding, storage upload, and profile update.
+   */
+  async enrollFace(imageBlob: Blob): Promise<ApiResponse<any>> {
+    const token = await this.getAccessToken();
+    const formData = new FormData();
+    formData.append('image', imageBlob, 'enrollment.jpg');
+
+    const url = `${DJANGO_BASE_URL}${API_ROUTES.FACE_ENROLL}`;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Do NOT set Content-Type — browser sets it with multipart boundary
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for upload
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const text = await response.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { message: text }; }
+
+      if (!response.ok) {
+        const error = data?.detail || data?.error || data?.message || 'Enrollment failed';
+        this.notifyError(response.status, error, API_ROUTES.FACE_ENROLL, false, data);
+        return { status: response.status, error };
+      }
+
+      return { data, status: response.status };
+    } catch (err) {
+      const isTimeout = err instanceof DOMException && err.name === 'AbortError';
+      const message = isTimeout ? 'Upload timed out. Please try again.' : 'Network error during enrollment.';
+      if (!isTimeout) console.error('[DjangoApi] enrollFace error:', err);
+      toast({ variant: 'destructive', title: isTimeout ? 'Upload Timeout' : 'Connection Error', description: message });
+      return { status: 0, error: message };
+    }
   }
 
   async recognizeFace(

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { djangoApi } from '@/lib/api/client';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -32,16 +31,26 @@ type EnrollmentMethod = 'upload' | 'camera';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGE_DIMENSION = 800; // Max width/height for compression
+const MAX_IMAGE_DIMENSION = 800;
 const JPEG_QUALITY = 0.8;
-const ENROLLMENT_POLL_INTERVAL_MS = 2000;
-const ENROLLMENT_POLL_TIMEOUT_MS = 60000;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Compress an image to reduce file size for API upload.
- * Resizes to max dimension and converts to JPEG.
+ * Convert a data URL or canvas to a Blob for FormData upload.
+ */
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const byteString = atob(base64);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: mime });
+};
+
+/**
+ * Compress an image to reduce file size for upload.
  */
 const compressImage = (imageSrc: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -49,8 +58,6 @@ const compressImage = (imageSrc: string): Promise<string> => {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       let { width, height } = img;
-      
-      // Calculate new dimensions maintaining aspect ratio
       if (width > height) {
         if (width > MAX_IMAGE_DIMENSION) {
           height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
@@ -62,21 +69,12 @@ const compressImage = (imageSrc: string): Promise<string> => {
           height = MAX_IMAGE_DIMENSION;
         }
       }
-      
       canvas.width = width;
       canvas.height = height;
-      
       const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-      
+      if (!ctx) { reject(new Error('Could not get canvas context')); return; }
       ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convert to JPEG with compression
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-      resolve(compressedDataUrl);
+      resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY));
     };
     img.onerror = () => reject(new Error('Failed to load image for compression'));
     img.src = imageSrc;
@@ -85,14 +83,13 @@ const compressImage = (imageSrc: string): Promise<string> => {
 
 const FaceEnrollment = () => {
   const context = useOutletContext<DashboardContext>();
-  const { user, profile } = context;
+  const { user } = context;
   const navigate = useNavigate();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isMountedRef = useRef(true);
 
   const [method, setMethod] = useState<EnrollmentMethod>('upload');
   const [cameraActive, setCameraActive] = useState(false);
@@ -103,204 +100,82 @@ const FaceEnrollment = () => {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Progress percentage for visual feedback
   const progressMap: Record<EnrollmentStep, number> = {
-    IDLE: 0,
-    CAPTURING: 33,
-    PROCESSING: 66,
-    VERIFIED: 100,
-    FAILED: 0,
+    IDLE: 0, CAPTURING: 33, PROCESSING: 66, VERIFIED: 100, FAILED: 0,
   };
 
-  // Step labels for display
   const stepLabels: Record<EnrollmentStep, string> = {
     IDLE: 'Ready to capture',
     CAPTURING: method === 'upload' ? 'Reading image...' : 'Capturing...',
-    PROCESSING: 'Processing face data...',
+    PROCESSING: 'Enrolling face...',
     VERIFIED: 'Face Verified!',
     FAILED: 'Enrollment failed',
   };
 
-  const { refreshUser, user: authUser } = useDjangoAuth();
+  const { refreshUser } = useDjangoAuth();
 
-  const pollUntilEnrollmentReady = useCallback(async (): Promise<boolean> => {
-    const startedAt = Date.now();
+  // ─── File handling ───
 
-    while (Date.now() - startedAt < ENROLLMENT_POLL_TIMEOUT_MS) {
-      if (!isMountedRef.current) return false;
-
-      // Check enrollment status via dedicated endpoint
-      const statusResult = await djangoApi.getFaceEnrollmentStatus({ silent: true });
-      if (!statusResult.error && statusResult.data?.enrolled === true) {
-        // Sync AuthContext with latest profile
-        await refreshUser();
-        return true;
-      }
-
-      await sleep(ENROLLMENT_POLL_INTERVAL_MS);
-    }
-
-    return false;
-  }, [refreshUser]);
-
-  // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
     setErrorMessage(null);
-
-    // Validate file type
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setErrorMessage('Please upload a JPG, PNG, or WebP image.');
-      return;
+      setErrorMessage('Please upload a JPG, PNG, or WebP image.'); return;
     }
-
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMessage('Image must be less than 5MB.');
-      return;
+      setErrorMessage('Image must be less than 5MB.'); return;
     }
-
-    // Read file as base64
     const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setUploadedImage(result);
+      setUploadedImage(e.target?.result as string);
       setUploadedFileName(file.name);
     };
-    reader.onerror = () => {
-      setErrorMessage('Failed to read image file.');
-    };
+    reader.onerror = () => setErrorMessage('Failed to read image file.');
     reader.readAsDataURL(file);
   }, []);
 
-  // Handle file input change
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
+    if (file) handleFileSelect(file);
   };
 
-  // Handle drag events
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
+    e.preventDefault(); setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
+    if (file) handleFileSelect(file);
   };
 
-  // Start camera
+  // ─── Camera ───
+
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
-      
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
       setCameraActive(true);
-    } catch (err) {
-      console.error('Camera error:', err);
+    } catch {
       setCameraError('Unable to access camera. Please ensure camera permissions are granted.');
       setCameraActive(false);
     }
   }, []);
 
-  // Stop camera
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
     setCameraActive(false);
   }, []);
 
-  // Upload face image to Supabase storage and update profile via PATCH
-  // Returns true if both storage upload AND profile PATCH succeed.
-  const saveFaceImageToStorage = useCallback(async (base64Image: string): Promise<boolean> => {
-    try {
-      // Convert base64 to Blob
-      const byteString = atob(base64Image);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([ab], { type: 'image/jpeg' });
-      
-      // Use org-scoped path: faces/{org_id}/{user_id}/enrollment.jpg
-      const orgId = profile?.organization_id || 'default';
-      const fileName = `${orgId}/${user.id}/enrollment.jpg`;
-      
-      // Step 1: Upload to Supabase storage (faces bucket)
-      const { error: uploadError } = await supabase.storage
-        .from('faces')
-        .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
-      
-      if (uploadError) {
-        console.error('[FaceEnrollment] Storage upload error:', uploadError);
-        throw new Error('Failed to upload face image to storage.');
-      }
-      
-      // Step 2: Get public URL
-      const { data: { publicUrl } } = supabase.storage.from('faces').getPublicUrl(fileName);
-      
-      // Step 3: PATCH /api/profile/ with face_image_url — this MUST succeed
-      const patchResult = await djangoApi.updateProfile({ face_image_url: publicUrl });
-      if (patchResult.error) {
-        console.error('[FaceEnrollment] Profile PATCH failed:', patchResult.error);
-        throw new Error(patchResult.error || 'Failed to save face image URL to server.');
-      }
-      
-      console.log('[FaceEnrollment] Face image saved to storage and profile updated');
-      return true;
-    } catch (err: any) {
-      console.error('[FaceEnrollment] saveFaceImageToStorage failed:', err);
-      throw err;
-    }
-  }, [user?.id, profile?.organization_id]);
+  // ─── Core enrollment: send image as FormData to POST /api/face/enroll/ ───
 
-  // Process enrollment with base64 image
-  // Correct sequence: 1) Upload to Storage → 2) PATCH profile → 3) POST enroll → 4) Poll status
-  const processEnrollment = useCallback(async (base64Image: string) => {
+  const processEnrollment = useCallback(async (imageBlob: Blob) => {
     setEnrollmentStep('PROCESSING');
-
     try {
-      // Step 1 & 2: Upload to Supabase Storage and PATCH /api/profile/ with face_image_url
-      try {
-        await saveFaceImageToStorage(base64Image);
-        console.log('[FaceEnrollment] Step 1+2 complete: image uploaded & profile patched');
-      } catch (storageErr: any) {
-        setEnrollmentStep('FAILED');
-        setErrorMessage(storageErr.message || 'Failed to save face image. Please retry.');
-        return;
-      }
-
-      // Step 3: POST /api/face/enroll/ — triggers backend face processing
-      const userName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || user.email;
-      const result = await djangoApi.enrollFace(user.id, base64Image, userName);
+      const result = await djangoApi.enrollFace(imageBlob);
 
       if (result.error) {
         throw new Error(result.error);
@@ -308,131 +183,96 @@ const FaceEnrollment = () => {
 
       const data = result.data;
 
-      // Handle duplicate face error from Django
       if (data?.status === 'DUPLICATE_FACE' || data?.status === 'duplicate') {
         throw new Error(data.message || 'This face appears to be already enrolled for another user.');
       }
 
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        console.log('[FaceEnrollment] Step 3 complete: enroll API succeeded, starting polling');
-
-        // Step 4: Poll GET /api/face-enrollment-status/ only AFTER enroll succeeds
-        const isReady = await pollUntilEnrollmentReady();
-
-        if (!isReady) {
-          setEnrollmentStep('FAILED');
-          setErrorMessage('Face processing is taking longer than expected. Please refresh.');
-          return;
-        }
-
+        await refreshUser();
         setEnrollmentStep('VERIFIED');
-        navigate('/dashboard');
+        // Short delay so the user sees the success state before redirect
+        setTimeout(() => navigate('/dashboard'), 1500);
       } else {
         throw new Error(data?.message || 'Face enrollment failed. Please try again.');
       }
     } catch (err: any) {
-      console.error('Enrollment error:', err);
+      console.error('[FaceEnrollment] Error:', err);
       setEnrollmentStep('FAILED');
       setErrorMessage(err.message || 'Failed to enroll face. Please try again.');
     }
-  }, [user, profile, navigate, pollUntilEnrollmentReady, saveFaceImageToStorage]);
+  }, [navigate, refreshUser]);
 
-  // Enroll with uploaded image
+  // ─── Enroll with uploaded image ───
+
   const enrollWithUpload = useCallback(async () => {
     if (!uploadedImage || !user?.id) return;
-
     setEnrollmentStep('CAPTURING');
     setErrorMessage(null);
-
     try {
-      // Compress image before sending to avoid 413 errors
-      const compressedImage = await compressImage(uploadedImage);
-      
-      // Extract base64 data without the data URL prefix
-      const base64Image = compressedImage.replace(/^data:image\/\w+;base64,/, '');
-      
-      console.log('[FaceEnrollment] Compressed image size:', Math.round(base64Image.length / 1024), 'KB');
-      
-      await processEnrollment(base64Image);
-    } catch (err) {
-      console.error('[FaceEnrollment] Compression error:', err);
+      const compressed = await compressImage(uploadedImage);
+      const blob = dataUrlToBlob(compressed);
+      console.log('[FaceEnrollment] Upload size:', Math.round(blob.size / 1024), 'KB');
+      await processEnrollment(blob);
+    } catch {
       setEnrollmentStep('FAILED');
       setErrorMessage('Failed to process image. Please try a different photo.');
     }
   }, [uploadedImage, user?.id, processEnrollment]);
 
-  // Capture and process face from camera
+  // ─── Capture from camera ───
+
   const captureAndEnroll = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current || !user?.id) return;
-
     setEnrollmentStep('CAPTURING');
     setErrorMessage(null);
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-      setEnrollmentStep('FAILED');
-      setErrorMessage('Canvas context unavailable');
-      return;
-    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { setEnrollmentStep('FAILED'); setErrorMessage('Canvas context unavailable'); return; }
 
     try {
-      // Capture frame at reduced resolution to avoid 413 errors
       const targetWidth = Math.min(video.videoWidth, MAX_IMAGE_DIMENSION);
       const targetHeight = Math.round((video.videoHeight / video.videoWidth) * targetWidth);
-      
       canvas.width = targetWidth;
       canvas.height = targetHeight;
-      context.drawImage(video, 0, 0, targetWidth, targetHeight);
+      ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
-      const imageData = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-      const base64Image = imageData.replace(/^data:image\/\w+;base64,/, '');
+      // Get blob directly from canvas
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => b ? resolve(b) : reject(new Error('Failed to create image blob')),
+          'image/jpeg',
+          JPEG_QUALITY
+        );
+      });
 
-      console.log('[FaceEnrollment] Captured image size:', Math.round(base64Image.length / 1024), 'KB');
-
-      // Stop camera after capture
+      console.log('[FaceEnrollment] Capture size:', Math.round(blob.size / 1024), 'KB');
       stopCamera();
-
-      await processEnrollment(base64Image);
-    } catch (err) {
-      console.error('[FaceEnrollment] Capture error:', err);
+      await processEnrollment(blob);
+    } catch {
       setEnrollmentStep('FAILED');
       setErrorMessage('Failed to capture image. Please try again.');
       stopCamera();
     }
   }, [user?.id, stopCamera, processEnrollment]);
 
-  // Handle retry
+  // ─── UI handlers ───
+
   const handleRetry = () => {
     setEnrollmentStep('IDLE');
     setErrorMessage(null);
-    if (method === 'camera') {
-      startCamera();
-    }
+    if (method === 'camera') startCamera();
   };
 
-  // Handle method change
   const handleMethodChange = (value: string) => {
     setMethod(value as EnrollmentMethod);
     setErrorMessage(null);
     setEnrollmentStep('IDLE');
-    
-    if (value === 'camera') {
-      startCamera();
-    } else {
-      stopCamera();
-    }
+    if (value === 'camera') startCamera(); else stopCamera();
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      stopCamera();
-    };
-  }, [stopCamera]);
+  useEffect(() => { return () => { stopCamera(); }; }, [stopCamera]);
 
   // Block back navigation
   useEffect(() => {
@@ -440,16 +280,12 @@ const FaceEnrollment = () => {
       e.preventDefault();
       window.history.pushState(null, '', window.location.pathname);
     };
-
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Verified state
+  // ─── Verified state ───
   if (enrollmentStep === 'VERIFIED') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -469,9 +305,9 @@ const FaceEnrollment = () => {
     );
   }
 
+  // ─── Main UI ───
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header Card */}
       <Card className="border-primary/20">
         <CardHeader className="text-center pb-4">
           <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -484,7 +320,6 @@ const FaceEnrollment = () => {
         </CardHeader>
       </Card>
 
-      {/* Recommendation Banner */}
       <Alert className="border-primary/30 bg-primary/5">
         <Lightbulb className="h-4 w-4 text-primary" />
         <AlertDescription className="text-sm">
@@ -493,7 +328,6 @@ const FaceEnrollment = () => {
         </AlertDescription>
       </Alert>
 
-      {/* Progress Indicator */}
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -507,17 +341,14 @@ const FaceEnrollment = () => {
                 {method === 'upload' ? 'Reading' : 'Capturing'}
               </span>
               <span className={enrollmentStep === 'PROCESSING' ? 'text-primary font-medium' : ''}>
-                Processing
+                Enrolling
               </span>
-              <span className="text-muted-foreground">
-                Verified
-              </span>
+              <span>Verified</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Method Selection & Input */}
       <Card>
         <CardContent className="pt-6 space-y-6">
           <Tabs value={method} onValueChange={handleMethodChange} className="w-full">
@@ -535,16 +366,10 @@ const FaceEnrollment = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Upload Tab */}
             <TabsContent value="upload" className="space-y-4 mt-4">
-              {/* Drop Zone */}
               <div
                 className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                  isDragging 
-                    ? 'border-primary bg-primary/5' 
-                    : uploadedImage 
-                      ? 'border-primary/50' 
-                      : 'border-border hover:border-primary/50'
+                  isDragging ? 'border-primary bg-primary/5' : uploadedImage ? 'border-primary/50' : 'border-border hover:border-primary/50'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -552,54 +377,27 @@ const FaceEnrollment = () => {
               >
                 {uploadedImage ? (
                   <div className="relative aspect-video">
-                    <img 
-                      src={uploadedImage} 
-                      alt="Uploaded face" 
-                      className="w-full h-full object-contain rounded-lg"
-                    />
+                    <img src={uploadedImage} alt="Uploaded face" className="w-full h-full object-contain rounded-lg" />
                     <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-                      <span className="text-xs bg-background/80 backdrop-blur px-2 py-1 rounded">
-                        {uploadedFileName}
-                      </span>
-                      <Button 
-                        size="sm" 
-                        variant="secondary"
-                        onClick={() => {
-                          setUploadedImage(null);
-                          setUploadedFileName(null);
-                        }}
-                      >
+                      <span className="text-xs bg-background/80 backdrop-blur px-2 py-1 rounded">{uploadedFileName}</span>
+                      <Button size="sm" variant="secondary" onClick={() => { setUploadedImage(null); setUploadedFileName(null); }}>
                         Change
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div 
-                    className="flex flex-col items-center justify-center py-12 cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <div className="flex flex-col items-center justify-center py-12 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                       <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <p className="text-lg font-medium mb-1">Drop your photo here</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      or click to browse
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      JPG, PNG or WebP • Max 5MB
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
+                    <p className="text-xs text-muted-foreground">JPG, PNG or WebP • Max 5MB</p>
                   </div>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileInputChange} className="hidden" />
               </div>
 
-              {/* Upload Tips */}
               <div className="bg-muted/50 rounded-lg p-4">
                 <h4 className="font-medium mb-2 flex items-center gap-2">
                   <Star className="h-4 w-4 text-primary" />
@@ -615,57 +413,36 @@ const FaceEnrollment = () => {
               </div>
             </TabsContent>
 
-            {/* Camera Tab */}
             <TabsContent value="camera" className="space-y-4 mt-4">
               <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border-2 border-dashed border-border">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  playsInline
-                  muted
-                />
-                
-                {/* Face Guide Overlay */}
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                 {cameraActive && enrollmentStep === 'IDLE' && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-48 h-60 border-4 border-primary/50 rounded-full" />
                   </div>
                 )}
-
-                {/* Loading States */}
                 {enrollmentStep === 'CAPTURING' && method === 'camera' && (
                   <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center">
                     <Scan className="h-16 w-16 text-primary animate-pulse" />
                     <p className="mt-4 text-lg font-medium">Capturing face...</p>
                   </div>
                 )}
-
-                {/* Camera Error */}
                 {cameraError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
                     <div className="text-center p-4">
                       <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
                       <p className="text-destructive font-medium">{cameraError}</p>
-                      <Button onClick={startCamera} className="mt-4">
-                        Retry Camera
-                      </Button>
+                      <Button onClick={startCamera} className="mt-4">Retry Camera</Button>
                     </div>
                   </div>
                 )}
-
-                {/* Camera Loading */}
                 {!cameraActive && !cameraError && enrollmentStep === 'IDLE' && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 )}
               </div>
-
-              {/* Hidden canvas for capture */}
               <canvas ref={canvasRef} className="hidden" />
-
-              {/* Camera Tips */}
               <div className="bg-muted/50 rounded-lg p-4">
                 <h4 className="font-medium mb-2 flex items-center gap-2">
                   <Camera className="h-4 w-4" />
@@ -682,16 +459,14 @@ const FaceEnrollment = () => {
             </TabsContent>
           </Tabs>
 
-          {/* Processing Overlay */}
           {enrollmentStep === 'PROCESSING' && (
             <div className="flex flex-col items-center justify-center py-8">
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
-              <p className="mt-4 text-lg font-medium">Processing face data...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we verify your face</p>
+              <p className="mt-4 text-lg font-medium">Enrolling face...</p>
+              <p className="text-sm text-muted-foreground">Please wait while the server processes your face</p>
             </div>
           )}
 
-          {/* Error Message */}
           {errorMessage && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -699,7 +474,6 @@ const FaceEnrollment = () => {
             </Alert>
           )}
 
-          {/* Action Buttons */}
           <div className="flex justify-center gap-4">
             {enrollmentStep === 'FAILED' ? (
               <Button size="lg" onClick={handleRetry} className="min-w-48">
@@ -707,47 +481,24 @@ const FaceEnrollment = () => {
                 Try Again
               </Button>
             ) : method === 'upload' ? (
-              <Button 
-                size="lg" 
-                onClick={enrollWithUpload}
-                disabled={!uploadedImage || enrollmentStep !== 'IDLE'}
-                className="min-w-48"
-              >
+              <Button size="lg" onClick={enrollWithUpload} disabled={!uploadedImage || enrollmentStep !== 'IDLE'} className="min-w-48">
                 {enrollmentStep === 'IDLE' ? (
-                  <>
-                    <Upload className="h-5 w-5 mr-2" />
-                    Enroll with Photo
-                  </>
+                  <><Upload className="h-5 w-5 mr-2" />Enroll with Photo</>
                 ) : (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    {stepLabels[enrollmentStep]}
-                  </>
+                  <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{stepLabels[enrollmentStep]}</>
                 )}
               </Button>
             ) : (
-              <Button 
-                size="lg" 
-                onClick={captureAndEnroll}
-                disabled={!cameraActive || enrollmentStep !== 'IDLE'}
-                className="min-w-48"
-              >
+              <Button size="lg" onClick={captureAndEnroll} disabled={!cameraActive || enrollmentStep !== 'IDLE'} className="min-w-48">
                 {enrollmentStep === 'IDLE' ? (
-                  <>
-                    <Camera className="h-5 w-5 mr-2" />
-                    Capture & Enroll
-                  </>
+                  <><Camera className="h-5 w-5 mr-2" />Capture & Enroll</>
                 ) : (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    {stepLabels[enrollmentStep]}
-                  </>
+                  <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{stepLabels[enrollmentStep]}</>
                 )}
               </Button>
             )}
           </div>
 
-          {/* Security Notice */}
           <p className="text-xs text-center text-muted-foreground">
             Your face data is securely processed and stored for attendance verification only.
           </p>
