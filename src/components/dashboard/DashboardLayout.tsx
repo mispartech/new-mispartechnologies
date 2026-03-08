@@ -11,7 +11,7 @@ const DashboardLayoutInner = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const { user: djangoUser, isLoading: djangoLoading, isAuthenticated } = useDjangoAuth();
 
   const isEnrolled = djangoUser?.face_enrolled === true;
@@ -75,6 +75,9 @@ const DashboardLayoutInner = () => {
     last_name: djangoUser.last_name,
     role: djangoUser.role,
     organization_id: djangoUser.organization_id,
+    organization_name: djangoUser.organization_name,
+    organization_type: djangoUser.organization_type,
+    organization_size_range: djangoUser.organization_size_range,
     department: djangoUser.department,
     department_id: djangoUser.department_id,
     face_image_url: djangoUser.face_image_url,
@@ -89,23 +92,16 @@ const DashboardLayoutInner = () => {
     id: profile.id,
     email: profile.email,
     app_metadata: {},
-    user_metadata: {
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-    },
+    user_metadata: { first_name: profile.first_name, last_name: profile.last_name },
     aud: 'authenticated',
     created_at: '',
   };
 
   if (location.pathname === '/dashboard/face-enrollment') {
     return (
-      <div className="min-h-screen bg-muted/30 dashboard-themed">
-        <DashboardHeader 
-          user={mockUser as any} 
-          profile={profile}
-          onMenuToggle={() => {}}
-        />
-        <main className="p-4 lg:p-6 mt-16">
+      <div className="min-h-screen bg-background dashboard-themed">
+        <DashboardHeader user={mockUser as any} profile={profile} onMenuToggle={() => {}} />
+        <main className="p-4 lg:p-6 mt-14">
           <Outlet context={{ user: mockUser, profile, session: null }} />
         </main>
       </div>
@@ -113,22 +109,22 @@ const DashboardLayoutInner = () => {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 dashboard-themed">
-      <DashboardSidebar 
-        isOpen={sidebarOpen} 
+    <div className="min-h-screen bg-background dashboard-themed">
+      <DashboardSidebar
+        isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         currentPath={location.pathname}
         profile={profile}
       />
-      
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        <DashboardHeader 
-          user={mockUser as any} 
+
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-[68px]'}`}>
+        <DashboardHeader
+          user={mockUser as any}
           profile={profile}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        
-        <main className="p-4 lg:p-6 mt-16">
+
+        <main className="p-4 lg:p-6 mt-14">
           <Outlet context={{ user: mockUser, profile, session: null }} />
         </main>
       </div>
