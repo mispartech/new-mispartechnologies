@@ -1,152 +1,70 @@
 
 
-## Problem Analysis
+# Admin Dashboard Design Revamp — Phased Plan
 
-There are **three interconnected issues** causing the broken logout and missing login button:
+## Current State
 
-### Issue 1: Logout page never actually signs out
+The dashboard has ~18 admin-facing pages all using basic Card/Table layouts with minimal visual hierarchy, no consistent page header pattern, generic loading states, and a utilitarian sidebar. The design is functional but flat — it lacks the polish, density, and delight expected of a modern admin experience.
 
-The console on `/logout` shows:
-```
-[DjangoAuth] Auth state change: SIGNED_IN
-[DjangoAuth] Fetching profile from Django...
-```
+## Design System Foundations (Phase 0 — applies to all phases)
 
-This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
+Before touching individual pages, establish shared design primitives:
 
-The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
+- **Page header component**: Consistent layout with title, subtitle, breadcrumb, and action buttons area. Gradient accent strip at top.
+- **Enhanced card variants**: Add subtle gradient borders, hover micro-interactions, and a "spotlight" card variant for hero metrics.
+- **Empty state component**: Illustrated empty states with contextual CTAs instead of plain text.
+- **Skeleton loaders**: Replace spinner loaders with content-shaped skeleton placeholders on every page.
+- **Sidebar redesign**: Grouped navigation sections with labels (e.g., "Attendance", "People", "Settings"), collapsible groups, active indicator bar, and a polished org logo/name area at top.
+- **Header bar upgrade**: Add breadcrumbs, global search command palette (Cmd+K), and a more prominent user menu with role badge.
+- **Dashboard-specific CSS variables**: Refine card backgrounds, add subtle noise texture, softer shadows, and improved border treatments for `.dashboard-themed`.
 
-### Issue 2: Login button not showing on the navbar
+## Phase 1 — Layout Shell & Dashboard Home
 
-The Navbar conditionally renders based on `isLoading`:
-- If `isLoading` is `true` -> shows a skeleton placeholder
-- If `isAuthenticated` is `true` -> shows user dropdown
-- If neither -> shows Login button
+**Files**: `DashboardSidebar.tsx`, `DashboardHeader.tsx`, `DashboardLayout.tsx`, `DashboardHome.tsx`, `StatsCard.tsx`
 
-Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
+- **Sidebar**: Reorganize into labeled groups (Overview, Attendance, People, Configuration). Add collapsible sections, active route indicator pill, smooth transitions, and user info card at bottom with avatar + role badge.
+- **Header**: Add breadcrumbs derived from route, command palette trigger, and improved mobile hamburger.
+- **Dashboard Home**: Redesign stats cards with gradient backgrounds, sparkline mini-charts, and animated counters. Make the welcome banner more visually striking with time-of-day greeting. Improve the quick actions grid with icon backgrounds and subtle hover animations. Add better spacing and visual rhythm.
+- **StatsCard**: Add sparkline support, gradient icon backgrounds, and percentage change indicators with color coding.
 
-The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
+## Phase 2 — Attendance Pages
 
-### Issue 3: No Django logout endpoint needed
+**Files**: `AttendanceCapture.tsx`, `AttendanceLogs.tsx`, `AttendanceHistory.tsx`, `AttendanceSummary.tsx`
 
-**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
+- **AttendanceCapture**: Polish the camera view with a refined frame, status indicators, and smoother recognition feedback animations.
+- **AttendanceLogs**: Redesign the table with row hover effects, inline avatars, confidence score progress bars, and status pills. Add a summary strip above the table showing today's totals.
+- **AttendanceHistory**: Improve the date range picker UX, add visual chart above the table, and enhance the filter bar with pill-style active filters.
+- **AttendanceSummary**: Better data visualization cards with trend arrows and color-coded metrics.
 
----
+## Phase 3 — People Management Pages
 
-## Fix Plan
+**Files**: `MembersList.tsx`, `TempMembersList.tsx`, `AdminManagement.tsx`, `FaceGallery.tsx`
 
-### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
+- **MembersList**: Enhance the table with richer row design (department color dots, enrollment status icon). Improve grid view cards with glassmorphism style. Add bulk action toolbar.
+- **TempMembersList**: Add a visual timeline view option alongside the table. Better visitor cards with face thumbnail prominence.
+- **AdminManagement**: Redesign the invite flow as a stepped modal. Show admin cards in a grid with role badges and last-active status.
+- **FaceGallery**: Masonry-style grid with enrollment status overlays, hover zoom, and a refined upload dialog.
 
-- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
-- Wrap in try/catch so it never throws
-- As a safety net, manually remove Supabase keys from localStorage if signOut fails
+## Phase 4 — Reports & Analytics
 
-### 2. Fix the `Logout.tsx` component
+**Files**: `Reports.tsx`, `AttendanceChart.tsx`, `AttendanceHeatmap.tsx`
 
-- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
-- Clear user state and redirect immediately
-- Don't rely on the auth context `logout()` which races with initialization
+- **Reports**: Add a dashboard-style report overview with KPI cards at top, improved chart styling (custom Recharts theme matching brand colors), and a cleaner export UI.
+- **Charts**: Apply consistent chart theming — rounded bars, gradient fills, custom tooltips with card styling, and axis label improvements.
+- **Heatmap**: Better color scale, legend, and hover tooltips.
 
-### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
+## Phase 5 — Configuration & Settings Pages
 
-- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
-- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
+**Files**: `OrganizationSettings.tsx`, `BrandingSettings.tsx`, `ScheduleManagement.tsx`, `SiteManagement.tsx`, `DepartmentsList.tsx`, `ProfileSettings.tsx`, `ActivityLogs.tsx`
 
-### 4. Unify the `DashboardHeader.tsx` logout
+- **Settings pages**: Unified settings layout with a left-side vertical tab navigation within the page. Clean form styling with section dividers.
+- **BrandingSettings**: Already rich — polish the preview area and improve color picker interactions.
+- **ScheduleManagement**: Visual weekly calendar grid instead of plain form inputs.
+- **DepartmentsList**: Card-based department view with member count badges and head avatar.
+- **ActivityLogs**: Timeline-style log view with action type icons, color-coded badges, and relative timestamps.
+- **ProfileSettings**: Cleaner profile card with large avatar, role badge, and tabbed sections.
 
-- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
+## Implementation Approach
 
----
-
-## Technical Details
-
-### File: `src/contexts/DjangoAuthContext.tsx`
-
-Changes to the `logout` function:
-```typescript
-const logout = useCallback(async () => {
-  try {
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch (err) {
-    console.error('[DjangoAuth] signOut error, clearing manually:', err);
-    // Fallback: manually clear Supabase tokens from localStorage
-    const keys = Object.keys(localStorage).filter(k =>
-      k.startsWith('sb-')
-    );
-    keys.forEach(k => localStorage.removeItem(k));
-  }
-  setUser(null);
-}, []);
-```
-
-Changes to `onAuthStateChange` to prevent double-fetch race:
-- Track whether `initialize()` has already completed
-- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
-- Only fetch profile on explicit `SIGNED_IN` (actual new login)
-
-### File: `src/pages/Logout.tsx`
-
-Rewrite to bypass the auth context race condition:
-```typescript
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-
-const Logout = () => {
-  const hasRun = useRef(false);
-
-  useEffect(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
-
-    const doLogout = async () => {
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch (err) {
-        console.error('[Logout] signOut failed, clearing manually:', err);
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-'))
-          .forEach(k => localStorage.removeItem(k));
-      } finally {
-        window.location.href = '/';
-      }
-    };
-
-    doLogout();
-  }, []);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-muted-foreground">Signing out...</p>
-    </div>
-  );
-};
-```
-
-### File: `src/components/dashboard/DashboardHeader.tsx`
-
-Replace the direct Supabase call with the unified auth context:
-```typescript
-import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
-// ...
-const { logout } = useDjangoAuth();
-
-const handleLogout = async () => {
-  setIsLoggingOut(true);
-  try {
-    await logout();
-    window.location.href = '/';
-  } catch {
-    // fallback
-    window.location.href = '/';
-  }
-};
-```
-
-### Summary of changes
-
-| File | What Changes |
-|---|---|
-| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
-| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
-| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
+Each phase will be implemented as a single prompt to keep changes focused and reviewable. Phase 0 (shared components) ships with Phase 1. No API or data changes — this is purely visual and UX.
 
