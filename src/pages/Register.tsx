@@ -196,11 +196,13 @@ export default function Register() {
 
       // 2. Enroll face via Django API
       try {
-        await djangoApi.enrollFace(
-          authData.user.id,
-          faceImage.replace(/^data:image\/\w+;base64,/, ''),
-          `${firstName} ${lastName}`
-        );
+        const base64Data = faceImage.replace(/^data:image\/\w+;base64,/, '');
+        const byteString = atob(base64Data);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+        const blob = new Blob([ab], { type: 'image/jpeg' });
+        await djangoApi.enrollFace(blob);
       } catch (faceError) {
         console.error("Face registration error:", faceError);
         // Continue - face can be registered later via enrollment page
