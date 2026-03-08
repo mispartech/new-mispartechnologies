@@ -268,7 +268,14 @@ export const useFaceRecognition = () => {
     setError(null);
 
     try {
-      const result = await djangoApi.enrollFace(userData.user_id, imageBase64, userData.name);
+      // Convert base64 to Blob for FormData upload
+      const byteString = atob(imageBase64);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: 'image/jpeg' });
+
+      const result = await djangoApi.enrollFace(blob);
 
       if (result.error) {
         setError(result.error);

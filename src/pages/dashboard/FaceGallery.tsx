@@ -54,7 +54,7 @@ const FaceGallery = () => {
       // Update profile via Django
       await djangoApi.updateMember(selectedMember.id, { face_image_url: publicUrl });
       // Register face with Django
-      try { await djangoApi.enrollFace(selectedMember.id, publicUrl, `${selectedMember.first_name} ${selectedMember.last_name}`); } catch (faceErr) { console.warn('Django face enrollment failed (non-fatal):', faceErr); }
+      try { await djangoApi.enrollFace(file); } catch (faceErr) { console.warn('Django face enrollment failed (non-fatal):', faceErr); }
       setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, face_image_url: publicUrl } : m));
       toast({ title: 'Face Registered', description: `Face image uploaded for ${selectedMember.first_name} ${selectedMember.last_name}` });
       setSelectedMember(null);
