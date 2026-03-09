@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import DashboardSidebar from './DashboardSidebar';
@@ -12,7 +12,8 @@ const DashboardLayoutInner = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { user: djangoUser, isLoading: djangoLoading, isAuthenticated } = useDjangoAuth();
+  const { user: djangoUser, isLoading: djangoLoading, isAuthenticated, refreshUser } = useDjangoAuth();
+  const enrollCheckDone = useRef(false);
 
   const isEnrolled = djangoUser?.face_enrolled === true;
 
@@ -23,6 +24,7 @@ const DashboardLayoutInner = () => {
     }
   }, [djangoLoading, isAuthenticated, djangoUser, navigate]);
 
+  // If profile says not enrolled, do one refresh to check for stale data before redirecting
   useEffect(() => {
     if (djangoLoading || !djangoUser) return;
 
@@ -31,10 +33,26 @@ const DashboardLayoutInner = () => {
       return;
     }
 
-    if (!isEnrolled && location.pathname !== '/dashboard/face-enrollment') {
+    if (isEnrolled) {
+      // Already enrolled — if on enrollment page, redirect away
+      if (location.pathname === '/dashboard/face-enrollment') {
+        navigate('/dashboard', { replace: true });
+      }
+      return;
+    }
+
+    // Not enrolled according to profile — do one refresh to catch stale data
+    if (!enrollCheckDone.current) {
+      enrollCheckDone.current = true;
+      refreshUser(); // Will re-trigger this effect with fresh data
+      return;
+    }
+
+    // After refresh, still not enrolled — redirect to enrollment
+    if (location.pathname !== '/dashboard/face-enrollment') {
       navigate('/dashboard/face-enrollment');
     }
-  }, [isEnrolled, djangoLoading, djangoUser, location.pathname, navigate]);
+  }, [isEnrolled, djangoLoading, djangoUser, location.pathname, navigate, refreshUser]);
 
   // Access theme for preloader customization
   let themePreloader: { style: any; color: string; logo: string } | null = null;
