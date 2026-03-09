@@ -15,11 +15,12 @@ const DashboardLayoutInner = () => {
   const { user: djangoUser, isLoading: djangoLoading, isAuthenticated, refreshUser } = useDjangoAuth();
   const enrollCheckDone = useRef(false);
 
-  // Accept any truthy value — cast to unknown first to handle backend inconsistencies
+  // Accept any truthy value — also treat having a face_image_url as enrolled
   const rawEnrolled: unknown = djangoUser?.face_enrolled;
-  const isEnrolled = !!rawEnrolled;
+  const hasFaceImage = !!djangoUser?.face_image_url;
+  const isEnrolled = !!rawEnrolled || hasFaceImage;
   
-  console.log('[DashboardLayout] face_enrolled raw value:', rawEnrolled, 'type:', typeof rawEnrolled, 'resolved:', isEnrolled);
+  console.log('[DashboardLayout] face_enrolled raw:', rawEnrolled, 'face_image_url:', djangoUser?.face_image_url, 'resolved:', isEnrolled);
 
   useEffect(() => {
     if (djangoLoading) return;
