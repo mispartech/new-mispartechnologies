@@ -39,6 +39,7 @@ interface AuthContextType {
     invite_token?: string;
   }) => Promise<{ error?: string; user?: User }>;
   refreshUser: () => Promise<void>;
+  overrideEnrollmentStatus: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
