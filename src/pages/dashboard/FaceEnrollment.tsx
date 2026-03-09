@@ -202,7 +202,7 @@ const FaceEnrollment = () => {
       }
 
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        await refreshUser();
+        overrideEnrollmentStatus();
         setEnrollmentStep('VERIFIED');
         setTimeout(() => navigate('/dashboard'), 1500);
       } else {
