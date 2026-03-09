@@ -49,6 +49,11 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const initDone = useRef(false);
 
+  // Client-side override for when backend profile is stale about enrollment
+  const overrideEnrollmentStatus = useCallback(() => {
+    setUser(prev => prev ? { ...prev, face_enrolled: true } : prev);
+  }, []);
+
   const fetchProfile = useCallback(async (): Promise<User | null> => {
     try {
       console.log('[DjangoAuth] Fetching profile from Django...');
