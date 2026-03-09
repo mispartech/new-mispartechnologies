@@ -205,6 +205,7 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     refreshUser,
+    overrideEnrollmentStatus,
   };
 
   return (
