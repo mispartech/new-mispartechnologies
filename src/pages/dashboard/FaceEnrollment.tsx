@@ -112,7 +112,7 @@ const FaceEnrollment = () => {
     FAILED: 'Enrollment failed',
   };
 
-  const { refreshUser } = useDjangoAuth();
+  const { refreshUser, overrideEnrollmentStatus } = useDjangoAuth();
 
   // ─── File handling ───
 
