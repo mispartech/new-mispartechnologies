@@ -39,6 +39,7 @@ interface AuthContextType {
     invite_token?: string;
   }) => Promise<{ error?: string; user?: User }>;
   refreshUser: () => Promise<void>;
+  overrideEnrollmentStatus: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +48,11 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initDone = useRef(false);
+
+  // Client-side override for when backend profile is stale about enrollment
+  const overrideEnrollmentStatus = useCallback(() => {
+    setUser(prev => prev ? { ...prev, face_enrolled: true } : prev);
+  }, []);
 
   const fetchProfile = useCallback(async (): Promise<User | null> => {
     try {
@@ -199,6 +205,7 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     refreshUser,
+    overrideEnrollmentStatus,
   };
 
   return (

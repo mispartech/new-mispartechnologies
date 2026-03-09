@@ -112,7 +112,7 @@ const FaceEnrollment = () => {
     FAILED: 'Enrollment failed',
   };
 
-  const { refreshUser } = useDjangoAuth();
+  const { refreshUser, overrideEnrollmentStatus } = useDjangoAuth();
 
   // ─── File handling ───
 
@@ -184,8 +184,8 @@ const FaceEnrollment = () => {
         alreadyEnrolledMsg.includes('already registered') ||
         result.data?.status === 'ALREADY_ENROLLED'
       ) {
-        console.log('[FaceEnrollment] Face already enrolled — syncing profile and redirecting');
-        await refreshUser();
+        console.log('[FaceEnrollment] Face already enrolled — forcing local override and redirecting');
+        overrideEnrollmentStatus();
         setEnrollmentStep('VERIFIED');
         setTimeout(() => navigate('/dashboard'), 1500);
         return;
@@ -202,7 +202,7 @@ const FaceEnrollment = () => {
       }
 
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
-        await refreshUser();
+        overrideEnrollmentStatus();
         setEnrollmentStep('VERIFIED');
         setTimeout(() => navigate('/dashboard'), 1500);
       } else {
