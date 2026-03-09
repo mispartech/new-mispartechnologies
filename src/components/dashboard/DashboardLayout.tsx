@@ -15,7 +15,11 @@ const DashboardLayoutInner = () => {
   const { user: djangoUser, isLoading: djangoLoading, isAuthenticated, refreshUser } = useDjangoAuth();
   const enrollCheckDone = useRef(false);
 
-  const isEnrolled = djangoUser?.face_enrolled === true;
+  // Accept any truthy value (true, "true", 1, "1", etc.)
+  const rawEnrolled = djangoUser?.face_enrolled;
+  const isEnrolled = rawEnrolled === true || rawEnrolled === 'true' || rawEnrolled === 1 || rawEnrolled === '1';
+  
+  console.log('[DashboardLayout] face_enrolled raw value:', rawEnrolled, 'type:', typeof rawEnrolled, 'resolved:', isEnrolled);
 
   useEffect(() => {
     if (djangoLoading) return;
