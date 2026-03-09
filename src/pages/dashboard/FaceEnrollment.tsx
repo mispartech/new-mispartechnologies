@@ -177,6 +177,20 @@ const FaceEnrollment = () => {
     try {
       const result = await djangoApi.enrollFace(imageBlob);
 
+      // Handle "already enrolled" as a success case — face IS enrolled on the backend
+      const alreadyEnrolledMsg = result.error?.toLowerCase() || '';
+      if (
+        alreadyEnrolledMsg.includes('already enrolled') ||
+        alreadyEnrolledMsg.includes('already registered') ||
+        result.data?.status === 'ALREADY_ENROLLED'
+      ) {
+        console.log('[FaceEnrollment] Face already enrolled — syncing profile and redirecting');
+        await refreshUser();
+        setEnrollmentStep('VERIFIED');
+        setTimeout(() => navigate('/dashboard'), 1500);
+        return;
+      }
+
       if (result.error) {
         throw new Error(result.error);
       }
@@ -190,7 +204,6 @@ const FaceEnrollment = () => {
       if (data?.status === 'success' || data?.status === 'SUCCESS') {
         await refreshUser();
         setEnrollmentStep('VERIFIED');
-        // Short delay so the user sees the success state before redirect
         setTimeout(() => navigate('/dashboard'), 1500);
       } else {
         throw new Error(data?.message || 'Face enrollment failed. Please try again.');
