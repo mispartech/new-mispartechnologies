@@ -184,24 +184,26 @@ export const useFaceRecognition = () => {
    * Send frame to Django directly for recognition
    */
   const recognizeFace = useCallback(async (
-    imageBase64: string, 
-    organizationId?: string
+    imageDataUrl: string, 
+    organizationId?: string,
+    options?: { silent?: boolean; timeout?: number }
   ): Promise<{ 
     success: boolean; 
     faces: TrackedFace[]; 
     scanningBboxes: number[][];
     shouldPause: boolean;
     error?: string;
+    httpStatus?: number;
   }> => {
     setIsProcessing(true);
     setError(null);
 
     try {
-      const result = await djangoApi.recognizeFace(imageBase64, organizationId);
+      const result = await djangoApi.recognizeFace(imageDataUrl, organizationId, options);
 
       if (result.error) {
         setError(result.error);
-        return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: result.error };
+        return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: result.error, httpStatus: result.status };
       }
 
       const response = result.data as DjangoResponse;
@@ -214,7 +216,8 @@ export const useFaceRecognition = () => {
           faces: trackedFaces, 
           scanningBboxes,
           shouldPause: false,
-          error: msg 
+          error: msg,
+          httpStatus: result.status,
         };
       }
 
@@ -251,7 +254,7 @@ export const useFaceRecognition = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Recognition failed';
       setError(errorMessage);
-      return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: errorMessage };
+      return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: errorMessage, httpStatus: 0 };
     } finally {
       setIsProcessing(false);
     }
