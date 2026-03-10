@@ -64,12 +64,13 @@ const ProfileSettings = () => {
   };
 
   const handlePasswordChange = async () => {
+    if (!passwords.current) { toast({ title: 'Required', description: 'Please enter your current password.', variant: 'destructive' }); return; }
     if (passwords.new !== passwords.confirm) { toast({ title: 'Password Mismatch', description: 'New passwords do not match.', variant: 'destructive' }); return; }
     if (passwords.new.length < 6) { toast({ title: 'Weak Password', description: 'Password must be at least 6 characters.', variant: 'destructive' }); return; }
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: passwords.new });
-      if (error) throw error;
+      const result = await djangoApi.updatePassword(passwords.current, passwords.new);
+      if (result.error) throw new Error(result.error);
       setPasswords({ current: '', new: '', confirm: '' });
       toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
     } catch (error: any) {
