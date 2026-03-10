@@ -60,7 +60,20 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error, status } = await djangoApi.getProfile({ silent: true });
       console.log('[DjangoAuth] Profile response:', { status, error, hasData: !!data });
       if (data && !error) {
-        return data as User;
+        const profile = data as User;
+        // Django lazy provisioning may not copy names from Supabase metadata.
+        // Supplement empty names from Supabase auth user_metadata as fallback.
+        if (!profile.first_name || !profile.last_name) {
+          try {
+            const { data: { user: sbUser } } = await supabase.auth.getUser();
+            const meta = sbUser?.user_metadata;
+            if (meta) {
+              if (!profile.first_name && meta.first_name) profile.first_name = meta.first_name;
+              if (!profile.last_name && meta.last_name) profile.last_name = meta.last_name;
+            }
+          } catch { /* ignore */ }
+        }
+        return profile;
       }
       console.warn('[DjangoAuth] Failed to fetch profile:', error, 'status:', status);
       return null;
