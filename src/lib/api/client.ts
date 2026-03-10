@@ -554,16 +554,19 @@ class DjangoApiClient {
   }
 
   async recognizeFace(
-    imageBase64: string,
+    imageDataUrl: string,
     organizationId?: string,
+    options?: { silent?: boolean; timeout?: number },
   ): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.FACE_RECOGNIZE, {
       method: 'POST',
       body: JSON.stringify({
-        frame: imageBase64,
+        frame: imageDataUrl,
         mode: 'RECOGNIZE',
         organization_id: organizationId,
       }),
+      silent: options?.silent,
+      timeout: options?.timeout,
     });
   }
 
