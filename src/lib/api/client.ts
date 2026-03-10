@@ -31,6 +31,8 @@ export interface ApiResponse<T> {
 interface RequestOptions extends RequestInit {
   /** If true, skip automatic toast notifications on error */
   silent?: boolean;
+  /** Custom timeout in ms (default: 15000) */
+  timeout?: number;
 }
 
 // ────────────────────────── error notifications ──────────────────────────
