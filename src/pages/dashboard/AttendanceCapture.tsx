@@ -11,6 +11,9 @@ import {
   VolumeX,
   Wifi,
   WifiOff,
+  AlertTriangle,
+  Loader2,
+  ScanFace,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -25,9 +28,19 @@ interface RecognizedPerson {
   attendanceStatus?: string;
 }
 
-// Throttle configuration
-const FRAME_INTERVAL_MS = 150; // 150ms between frames (6-7 FPS)
-const PAUSE_DURATION_MS = 3000; // Pause for 3s after confirmed/visitor
+// ── Throttle / timing config ──
+const CAPTURE_INTERVAL_MS = 500;       // 500ms between frames (2 FPS)
+const PAUSE_DURATION_MS = 3000;        // Pause 3s after confirmed attendance
+const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) request
+
+/**
+ * Recognition engine state machine:
+ * idle         → camera off, nothing happening
+ * initializing → first API call in progress (model may be downloading)
+ * ready        → model loaded, normal scanning active
+ * error        → 500 or fatal error — capture stopped
+ */
+type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
 const AttendanceCapture = () => {
   const { profile } = useOutletContext<{ profile: any }>();
@@ -37,6 +50,7 @@ const AttendanceCapture = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [engineState, setEngineState] = useState<EngineState>('idle');
   const [stats, setStats] = useState({ total: 0, members: 0, visitors: 0 });
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
@@ -45,9 +59,10 @@ const AttendanceCapture = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const captureLoopRef = useRef<number | null>(null);
-  const lastCaptureTimeRef = useRef<number>(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pausedUntilRef = useRef<number>(0);
+  const isFirstCallRef = useRef(true);
+  const processingRef = useRef(false);
   
   const { toast } = useToast();
   const { 
@@ -60,7 +75,7 @@ const AttendanceCapture = () => {
     pruneStalefaces 
   } = useFaceRecognition();
 
-  // Convert TrackedFace to FaceOverlayData (only recognized members)
+  // Convert TrackedFace to FaceOverlayData
   const facesForOverlay: FaceOverlayData[] = trackedFaces.map(face => ({
     bbox: face.bbox,
     name: face.name,
@@ -68,16 +83,14 @@ const AttendanceCapture = () => {
     confidence: face.confidence,
   }));
 
-  // Add scanning overlay bboxes for unrecognized faces (no attendance entry)
   const scanningFacesForOverlay: FaceOverlayData[] = scanningBboxes.map(bbox => ({
     bbox,
     attendanceStatus: 'detecting' as const,
   }));
 
-  // Combined overlay: recognized faces + scanning bboxes
   const allFacesForOverlay = [...facesForOverlay, ...scanningFacesForOverlay];
 
-  // Check API health on mount
+  // ── Health check on mount ──
   useEffect(() => {
     const checkApiHealth = async () => {
       setApiStatus('checking');
@@ -96,215 +109,180 @@ const AttendanceCapture = () => {
     checkApiHealth();
   }, [checkHealth, toast]);
 
-  // Update container dimensions on resize
+  // ── Container resize tracking ──
   useEffect(() => {
-    const updateContainerDimensions = () => {
+    const update = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         setContainerDimensions({ width: rect.width, height: rect.height });
       }
     };
-
-    updateContainerDimensions();
-    window.addEventListener('resize', updateContainerDimensions);
-    return () => window.removeEventListener('resize', updateContainerDimensions);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Prune stale faces periodically
+  // ── Prune stale faces ──
   useEffect(() => {
     if (!isCameraOn) return;
-    
     const interval = setInterval(pruneStalefaces, 1000);
     return () => clearInterval(interval);
   }, [isCameraOn, pruneStalefaces]);
 
+  // ── Stop capture interval ──
+  const stopCaptureLoop = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // ── Core: capture a frame and send to API ──
   const captureAndRecognize = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
-    
-    const now = Date.now();
-    
-    // Check if we're paused
-    if (now < pausedUntilRef.current) {
-      return;
+    if (processingRef.current) return; // skip if previous call still in-flight
+    if (Date.now() < pausedUntilRef.current) return;
+    if (videoRef.current.readyState < 2) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    setVideoDimensions({ width: video.videoWidth, height: video.videoHeight });
+
+    // ⑥ Send full data URL: "data:image/jpeg;base64,..."
+    const frameDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+    const isFirst = isFirstCallRef.current;
+    if (isFirst) {
+      setEngineState('initializing');
+      isFirstCallRef.current = false;
     }
-    
-    // Throttle frame submission
-    if (now - lastCaptureTimeRef.current < FRAME_INTERVAL_MS) {
-      return;
-    }
-    
-    // Skip if already processing
-    if (isProcessing) return;
-    
-    // Check if video is ready
-    if (videoRef.current.readyState < 2) {
-      return;
-    }
-    
+
+    processingRef.current = true;
+
     try {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext('2d');
-      
-      if (!context) return;
-      
-      // Ensure video dimensions are valid
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
+      const result = await recognizeFace(
+        frameDataUrl,
+        profile?.organization_id,
+        {
+          silent: true,
+          timeout: isFirst ? WARMUP_TIMEOUT_MS : 15000,
+        },
+      );
+
+      // ④⑦ Handle 500 → stop loop, show error
+      if (!result.success && result.httpStatus && result.httpStatus >= 500) {
+        setEngineState('error');
+        setError('Face recognition temporarily unavailable.\nPlease refresh the page.');
+        stopCaptureLoop();
         return;
       }
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0);
-      
-      // Update video dimensions for overlay scaling
-      setVideoDimensions({ width: video.videoWidth, height: video.videoHeight });
-      
-      // Get base64 without the data URL prefix
-      const frameData = canvas.toDataURL('image/jpeg', 0.8);
-      const base64Image = frameData.split(',')[1];
-      
-      lastCaptureTimeRef.current = now;
-      
-      // Call recognition
-      const result = await recognizeFace(base64Image, profile?.organization_id);
+
+      // If we were initializing, we're now ready
+      if (engineState === 'initializing' || (isFirst && result.success)) {
+        setEngineState('ready');
+      }
 
       if (result.success && result.faces.length > 0) {
-        // Check if we should pause (confirmed attendance)
         if (result.shouldPause) {
           pausedUntilRef.current = Date.now() + PAUSE_DURATION_MS;
         }
 
-        // Process each recognized face for history and stats
-        // Only members create attendance entries now
         for (const face of result.faces) {
-          // Skip faces that are still detecting
           if (face.attendanceStatus === 'detecting') continue;
-          
+
           const person: RecognizedPerson = {
             id: face.id,
-            type: 'member', // Only members now
+            type: 'member',
             name: face.name,
             confidence: face.confidence,
             timestamp: new Date(),
             attendanceStatus: face.attendanceMarked ? 'marked' : 'detecting',
           };
 
-          // Check if already in recent history (within 30 seconds)
           const exists = recognizedPersons.find(
-            p => p.id === person.id && 
-            (Date.now() - p.timestamp.getTime()) < 30000
+            p => p.id === person.id && (Date.now() - p.timestamp.getTime()) < 30000,
           );
 
           if (!exists) {
             setRecognizedPersons(prev => [person, ...prev.slice(0, 19)]);
-            
-            // Update stats - only members now
             setStats(prev => ({
               total: prev.total + 1,
               members: prev.members + 1,
-              visitors: prev.visitors, // No longer incremented
+              visitors: prev.visitors,
             }));
-            
+
             if (soundEnabled) {
-              const audio = new Audio('/success.mp3');
-              audio.play().catch(() => {});
+              new Audio('/success.mp3').play().catch(() => {});
             }
 
-            const isNewAttendance = face.attendanceMarked === true;
-            
+            const isNew = face.attendanceMarked === true;
             toast({
               title: 'Member Recognized',
-              description: `${person.name || 'Unknown'} - ${isNewAttendance ? 'Attendance marked' : 'Already recorded'}`,
-              variant: isNewAttendance ? 'default' : undefined,
+              description: `${person.name || 'Unknown'} - ${isNew ? 'Attendance marked' : 'Already recorded'}`,
+              variant: isNew ? 'default' : undefined,
             });
           }
         }
       }
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('[AttendanceCapture] Recognition error:', err);
       }
+    } finally {
+      processingRef.current = false;
     }
-  }, [isProcessing, recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, toast]);
+  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, toast, engineState, stopCaptureLoop]);
 
-  // Capture loop using requestAnimationFrame
+  // ── Start capture loop with setInterval (⑤ 500ms) ──
   const startCaptureLoop = useCallback(() => {
-    const loop = () => {
-      if (!isCameraOn) return;
-      
-      captureAndRecognize();
-      captureLoopRef.current = requestAnimationFrame(loop);
-    };
-    
-    captureLoopRef.current = requestAnimationFrame(loop);
-  }, [isCameraOn, captureAndRecognize]);
-
-  const stopCaptureLoop = useCallback(() => {
-    if (captureLoopRef.current) {
-      cancelAnimationFrame(captureLoopRef.current);
-      captureLoopRef.current = null;
-    }
-  }, []);
+    stopCaptureLoop();
+    intervalRef.current = setInterval(captureAndRecognize, CAPTURE_INTERVAL_MS);
+  }, [captureAndRecognize, stopCaptureLoop]);
 
   const startCamera = async () => {
     try {
       setError(null);
       setIsCameraStarting(true);
-      
+      isFirstCallRef.current = true;
+      setEngineState('idle');
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user', 
-          width: { ideal: 640 }, 
-          height: { ideal: 480 } 
-        }
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
       });
-      
+
       if (videoRef.current) {
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
-        
+
         await new Promise<void>((resolve, reject) => {
-          if (!videoRef.current) {
-            reject(new Error('Video element not found'));
-            return;
-          }
-          
-          const handleLoadedMetadata = () => resolve();
-          const handleError = () => reject(new Error('Video failed to load'));
-          
-          videoRef.current.onloadedmetadata = handleLoadedMetadata;
-          videoRef.current.onerror = handleError;
-          
+          if (!videoRef.current) return reject(new Error('Video element not found'));
+          videoRef.current.onloadedmetadata = () => resolve();
+          videoRef.current.onerror = () => reject(new Error('Video failed to load'));
           setTimeout(() => reject(new Error('Video load timeout')), 10000);
         });
-        
+
         await videoRef.current.play();
-        
         setIsCameraOn(true);
         setIsCameraStarting(false);
-        
-        // Reset pause state
         pausedUntilRef.current = 0;
-        lastCaptureTimeRef.current = 0;
-        
-        toast({
-          title: 'Camera Started',
-          description: 'Face recognition is now active',
-        });
+
+        toast({ title: 'Camera Started', description: 'Face recognition is now active' });
       }
     } catch (err) {
       setIsCameraStarting(false);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Unable to access camera: ${errorMessage}. Please check permissions.`);
-      toast({
-        title: 'Camera Error',
-        description: `Unable to access camera. Please check permissions.`,
-        variant: 'destructive',
-      });
-      
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Unable to access camera: ${msg}. Please check permissions.`);
+      toast({ title: 'Camera Error', description: 'Unable to access camera. Please check permissions.', variant: 'destructive' });
+
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach(t => t.stop());
         streamRef.current = null;
       }
     }
@@ -312,38 +290,28 @@ const AttendanceCapture = () => {
 
   const stopCamera = useCallback(() => {
     stopCaptureLoop();
-    
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    
+    if (videoRef.current) videoRef.current.srcObject = null;
     clearFaces();
     setIsCameraOn(false);
     setIsCameraStarting(false);
+    setEngineState('idle');
+    isFirstCallRef.current = true;
+    processingRef.current = false;
   }, [stopCaptureLoop, clearFaces]);
 
-  // Start/stop capture loop when camera state changes
+  // ── Start/stop capture when camera toggles ──
   useEffect(() => {
-    if (isCameraOn) {
-      startCaptureLoop();
-    } else {
-      stopCaptureLoop();
-    }
-    
+    if (isCameraOn) startCaptureLoop();
+    else stopCaptureLoop();
     return () => stopCaptureLoop();
   }, [isCameraOn, startCaptureLoop, stopCaptureLoop]);
 
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, [stopCamera]);
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const resetSession = () => {
     setRecognizedPersons([]);
@@ -354,13 +322,64 @@ const AttendanceCapture = () => {
 
   const getStatusIcon = () => {
     switch (apiStatus) {
-      case 'connected':
-        return <Wifi className="w-4 h-4" />;
-      case 'disconnected':
-        return <WifiOff className="w-4 h-4" />;
-      default:
-        return <RefreshCw className="w-4 h-4 animate-spin" />;
+      case 'connected': return <Wifi className="w-4 h-4" />;
+      case 'disconnected': return <WifiOff className="w-4 h-4" />;
+      default: return <RefreshCw className="w-4 h-4 animate-spin" />;
     }
+  };
+
+  // ── Render camera overlay content based on engine state ──
+  const renderCameraOverlay = () => {
+    // ④ Fatal error state
+    if (engineState === 'error') {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 z-10">
+          <AlertTriangle className="w-12 h-12 text-destructive mb-3" />
+          <p className="text-destructive font-semibold text-center px-4">
+            Face recognition temporarily unavailable.
+          </p>
+          <p className="text-destructive/80 text-sm text-center mt-1">
+            Please refresh the page.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      );
+    }
+
+    // ①② Initializing state (first API call — model loading)
+    if (engineState === 'initializing') {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm z-10">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mb-3" />
+          <p className="text-foreground font-semibold text-lg">Initializing Face Recognition</p>
+          <p className="text-muted-foreground text-sm text-center mt-1 max-w-xs">
+            Setting up face recognition system. This may take a few seconds on first use.
+          </p>
+        </div>
+      );
+    }
+
+    // ③ Ready — scanning state
+    if (engineState === 'ready' && allFacesForOverlay.length === 0 && isCameraOn) {
+      return (
+        <div className="absolute top-3 left-3 z-10">
+          <Badge variant="secondary" className="gap-1.5 bg-background/70 backdrop-blur-sm">
+            <ScanFace className="w-3.5 h-3.5 animate-pulse" />
+            Scanning for faces…
+          </Badge>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -397,7 +416,7 @@ const AttendanceCapture = () => {
             variant={isCameraOn ? 'destructive' : 'default'}
             className="gap-2 flex-1 sm:flex-none"
             size="sm"
-            disabled={apiStatus !== 'connected' || isCameraStarting}
+            disabled={apiStatus !== 'connected' || isCameraStarting || engineState === 'error'}
           >
             {isCameraStarting ? (
               <>
@@ -450,16 +469,22 @@ const AttendanceCapture = () => {
             <CardTitle className="flex items-center justify-between">
               <span>Camera Feed</span>
               <div className="flex items-center gap-2">
-                {isCameraOn && (
+                {isCameraOn && engineState === 'ready' && (
                   <Badge variant="outline" className="gap-1 text-primary border-primary">
                     <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     Live
                   </Badge>
                 )}
-                {isProcessing && (
+                {engineState === 'initializing' && (
+                  <Badge variant="secondary" className="animate-pulse">
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Loading model…
+                  </Badge>
+                )}
+                {isProcessing && engineState === 'ready' && (
                   <Badge variant="secondary" className="animate-pulse">
                     <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                    Processing...
+                    Processing…
                   </Badge>
                 )}
               </div>
@@ -467,7 +492,6 @@ const AttendanceCapture = () => {
           </CardHeader>
           <CardContent>
             <div ref={containerRef} className="relative aspect-video bg-muted rounded-lg overflow-hidden">
-              {/* Video element - always rendered but visibility controlled */}
               <video
                 ref={videoRef}
                 autoPlay
@@ -475,12 +499,10 @@ const AttendanceCapture = () => {
                 muted
                 className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
               />
-              
-              {/* Hidden canvas for frame capture */}
               <canvas ref={canvasRef} className="hidden" />
-              
-              {/* Face detection overlay - includes recognized faces + scanning bboxes */}
-              {isCameraOn && allFacesForOverlay.length > 0 && (
+
+              {/* Face detection overlay */}
+              {isCameraOn && engineState === 'ready' && allFacesForOverlay.length > 0 && (
                 <FaceOverlay
                   faces={allFacesForOverlay}
                   videoWidth={videoDimensions.width}
@@ -489,9 +511,10 @@ const AttendanceCapture = () => {
                   containerHeight={containerDimensions.height}
                 />
               )}
-              
-              {/* No static placeholder - FaceOverlay handles all detection visualization */}
-              
+
+              {/* State-based overlays */}
+              {isCameraOn && renderCameraOverlay()}
+
               {/* Placeholder when camera is off */}
               {!isCameraOn && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
@@ -510,8 +533,8 @@ const AttendanceCapture = () => {
                   )}
                 </div>
               )}
-              
-              {error && (
+
+              {error && engineState !== 'error' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
                   <p className="text-destructive text-center px-4">{error}</p>
                 </div>

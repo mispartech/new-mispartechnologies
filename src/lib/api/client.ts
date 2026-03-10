@@ -31,6 +31,8 @@ export interface ApiResponse<T> {
 interface RequestOptions extends RequestInit {
   /** If true, skip automatic toast notifications on error */
   silent?: boolean;
+  /** Custom timeout in ms (default: 15000) */
+  timeout?: number;
 }
 
 // ────────────────────────── error notifications ──────────────────────────
@@ -84,7 +86,7 @@ class DjangoApiClient {
     endpoint: string,
     options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
-    const { silent, ...fetchOptions } = options;
+    const { silent, timeout, ...fetchOptions } = options;
     const token = await this.getAccessToken();
 
     const headers: Record<string, string> = {
@@ -98,7 +100,7 @@ class DjangoApiClient {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), timeout ?? 15000);
 
       const response = await fetch(url, {
         ...fetchOptions,
@@ -552,16 +554,19 @@ class DjangoApiClient {
   }
 
   async recognizeFace(
-    imageBase64: string,
+    imageDataUrl: string,
     organizationId?: string,
+    options?: { silent?: boolean; timeout?: number },
   ): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.FACE_RECOGNIZE, {
       method: 'POST',
       body: JSON.stringify({
-        frame: imageBase64,
+        frame: imageDataUrl,
         mode: 'RECOGNIZE',
         organization_id: organizationId,
       }),
+      silent: options?.silent,
+      timeout: options?.timeout,
     });
   }
 
