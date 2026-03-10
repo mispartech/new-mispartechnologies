@@ -86,7 +86,7 @@ class DjangoApiClient {
     endpoint: string,
     options: RequestOptions = {},
   ): Promise<ApiResponse<T>> {
-    const { silent, ...fetchOptions } = options;
+    const { silent, timeout, ...fetchOptions } = options;
     const token = await this.getAccessToken();
 
     const headers: Record<string, string> = {
