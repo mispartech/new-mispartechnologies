@@ -100,7 +100,7 @@ class DjangoApiClient {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), timeout ?? 15000);
 
       const response = await fetch(url, {
         ...fetchOptions,
