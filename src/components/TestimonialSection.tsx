@@ -49,7 +49,7 @@ const TestimonialSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
-  const autoPlayRef = useRef<NodeJS.Timeout>();
+  const autoPlayRef = useRef<ReturnType<typeof setTimeout>>();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const touchStartX = useRef(0);

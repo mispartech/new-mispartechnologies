@@ -286,9 +286,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ DEPARTMENTS ═══════════════════════════
 
-  async getDepartments(organizationId?: string): Promise<ApiResponse<any[]>> {
-    const query = organizationId ? `?organization_id=${organizationId}` : '';
-    return this.request(`${API_ROUTES.DEPARTMENTS}${query}`);
+  async getDepartments(): Promise<ApiResponse<any[]>> {
+    return this.request(API_ROUTES.DEPARTMENTS);
   }
 
   async getDepartment(id: string): Promise<ApiResponse<any>> {
@@ -576,7 +575,6 @@ class DjangoApiClient {
 
   async getReportData(params: {
     period: string;
-    organization_id?: string;
   }): Promise<ApiResponse<any>> {
     const query =
       '?' +
@@ -601,10 +599,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ SCHEDULES ═══════════════════════════
 
-  async getSchedules(organizationId: string): Promise<ApiResponse<any[]>> {
-    return this.request(
-      `${API_ROUTES.SCHEDULES}?organization_id=${organizationId}`,
-    );
+  async getSchedules(): Promise<ApiResponse<any[]>> {
+    return this.request(API_ROUTES.SCHEDULES);
   }
 
   async createSchedule(data: any): Promise<ApiResponse<any>> {
