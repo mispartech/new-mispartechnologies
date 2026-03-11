@@ -37,7 +37,7 @@ interface AuthContextType {
     phone_number?: string;
     gender?: string;
     invite_token?: string;
-  }) => Promise<{ error?: string; user?: User }>;
+  }) => Promise<{ error?: string; user?: User; existingUser?: boolean }>;
   refreshUser: () => Promise<void>;
   overrideEnrollmentStatus: () => void;
 }
@@ -190,7 +190,7 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     phone_number?: string;
     gender?: string;
     invite_token?: string;
-  }) => {
+  }): Promise<{ error?: string; user?: User; existingUser?: boolean }> => {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -205,6 +205,12 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!signUpData?.user) {
       return { error: 'No user returned from signup.' };
+    }
+
+    // Supabase returns a user with empty identities when email already exists
+    // (email confirmation enabled). Detect this to prevent duplicate "check your email" messages.
+    if (signUpData.user.identities && signUpData.user.identities.length === 0) {
+      return { existingUser: true };
     }
 
     return {};

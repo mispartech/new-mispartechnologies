@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Scan, ArrowLeft, Mail, Lock, User, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Scan, ArrowLeft, Mail, Lock, User, Shield, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 
@@ -128,6 +128,7 @@ const Auth = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [shakeField, setShakeField] = useState<string | null>(null);
+  const [infoBanner, setInfoBanner] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -194,10 +195,30 @@ const Auth = () => {
       } else {
         const result = await register({ email, password, first_name: firstName, last_name: lastName });
         if (result.error) {
+          // Check for "already registered" type errors
+          if (result.error.toLowerCase().includes('already registered') || result.error.toLowerCase().includes('already been registered')) {
+            setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+            setIsLogin(true);
+            setErrors({});
+            setTouched({});
+            return;
+          }
           toast({ title: 'Sign up failed', description: result.error, variant: 'destructive' });
           return;
         }
+        if (result.existingUser) {
+          // Supabase returned empty identities — email already taken
+          setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+          setIsLogin(true);
+          setErrors({});
+          setTouched({});
+          return;
+        }
         toast({ title: 'Check your email', description: 'A verification link has been sent. Please confirm before signing in.' });
+        setInfoBanner('A verification link has been sent to your email. Once verified, you can sign in below.');
+        setIsLogin(true);
+        setErrors({});
+        setTouched({});
       }
     } catch {
       toast({ title: 'Error', description: 'An unexpected error occurred. Please try again.', variant: 'destructive' });
@@ -274,6 +295,15 @@ const Auth = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Button>
+
+          {/* Info banner */}
+          {infoBanner && (
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-[hsl(var(--electric-cyan)/0.3)] bg-[hsl(var(--electric-cyan)/0.05)] p-3">
+              <Info className="w-4 h-4 mt-0.5 text-[hsl(var(--electric-cyan))] shrink-0" />
+              <p className="text-sm text-foreground">{infoBanner}</p>
+              <button type="button" onClick={() => setInfoBanner(null)} className="ml-auto text-muted-foreground hover:text-foreground shrink-0">×</button>
+            </div>
+          )}
 
           {/* Glass card */}
           <div className="glass-card rounded-2xl p-8 border border-[hsl(var(--electric-cyan)/0.1)]">
@@ -469,7 +499,7 @@ const Auth = () => {
 
                 <div className="mt-6 text-center">
                   <button type="button"
-                    onClick={() => { setIsLogin(!isLogin); setErrors({}); setTouched({}); }}
+                    onClick={() => { setIsLogin(!isLogin); setErrors({}); setTouched({}); setInfoBanner(null); }}
                     className="text-sm text-muted-foreground hover:text-[hsl(var(--electric-cyan))] transition-colors">
                     {isLogin ? "Don't have an account? " : 'Already have an account? '}
                     <span className="font-medium text-[hsl(var(--electric-cyan))]">{isLogin ? 'Sign up' : 'Sign in'}</span>
