@@ -499,7 +499,7 @@ const Auth = () => {
 
                 <div className="mt-6 text-center">
                   <button type="button"
-                    onClick={() => { setIsLogin(!isLogin); setErrors({}); setTouched({}); }}
+                    onClick={() => { setIsLogin(!isLogin); setErrors({}); setTouched({}); setInfoBanner(null); }}
                     className="text-sm text-muted-foreground hover:text-[hsl(var(--electric-cyan))] transition-colors">
                     {isLogin ? "Don't have an account? " : 'Already have an account? '}
                     <span className="font-medium text-[hsl(var(--electric-cyan))]">{isLogin ? 'Sign up' : 'Sign in'}</span>
