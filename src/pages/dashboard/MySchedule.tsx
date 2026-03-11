@@ -30,7 +30,7 @@ const MySchedule = () => {
 
   const fetchSchedules = async () => {
     try {
-      const { data, status } = await djangoApi.getSchedules(profile.organization_id);
+      const { data, status } = await djangoApi.getSchedules();
       if (status === 404) { setLoading(false); return; }
       setSchedules(data || []);
     } catch (error) { console.error('Error fetching schedules:', error); }

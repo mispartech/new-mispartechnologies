@@ -35,9 +35,7 @@ const ScheduleManagement = () => {
 
   const fetchSchedules = async () => {
     try {
-      const orgId = user?.organization_id;
-      if (!orgId) { setIsLoading(false); return; }
-      const result = await djangoApi.getSchedules(orgId);
+      const result = await djangoApi.getSchedules();
       if (result.error) throw new Error(result.error);
       setSchedules(result.data || []);
     } catch (error) {

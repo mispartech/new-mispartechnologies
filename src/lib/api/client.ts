@@ -575,7 +575,6 @@ class DjangoApiClient {
 
   async getReportData(params: {
     period: string;
-    organization_id?: string;
   }): Promise<ApiResponse<any>> {
     const query =
       '?' +
