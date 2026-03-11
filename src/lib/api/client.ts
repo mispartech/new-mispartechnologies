@@ -286,9 +286,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ DEPARTMENTS ═══════════════════════════
 
-  async getDepartments(organizationId?: string): Promise<ApiResponse<any[]>> {
-    const query = organizationId ? `?organization_id=${organizationId}` : '';
-    return this.request(`${API_ROUTES.DEPARTMENTS}${query}`);
+  async getDepartments(): Promise<ApiResponse<any[]>> {
+    return this.request(API_ROUTES.DEPARTMENTS);
   }
 
   async getDepartment(id: string): Promise<ApiResponse<any>> {
