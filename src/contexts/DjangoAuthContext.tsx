@@ -37,7 +37,7 @@ interface AuthContextType {
     phone_number?: string;
     gender?: string;
     invite_token?: string;
-  }) => Promise<{ error?: string; user?: User }>;
+  }) => Promise<{ error?: string; user?: User; existingUser?: boolean }>;
   refreshUser: () => Promise<void>;
   overrideEnrollmentStatus: () => void;
 }
