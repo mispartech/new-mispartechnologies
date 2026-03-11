@@ -27,14 +27,50 @@ const FaceScanVisualization = () => {
         <div className="scan-line absolute w-[200px] md:w-[600px] h-[2px] left-1/2 -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan to-transparent opacity-20 md:opacity-40" />
       </div>
 
-      {/* Face detection frame - desktop only */}
+      {/* Face detection frame with face silhouette - desktop only */}
       <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-[320px] h-[400px] hidden lg:block">
-        {/* Corner brackets with glow */}
+        {/* Corner brackets with glow — cvzone style */}
         <div className="absolute top-0 left-0 w-12 h-12 border-l-2 border-t-2 border-cyan/60 animate-pulse" />
         <div className="absolute top-0 right-0 w-12 h-12 border-r-2 border-t-2 border-cyan/60 animate-pulse" style={{ animationDelay: '0.2s' }} />
         <div className="absolute bottom-0 left-0 w-12 h-12 border-l-2 border-b-2 border-cyan/60 animate-pulse" style={{ animationDelay: '0.4s' }} />
         <div className="absolute bottom-0 right-0 w-12 h-12 border-r-2 border-b-2 border-cyan/60 animate-pulse" style={{ animationDelay: '0.6s' }} />
-        
+
+        {/* Face silhouette SVG */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Head outline */}
+          <ellipse cx="160" cy="160" rx="85" ry="105" stroke="hsl(190 90% 50%)" strokeWidth="1" opacity="0.25" className="animate-pulse" />
+          {/* Jaw / chin */}
+          <path d="M75 180 Q90 290 160 310 Q230 290 245 180" stroke="hsl(190 90% 50%)" strokeWidth="0.8" opacity="0.2" className="animate-pulse" />
+          {/* Left eye region */}
+          <ellipse cx="125" cy="150" rx="22" ry="12" stroke="hsl(190 90% 50%)" strokeWidth="0.8" opacity="0.3" />
+          {/* Right eye region */}
+          <ellipse cx="195" cy="150" rx="22" ry="12" stroke="hsl(190 90% 50%)" strokeWidth="0.8" opacity="0.3" />
+          {/* Nose line */}
+          <path d="M160 165 L155 200 Q160 208 165 200 L160 165" stroke="hsl(190 90% 50%)" strokeWidth="0.6" opacity="0.2" />
+          {/* Mouth */}
+          <path d="M135 235 Q160 250 185 235" stroke="hsl(190 90% 50%)" strokeWidth="0.7" opacity="0.25" />
+          {/* Neck */}
+          <line x1="140" y1="310" x2="135" y2="370" stroke="hsl(190 90% 50%)" strokeWidth="0.5" opacity="0.15" />
+          <line x1="180" y1="310" x2="185" y2="370" stroke="hsl(190 90% 50%)" strokeWidth="0.5" opacity="0.15" />
+        </svg>
+
+        {/* cvzone-style inner detection rectangles */}
+        {/* Eye region boxes */}
+        <div className="absolute border border-cyan/40 rounded-sm" style={{ top: '32%', left: '24%', width: '22%', height: '10%' }}>
+          <div className="absolute -top-4 left-0 text-[9px] font-mono text-cyan/50">L_EYE 0.97</div>
+        </div>
+        <div className="absolute border border-cyan/40 rounded-sm" style={{ top: '32%', right: '24%', width: '22%', height: '10%' }}>
+          <div className="absolute -top-4 right-0 text-[9px] font-mono text-cyan/50">R_EYE 0.96</div>
+        </div>
+        {/* Nose region box */}
+        <div className="absolute border border-mint/30 rounded-sm" style={{ top: '42%', left: '40%', width: '20%', height: '15%' }}>
+          <div className="absolute -top-4 left-0 text-[9px] font-mono text-mint/50">NOSE 0.98</div>
+        </div>
+        {/* Mouth region box */}
+        <div className="absolute border border-cyan-light/30 rounded-sm" style={{ top: '54%', left: '33%', width: '34%', height: '10%' }}>
+          <div className="absolute -bottom-4 left-0 text-[9px] font-mono text-cyan-light/50">MOUTH 0.95</div>
+        </div>
+
         {/* Face landmark dots */}
         <div className="absolute inset-0">
           <div className="absolute top-[35%] left-[30%] w-2 h-2 rounded-full bg-cyan shadow-[0_0_10px_hsl(190,90%,50%)] animate-ping" style={{ animationDuration: '2s' }} />
@@ -44,7 +80,7 @@ const FaceScanVisualization = () => {
           <div className="absolute top-[65%] right-[35%] w-1.5 h-1.5 rounded-full bg-cyan-light shadow-[0_0_8px_hsl(190,80%,65%)] animate-ping" style={{ animationDuration: '2s', animationDelay: '0.9s' }} />
         </div>
 
-        {/* Connecting lines */}
+        {/* Connecting mesh lines */}
         <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
           <line x1="30" y1="35" x2="70" y2="35" stroke="hsl(190 90% 50%)" strokeWidth="0.3" className="animate-pulse" />
           <line x1="30" y1="35" x2="50" y2="50" stroke="hsl(190 90% 50%)" strokeWidth="0.3" className="animate-pulse" />
@@ -53,6 +89,13 @@ const FaceScanVisualization = () => {
           <line x1="50" y1="50" x2="65" y2="65" stroke="hsl(190 90% 50%)" strokeWidth="0.3" className="animate-pulse" />
           <line x1="35" y1="65" x2="65" y2="65" stroke="hsl(190 90% 50%)" strokeWidth="0.3" className="animate-pulse" />
         </svg>
+
+        {/* Main bounding box label — cvzone style top bar */}
+        <div className="absolute -top-7 left-0 right-0 flex items-center">
+          <div className="bg-cyan/20 backdrop-blur-sm px-2 py-0.5 rounded-t-sm border border-cyan/30 border-b-0">
+            <span className="text-[10px] font-mono text-cyan">FACE_0 conf:0.99</span>
+          </div>
+        </div>
 
         {/* Orbiting particle */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
