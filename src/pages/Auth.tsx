@@ -296,6 +296,15 @@ const Auth = () => {
             Back to Home
           </Button>
 
+          {/* Info banner */}
+          {infoBanner && (
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-[hsl(var(--electric-cyan)/0.3)] bg-[hsl(var(--electric-cyan)/0.05)] p-3">
+              <Info className="w-4 h-4 mt-0.5 text-[hsl(var(--electric-cyan))] shrink-0" />
+              <p className="text-sm text-foreground">{infoBanner}</p>
+              <button type="button" onClick={() => setInfoBanner(null)} className="ml-auto text-muted-foreground hover:text-foreground shrink-0">×</button>
+            </div>
+          )}
+
           {/* Glass card */}
           <div className="glass-card rounded-2xl p-8 border border-[hsl(var(--electric-cyan)/0.1)]">
             {/* Header */}
