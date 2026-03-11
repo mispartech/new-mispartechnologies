@@ -195,10 +195,30 @@ const Auth = () => {
       } else {
         const result = await register({ email, password, first_name: firstName, last_name: lastName });
         if (result.error) {
+          // Check for "already registered" type errors
+          if (result.error.toLowerCase().includes('already registered') || result.error.toLowerCase().includes('already been registered')) {
+            setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+            setIsLogin(true);
+            setErrors({});
+            setTouched({});
+            return;
+          }
           toast({ title: 'Sign up failed', description: result.error, variant: 'destructive' });
           return;
         }
+        if (result.existingUser) {
+          // Supabase returned empty identities — email already taken
+          setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+          setIsLogin(true);
+          setErrors({});
+          setTouched({});
+          return;
+        }
         toast({ title: 'Check your email', description: 'A verification link has been sent. Please confirm before signing in.' });
+        setInfoBanner('A verification link has been sent to your email. Once verified, you can sign in below.');
+        setIsLogin(true);
+        setErrors({});
+        setTouched({});
       }
     } catch {
       toast({ title: 'Error', description: 'An unexpected error occurred. Please try again.', variant: 'destructive' });
