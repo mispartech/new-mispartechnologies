@@ -601,10 +601,8 @@ class DjangoApiClient {
 
   // ═══════════════════════════ SCHEDULES ═══════════════════════════
 
-  async getSchedules(organizationId: string): Promise<ApiResponse<any[]>> {
-    return this.request(
-      `${API_ROUTES.SCHEDULES}?organization_id=${organizationId}`,
-    );
+  async getSchedules(): Promise<ApiResponse<any[]>> {
+    return this.request(API_ROUTES.SCHEDULES);
   }
 
   async createSchedule(data: any): Promise<ApiResponse<any>> {
