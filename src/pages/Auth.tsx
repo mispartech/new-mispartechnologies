@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Scan, ArrowLeft, Mail, Lock, User, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Scan, ArrowLeft, Mail, Lock, User, Shield, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 
