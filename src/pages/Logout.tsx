@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+const clearSupabaseTokens = () => {
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('sb-'))
+    .forEach(k => localStorage.removeItem(k));
+};
+
 const Logout = () => {
   const hasRun = useRef(false);
 
@@ -10,15 +16,13 @@ const Logout = () => {
 
     const doLogout = async () => {
       try {
-        await supabase.auth.signOut({ scope: 'local' });
+        await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        console.error('[Logout] signOut failed, clearing manually:', err);
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-'))
-          .forEach(k => localStorage.removeItem(k));
-      } finally {
-        window.location.href = '/';
+        console.error('[Logout] signOut failed:', err);
       }
+      // Always clear tokens as belt-and-suspenders
+      clearSupabaseTokens();
+      window.location.href = '/';
     };
 
     doLogout();
