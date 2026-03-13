@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { djangoApi } from '@/lib/api/client';
 
 type EntityType = 'member' | 'department' | 'attendance' | 'visitor' | 'admin' | 'organization' | 'settings' | 'schedule';
 type ActionType = 'create' | 'update' | 'delete' | 'view' | 'claim' | 'invite' | 'login' | 'logout';
@@ -11,23 +10,15 @@ interface LogActivityParams {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Activity logger hook.
+ * Currently a silent no-op — the /api/activity-logs/ endpoint is not yet implemented.
+ * When the backend endpoint is available, uncomment the API call below.
+ */
 export const useActivityLogger = () => {
-  const logActivity = useCallback(async ({
-    action,
-    entityType,
-    entityId,
-    metadata = {}
-  }: LogActivityParams) => {
-    try {
-      await djangoApi.createActivityLog({
-        action,
-        entity_type: entityType,
-        entity_id: entityId,
-        metadata,
-      });
-    } catch (err) {
-      console.error('Activity logging error:', err);
-    }
+  const logActivity = useCallback(async (_params: LogActivityParams) => {
+    // No-op until backend implements /api/activity-logs/
+    // await djangoApi.createActivityLog({ ... });
   }, []);
 
   return { logActivity };
