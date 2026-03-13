@@ -1,50 +1,40 @@
 import { useState, useEffect } from 'react';
 import { djangoApi } from '@/lib/api/client';
 import { useToast } from '@/hooks/use-toast';
-import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { UserPlus, Mail, Clock, CheckCircle, XCircle, Loader2, Shield } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface AdminInvite { id: string; email: string; invited_role: string; expires_at: string; accepted_at: string | null; created_at: string; token?: string; }
-interface Admin { id: string; email: string; first_name: string | null; last_name: string | null; role: string; created_at: string; }
-
-const ADMIN_ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'manager', label: 'Manager' },
-];
+interface Admin {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  created_at: string;
+}
 
 const AdminManagement = () => {
-  const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('admin');
-  const [inviteJobTitle, setInviteJobTitle] = useState('');
-  const [sending, setSending] = useState(false);
   const { toast } = useToast();
-  const { logActivity } = useActivityLogger();
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [adminsResult, invitesResult] = await Promise.all([
-        djangoApi.getAdminUsers(),
-        djangoApi.getAdminInvites(),
-      ]);
-
-      if (!adminsResult.error && adminsResult.data) setAdmins(adminsResult.data);
-      if (!invitesResult.error && invitesResult.data) setInvites(invitesResult.data);
+      // Use /api/members/ and filter by admin roles client-side
+      const result = await djangoApi.getMembers();
+      if (!result.error && result.data) {
+        const adminRoles = ['super_admin', 'admin', 'manager'];
+        const adminMembers = result.data.filter((m: any) =>
+          adminRoles.includes(m.role?.toLowerCase?.().replace(/\s+/g, '_') || '')
+        );
+        setAdmins(adminMembers);
+      }
     } catch (error: any) {
       toast({ title: 'Error', description: 'Failed to load admin data.', variant: 'destructive' });
     } finally {
@@ -52,51 +42,8 @@ const AdminManagement = () => {
     }
   };
 
-  const handleSendInvite = async () => {
-    if (!inviteEmail.trim()) {
-      toast({ title: 'Validation Error', description: 'Please enter an email address.', variant: 'destructive' });
-      return;
-    }
-
-    setSending(true);
-    try {
-      const result = await djangoApi.createAdminInvite({
-        email: inviteEmail.trim().toLowerCase(),
-        invited_role: inviteRole,
-        job_title: inviteJobTitle.trim(),
-      });
-
-      if (result.error) throw new Error(result.error);
-
-      // Send invite email via Django
-      if (result.data?.id && result.data?.token) {
-        await djangoApi.sendAdminInviteEmail({
-          invite_id: result.data.id,
-          email: inviteEmail.trim().toLowerCase(),
-          role: inviteRole,
-          token: result.data.token,
-          organization_name: 'Our Organization',
-        });
-      }
-
-      toast({ title: 'Invite Sent', description: `Invitation sent to ${inviteEmail}.` });
-
-      await logActivity({ action: 'invite', entityType: 'admin', entityId: result.data?.id, metadata: { email: inviteEmail, role: inviteRole } });
-
-      setInviteEmail('');
-      setInviteRole('admin');
-      setInviteJobTitle('');
-      setInviteDialogOpen(false);
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to send invitation.', variant: 'destructive' });
-    } finally {
-      setSending(false);
-    }
-  };
-
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
+    switch (role?.toLowerCase?.().replace(/\s+/g, '_')) {
       case 'super_admin': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'admin': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'manager': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
@@ -109,22 +56,7 @@ const AdminManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Management</h1><p className="text-sm sm:text-base text-muted-foreground">Manage administrators and send invitations</p></div>
-        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-          <DialogTrigger asChild><Button className="w-full sm:w-auto"><UserPlus className="h-4 w-4 mr-2" />Invite Admin</Button></DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader><DialogTitle>Invite New Admin</DialogTitle><DialogDescription>Send an invitation email to add a new administrator.</DialogDescription></DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2"><Label htmlFor="email">Email Address</Label><Input id="email" type="email" placeholder="admin@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="role">Role</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ADMIN_ROLES.map((role) => (<SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>))}</SelectContent></Select></div>
-              <div className="space-y-2"><Label htmlFor="jobTitle">Job Title (optional)</Label><Input id="jobTitle" placeholder="e.g., HR Manager, Head Usher" value={inviteJobTitle} onChange={(e) => setInviteJobTitle(e.target.value)} /></div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setInviteDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={handleSendInvite} disabled={sending} className="w-full sm:w-auto">{sending ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>) : (<><Mail className="h-4 w-4 mr-2" />Send Invite</>)}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div><h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Management</h1><p className="text-sm sm:text-base text-muted-foreground">View administrators in your organization</p></div>
       </div>
 
       <Card>
@@ -137,8 +69,8 @@ const AdminManagement = () => {
                   <TableRow key={admin.id}>
                     <TableCell className="font-medium">{admin.first_name && admin.last_name ? `${admin.first_name} ${admin.last_name}` : 'Not set'}</TableCell>
                     <TableCell>{admin.email}</TableCell>
-                    <TableCell><Badge className={getRoleBadgeColor(admin.role)}>{admin.role.replace('_', ' ')}</Badge></TableCell>
-                    <TableCell>{format(new Date(admin.created_at), 'MMM d, yyyy')}</TableCell>
+                    <TableCell><Badge className={getRoleBadgeColor(admin.role)}>{admin.role?.replace('_', ' ')}</Badge></TableCell>
+                    <TableCell>{admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -147,46 +79,19 @@ const AdminManagement = () => {
           <div className="md:hidden divide-y divide-border">
             {admins.length === 0 ? <div className="text-center text-muted-foreground py-8 px-4">No administrators found</div> : admins.map((admin) => (
               <div key={admin.id} className="p-4 space-y-2">
-                <div className="flex items-center justify-between"><div><p className="font-medium">{admin.first_name && admin.last_name ? `${admin.first_name} ${admin.last_name}` : 'Not set'}</p><p className="text-sm text-muted-foreground">{admin.email}</p></div><Badge className={getRoleBadgeColor(admin.role)}>{admin.role.replace('_', ' ')}</Badge></div>
-                <p className="text-xs text-muted-foreground">Since {format(new Date(admin.created_at), 'MMM d, yyyy')}</p>
+                <div className="flex items-center justify-between"><div><p className="font-medium">{admin.first_name && admin.last_name ? `${admin.first_name} ${admin.last_name}` : 'Not set'}</p><p className="text-sm text-muted-foreground">{admin.email}</p></div><Badge className={getRoleBadgeColor(admin.role)}>{admin.role?.replace('_', ' ')}</Badge></div>
+                <p className="text-xs text-muted-foreground">Since {admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '-'}</p>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
+      {/* Admin invites section — coming soon */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Clock className="h-5 w-5" />Pending Invitations</CardTitle><CardDescription>Invitations that haven't been accepted yet</CardDescription></CardHeader>
-        <CardContent className="p-0 sm:p-6">
-          <div className="hidden md:block">
-            <Table><TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Sent</TableHead><TableHead>Expires</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {invites.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No pending invitations</TableCell></TableRow> : invites.map((invite) => {
-                  const isExpired = new Date(invite.expires_at) < new Date();
-                  return (
-                    <TableRow key={invite.id}>
-                      <TableCell className="font-medium">{invite.email}</TableCell>
-                      <TableCell><Badge className={getRoleBadgeColor(invite.invited_role)}>{invite.invited_role.replace('_', ' ')}</Badge></TableCell>
-                      <TableCell>{format(new Date(invite.created_at), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>{format(new Date(invite.expires_at), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>{isExpired ? <Badge variant="destructive" className="flex items-center gap-1 w-fit"><XCircle className="h-3 w-3" />Expired</Badge> : <Badge variant="outline" className="flex items-center gap-1 w-fit"><Clock className="h-3 w-3" />Pending</Badge>}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="md:hidden divide-y divide-border">
-            {invites.length === 0 ? <div className="text-center text-muted-foreground py-8 px-4">No pending invitations</div> : invites.map((invite) => {
-              const isExpired = new Date(invite.expires_at) < new Date();
-              return (
-                <div key={invite.id} className="p-4 space-y-2">
-                  <div className="flex items-center justify-between"><p className="font-medium text-sm truncate flex-1 mr-2">{invite.email}</p>{isExpired ? <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" />Expired</Badge> : <Badge variant="outline" className="flex items-center gap-1"><Clock className="h-3 w-3" />Pending</Badge>}</div>
-                  <div className="flex items-center gap-2"><Badge className={getRoleBadgeColor(invite.invited_role)}>{invite.invited_role.replace('_', ' ')}</Badge><span className="text-xs text-muted-foreground">Sent {format(new Date(invite.created_at), 'MMM d')}</span></div>
-                </div>
-              );
-            })}
-          </div>
+        <CardHeader><CardTitle className="text-lg">Admin Invitations</CardTitle><CardDescription>Invite new administrators to your organization</CardDescription></CardHeader>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          <p>Admin invitations feature is coming soon.</p>
         </CardContent>
       </Card>
     </div>

@@ -5,6 +5,10 @@
  * Supabase is used ONLY for auth, storage, and realtime.
  *
  * Django verifies Supabase JWTs — no Django-issued tokens.
+ *
+ * ⚠️  Methods for endpoints not yet implemented on the backend are marked
+ *     as stubs — they return a synthetic 404 without making a network call
+ *     and log a developer-friendly warning.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +20,6 @@ const DJANGO_BASE_URL =
 
 const IS_DEV = import.meta.env.DEV;
 
-// Log the API URL on startup for debugging
 if (IS_DEV) console.log('[DjangoApi] Base URL:', DJANGO_BASE_URL);
 
 // ────────────────────────── types ──────────────────────────
@@ -27,15 +30,18 @@ export interface ApiResponse<T> {
   status: number;
 }
 
-/** Options for individual requests */
 interface RequestOptions extends RequestInit {
-  /** If true, skip automatic toast notifications on error */
   silent?: boolean;
-  /** Custom timeout in ms (default: 15000) */
   timeout?: number;
 }
 
-// ────────────────────────── error notifications ──────────────────────────
+// ────────────────────────── helpers ──────────────────────────
+
+/** Returns a synthetic 404 response for endpoints not yet implemented */
+function notImplemented<T>(endpointName: string): ApiResponse<T> {
+  console.warn(`[DjangoApi] Endpoint not implemented yet: ${endpointName}`);
+  return { status: 404, error: 'Feature not available yet. Backend endpoint pending.' };
+}
 
 function getErrorNotification(status: number, serverMessage?: string): { title: string; description: string } | null {
   if (status === 400) {
@@ -48,15 +54,14 @@ function getErrorNotification(status: number, serverMessage?: string): { title: 
     return { title: 'Access Denied', description: 'You do not have permission to perform this action.' };
   }
   if (status === 404) {
-    // Suppress 404 toasts globally — most endpoints are not yet implemented.
-    // Components should handle 404 status gracefully via response checking.
+    // Suppress 404 toasts globally
     return null;
   }
   if (status >= 500) {
     return { title: 'Server Error', description: 'Server error. Please try again later.' };
   }
   if (status === 0) {
-    return null; // handled separately
+    return null;
   }
   return { title: 'Request Failed', description: serverMessage || 'An unexpected error occurred.' };
 }
@@ -118,7 +123,6 @@ class DjangoApiClient {
         data = JSON.parse(text);
       } catch {
         if (!response.ok) {
-          // Never expose raw HTML/text error pages to the UI — use a generic message
           const isHtml = text.trimStart().startsWith('<') || text.includes('<!DOCTYPE');
           const error = isHtml
             ? 'Something went wrong. Please try again later.'
@@ -143,7 +147,8 @@ class DjangoApiClient {
         : err instanceof Error ? err.message : 'Network error';
 
       if (IS_DEV) {
-        console.error(`[DjangoApi] ${endpoint}:`, { error: err, timeout: isTimeout });
+        // Use warn instead of error to avoid noisy stack traces
+        console.warn(`[DjangoApi] ${endpoint}:`, isTimeout ? 'TIMEOUT' : message);
       }
 
       if (!silent) {
@@ -159,8 +164,9 @@ class DjangoApiClient {
   }
 
   private notifyError(status: number, message: string, endpoint: string, silent?: boolean, details?: any) {
+    // Use console.warn instead of console.error to avoid noisy stack traces
     if (IS_DEV) {
-      console.error(`[DjangoApi] ${status} ${endpoint}:`, { message, details });
+      console.warn(`[DjangoApi] ${status} ${endpoint}:`, message);
     }
 
     if (!silent) {
@@ -206,13 +212,13 @@ class DjangoApiClient {
     limit?: number;
   }): Promise<ApiResponse<any[]>> {
     const query = params
-      ? '?' + new URLSearchParams(params as Record<string, string>).toString()
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined),
+          ) as Record<string, string>,
+        ).toString()
       : '';
     return this.request(`${API_ROUTES.MEMBERS}${query}`);
-  }
-
-  async getMember(id: string): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.MEMBER(id));
   }
 
   async createMember(data: {
@@ -230,58 +236,25 @@ class DjangoApiClient {
     });
   }
 
-  async updateMember(
-    id: string,
-    data: Partial<{
-      first_name: string;
-      last_name: string;
-      phone_number: string;
-      gender: string;
-      department_id: string;
-      face_image_url: string;
-      organization_id: string;
-    }>,
-  ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.MEMBER(id), {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+  // ── Stub: getMember (single) — not yet implemented ──
+  async getMember(id: string): Promise<ApiResponse<any>> {
+    return notImplemented(`/api/members/${id}/`);
+  }
+
+  async updateMember(id: string, data: Partial<any>): Promise<ApiResponse<any>> {
+    return notImplemented(`/api/members/${id}/ PATCH`);
   }
 
   async deleteMember(id: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.MEMBER(id), { method: 'DELETE' });
+    return notImplemented(`/api/members/${id}/ DELETE`);
   }
 
-  async inviteMember(data: {
-    email: string;
-    first_name: string;
-    last_name: string;
-    phone_number?: string;
-    gender?: string;
-    department_id?: string;
-    organization_id: string;
-  }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.MEMBER_INVITE, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async inviteMember(data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/members/invite/');
   }
 
-  async bulkInviteMembers(data: {
-    members: Array<{
-      email: string;
-      first_name?: string;
-      last_name?: string;
-      phone_number?: string;
-      gender?: string;
-      department_id?: string;
-    }>;
-    organization_id: string;
-  }): Promise<ApiResponse<{ success: number; failed: number }>> {
-    return this.request(API_ROUTES.MEMBER_BULK_INVITE, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async bulkInviteMembers(data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/members/bulk-invite/');
   }
 
   // ═══════════════════════════ DEPARTMENTS ═══════════════════════════
@@ -290,8 +263,9 @@ class DjangoApiClient {
     return this.request(API_ROUTES.DEPARTMENTS);
   }
 
+  // ── Stub: single department CRUD — not yet confirmed ──
   async getDepartment(id: string): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.DEPARTMENT(id));
+    return notImplemented(`/api/departments/${id}/`);
   }
 
   async createDepartment(data: {
@@ -305,18 +279,12 @@ class DjangoApiClient {
     });
   }
 
-  async updateDepartment(
-    id: string,
-    data: Partial<{ name: string; description: string }>,
-  ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.DEPARTMENT(id), {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+  async updateDepartment(id: string, data: Partial<{ name: string; description: string }>): Promise<ApiResponse<any>> {
+    return notImplemented(`/api/departments/${id}/ PATCH`);
   }
 
   async deleteDepartment(id: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.DEPARTMENT(id), { method: 'DELETE' });
+    return notImplemented(`/api/departments/${id}/ DELETE`);
   }
 
   // ═══════════════════════════ ATTENDANCE ═══════════════════════════
@@ -349,151 +317,87 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ TEMP ATTENDANCE (VISITORS) ═══════════════════════════
+  // ═══════════════════════════ TEMP ATTENDANCE — STUB ═══════════════════════════
 
-  async getTempAttendance(params?: {
-    start_date?: string;
-    end_date?: string;
-  }): Promise<ApiResponse<any[]>> {
-    const query = params
-      ? '?' + new URLSearchParams(params as Record<string, string>).toString()
-      : '';
-    return this.request(`${API_ROUTES.TEMP_ATTENDANCE}${query}`);
+  async getTempAttendance(_params?: any): Promise<ApiResponse<any[]>> {
+    return notImplemented('/api/temp-attendance/');
   }
 
-  async claimVisitor(data: {
-    temp_attendance_id: string;
-    email: string;
-    password: string;
-    first_name: string;
-    last_name: string;
-    phone_number?: string;
-    gender?: string;
-    department_id?: string;
-  }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.TEMP_ATTENDANCE_CLAIM, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async claimVisitor(_data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/temp-attendance/claim/');
   }
 
   // ═══════════════════════════ ORGANIZATION SETTINGS ═══════════════════════════
 
-  /**
-   * GET /api/organization-settings/
-   * Returns the full organization settings for the authenticated user's org.
-   * Backend identifies the org via JWT — no ID in URL.
-   */
   async getOrgSettings(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.ORG_SETTINGS, { silent: options?.silent });
   }
 
-  /**
-   * PATCH /api/organization-settings/
-   * Updates organization settings (branding, features, attendance config, etc.).
-   * Backend identifies the org via JWT — no ID in URL.
-   */
-  async updateOrgSettings(
-    _orgId: string,
-    data: Partial<any>,
-  ): Promise<ApiResponse<any>> {
+  async updateOrgSettings(_orgId: string, data: Partial<any>): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.ORG_SETTINGS, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
-  // ═══════════════════════════ NOTIFICATIONS ═══════════════════════════
+  // ═══════════════════════════ NOTIFICATIONS — STUB ═══════════════════════════
 
-  async getNotifications(params?: {
-    user_id?: string;
-    limit?: number;
-  }): Promise<ApiResponse<any[]>> {
-    const query = params
-      ? '?' +
-        new URLSearchParams(
-          Object.fromEntries(
-            Object.entries(params).filter(([, v]) => v !== undefined),
-          ) as Record<string, string>,
-        ).toString()
-      : '';
-    return this.request(`${API_ROUTES.NOTIFICATIONS}${query}`);
+  async getNotifications(_params?: any): Promise<ApiResponse<any[]>> {
+    return notImplemented('/api/notifications/');
   }
 
-  async markNotificationRead(id: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.NOTIFICATION_READ(id), { method: 'PATCH' });
+  async markNotificationRead(_id: string): Promise<ApiResponse<void>> {
+    return notImplemented('/api/notifications/read/');
   }
 
   async markAllNotificationsRead(): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.NOTIFICATIONS_READ_ALL, { method: 'PATCH' });
+    return notImplemented('/api/notifications/read-all/');
   }
 
-  async deleteNotification(id: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.NOTIFICATION_DELETE(id), { method: 'DELETE' });
+  async deleteNotification(_id: string): Promise<ApiResponse<void>> {
+    return notImplemented('/api/notifications/delete/');
   }
 
-  // ═══════════════════════════ ACTIVITY LOGS ═══════════════════════════
+  // ═══════════════════════════ ACTIVITY LOGS — STUB ═══════════════════════════
 
-  async getActivityLogs(params?: {
-    limit?: number;
-    entity_type?: string;
-  }): Promise<ApiResponse<any[]>> {
-    const query = params
-      ? '?' +
-        new URLSearchParams(
-          Object.fromEntries(
-            Object.entries(params).filter(([, v]) => v !== undefined),
-          ) as Record<string, string>,
-        ).toString()
-      : '';
-    return this.request(`${API_ROUTES.ACTIVITY_LOGS}${query}`);
+  async getActivityLogs(_params?: any): Promise<ApiResponse<any[]>> {
+    return notImplemented('/api/activity-logs/');
   }
 
-  async createActivityLog(data: {
-    action: string;
-    entity_type: string;
-    entity_id?: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.ACTIVITY_LOGS, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async createActivityLog(_data: any): Promise<ApiResponse<any>> {
+    // Silently no-op — don't even warn on every call since this fires frequently
+    return { status: 200, data: null as any };
   }
 
-  // ═══════════════════════════ ADMIN USERS ═══════════════════════════
+  // ═══════════════════════════ ADMIN USERS — STUB ═══════════════════════════
 
   async getAdminUsers(): Promise<ApiResponse<any[]>> {
-    return this.request(API_ROUTES.ADMIN_USERS);
+    return notImplemented('/api/user-roles/admins/');
   }
 
-  // ═══════════════════════════ ADMIN INVITES ═══════════════════════════
+  // ═══════════════════════════ ADMIN INVITES — STUB ═══════════════════════════
 
   async getAdminInvites(): Promise<ApiResponse<any[]>> {
-    return this.request(API_ROUTES.ADMIN_INVITES);
+    return notImplemented('/api/admin-invites/');
   }
 
-  async createAdminInvite(data: {
-    email: string;
-    invited_role: string;
-    job_title?: string;
-    organization_id?: string;
-  }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.ADMIN_INVITES, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async createAdminInvite(_data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/admin-invites/ POST');
   }
 
-  // ═══════════════════════════ INVITES (MEMBER) ═══════════════════════════
+  async sendAdminInviteEmail(_data: any): Promise<ApiResponse<void>> {
+    return notImplemented('/api/admin-invites/send-email/');
+  }
+
+  // ═══════════════════════════ INVITES (MEMBER) — STUB ═══════════════════════════
 
   async getInvite(token: string): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.INVITE(token));
+    return this.request(API_ROUTES.ACCEPT_INVITE(token));
   }
 
-  async acceptInvite(inviteId: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.INVITE_ACCEPT(inviteId), {
-      method: 'PATCH',
+  async acceptInvite(token: string): Promise<ApiResponse<void>> {
+    return this.request(API_ROUTES.ACCEPT_INVITE(token), {
+      method: 'POST',
       body: JSON.stringify({ status: 'accepted' }),
     });
   }
@@ -504,10 +408,6 @@ class DjangoApiClient {
     return this.request(API_ROUTES.FACE_ENROLLMENT_STATUS, { silent: options?.silent });
   }
 
-  /**
-   * POST /api/face/enroll/ with multipart/form-data.
-   * The backend handles face detection, embedding, storage upload, and profile update.
-   */
   async enrollFace(imageBlob: Blob): Promise<ApiResponse<any>> {
     const token = await this.getAccessToken();
     const formData = new FormData();
@@ -518,11 +418,10 @@ class DjangoApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    // Do NOT set Content-Type — browser sets it with multipart boundary
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for upload
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -546,7 +445,7 @@ class DjangoApiClient {
     } catch (err) {
       const isTimeout = err instanceof DOMException && err.name === 'AbortError';
       const message = isTimeout ? 'Upload timed out. Please try again.' : 'Network error during enrollment.';
-      if (!isTimeout) console.error('[DjangoApi] enrollFace error:', err);
+      if (!isTimeout) console.warn('[DjangoApi] enrollFace error:', err);
       toast({ variant: 'destructive', title: isTimeout ? 'Upload Timeout' : 'Connection Error', description: message });
       return { status: 0, error: message };
     }
@@ -569,17 +468,10 @@ class DjangoApiClient {
     });
   }
 
-  // Dashboard stats are now computed client-side from attendance data.
+  // ═══════════════════════════ REPORTS — STUB ═══════════════════════════
 
-  // ═══════════════════════════ REPORTS ═══════════════════════════
-
-  async getReportData(params: {
-    period: string;
-  }): Promise<ApiResponse<any>> {
-    const query =
-      '?' +
-      new URLSearchParams(params as Record<string, string>).toString();
-    return this.request(`${API_ROUTES.REPORTS_ATTENDANCE}${query}`);
+  async getReportData(_params: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/reports/attendance/');
   }
 
   // ═══════════════════════════ ONBOARDING ═══════════════════════════
@@ -597,84 +489,38 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ SCHEDULES ═══════════════════════════
+  // ═══════════════════════════ SCHEDULES — STUB ═══════════════════════════
 
   async getSchedules(): Promise<ApiResponse<any[]>> {
-    return this.request(API_ROUTES.SCHEDULES);
+    return notImplemented('/api/schedules/');
   }
 
-  async createSchedule(data: any): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.SCHEDULES, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async createSchedule(_data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/schedules/ POST');
   }
 
-  async updateSchedule(
-    id: string,
-    data: Partial<any>,
-  ): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.SCHEDULE(id), {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+  async updateSchedule(_id: string, _data: any): Promise<ApiResponse<any>> {
+    return notImplemented('/api/schedules/ PATCH');
   }
 
-  async deleteSchedule(id: string): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.SCHEDULE(id), { method: 'DELETE' });
+  async deleteSchedule(_id: string): Promise<ApiResponse<void>> {
+    return notImplemented('/api/schedules/ DELETE');
   }
 
-  async bulkUpdateSchedules(
-    updates: Array<{ id: string; [key: string]: any }>,
-  ): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.SCHEDULES_BULK_UPDATE, {
-      method: 'PATCH',
-      body: JSON.stringify({ schedules: updates }),
-    });
+  async bulkUpdateSchedules(_updates: any): Promise<ApiResponse<void>> {
+    return notImplemented('/api/schedules/bulk-update/');
   }
 
-  // ═══════════════════════════ SEND INVITE EMAILS ═══════════════════════════
+  // ═══════════════════════════ SEND INVITE EMAILS — STUB ═══════════════════════════
 
-  async sendAdminInviteEmail(data: {
-    invite_id: string;
-    email: string;
-    role: string;
-    token: string;
-    organization_name: string;
-  }): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.ADMIN_INVITE_SEND_EMAIL, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  async sendMemberInviteEmail(_data: any): Promise<ApiResponse<void>> {
+    return notImplemented('/api/members/send-invite-email/');
   }
 
-  async sendMemberInviteEmail(data: {
-    invite_id: string;
-    email: string;
-    first_name?: string;
-    last_name?: string;
-    token: string;
-    organization_name?: string;
-  }): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.MEMBER_SEND_INVITE_EMAIL, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
+  // ═══════════════════════════ PASSWORD — STUB ═══════════════════════════
 
-  // ═══════════════════════════ PASSWORD ═══════════════════════════
-
-  async updatePassword(
-    currentPassword: string,
-    newPassword: string,
-  ): Promise<ApiResponse<void>> {
-    return this.request(API_ROUTES.PASSWORD_CHANGE, {
-      method: 'POST',
-      body: JSON.stringify({
-        current_password: currentPassword,
-        new_password: newPassword,
-      }),
-    });
+  async updatePassword(_currentPassword: string, _newPassword: string): Promise<ApiResponse<void>> {
+    return notImplemented('/api/auth/password/change/');
   }
 
   // ═══════════════════════════ HEALTH CHECK ═══════════════════════════

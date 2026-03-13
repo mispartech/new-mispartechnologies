@@ -5,53 +5,26 @@
  * No hardcoded URL paths should exist anywhere else in the codebase.
  *
  * This file serves as the contract between frontend and backend.
+ *
+ * ⚠️  Only endpoints that exist on the backend are listed here.
+ *     See FUTURE_ROUTES for planned but not-yet-implemented endpoints.
  */
 
-// ── Profile ──
 export const API_ROUTES = {
+  // ── Profile ──
   PROFILE: '/api/profile/',
   PROFILE_UPDATE: '/api/profile/',
 
   // ── Members ──
   MEMBERS: '/api/members/',
   MEMBERS_CREATE: '/api/members/create/',
-  MEMBER: (id: string) => `/api/members/${id}/`,
-  MEMBER_INVITE: '/api/members/invite/',
-  MEMBER_BULK_INVITE: '/api/members/bulk-invite/',
-  MEMBER_SEND_INVITE_EMAIL: '/api/members/send-invite-email/',
 
   // ── Departments ──
   DEPARTMENTS: '/api/departments/',
-  DEPARTMENT: (id: string) => `/api/departments/${id}/`,
 
   // ── Attendance ──
   ATTENDANCE: '/api/attendance/',
   ATTENDANCE_MARK: '/api/attendance/mark/',
-
-  // ── Temp Attendance (Visitors) ──
-  TEMP_ATTENDANCE: '/api/temp-attendance/',
-  TEMP_ATTENDANCE_CLAIM: '/api/temp-attendance/claim/',
-
-  // ── Organizations (removed — use profile + /api/organization-settings/) ──
-  // ── Notifications ──
-  NOTIFICATIONS: '/api/notifications/',
-  NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read/`,
-  NOTIFICATIONS_READ_ALL: '/api/notifications/read-all/',
-  NOTIFICATION_DELETE: (id: string) => `/api/notifications/${id}/`,
-
-  // ── Activity Logs ──
-  ACTIVITY_LOGS: '/api/activity-logs/',
-
-  // ── Admin Users ──
-  ADMIN_USERS: '/api/user-roles/admins/',
-
-  // ── Admin Invites ──
-  ADMIN_INVITES: '/api/admin-invites/',
-  ADMIN_INVITE_SEND_EMAIL: '/api/admin-invites/send-email/',
-
-  // ── Member Invites ──
-  INVITE: (token: string) => `/api/invites/${token}/`,
-  INVITE_ACCEPT: (id: string) => `/api/invites/${id}/accept/`,
 
   // ── Face Recognition ──
   FACE_ENROLL: '/api/face/enroll/',
@@ -61,20 +34,42 @@ export const API_ROUTES = {
   // ── Organization Settings ──
   ORG_SETTINGS: '/api/organization-settings/',
 
-  // ── Reports ──
-  REPORTS_ATTENDANCE: '/api/reports/attendance/',
-
   // ── Onboarding ──
   ONBOARDING: '/api/onboarding/',
 
-  // ── Schedules ──
+  // ── Health ──
+  HEALTH: '/api/health/',
+
+  // ── Version ──
+  VERSION: '/api/version/',
+
+  // ── Accept Invite ──
+  ACCEPT_INVITE: (token: string) => `/api/accept-invite/${token}/`,
+} as const;
+
+/**
+ * Endpoints planned but NOT yet implemented on the backend.
+ * Kept here for reference so the frontend knows what's coming.
+ */
+export const FUTURE_ROUTES = {
+  MEMBER: (id: string) => `/api/members/${id}/`,
+  MEMBER_INVITE: '/api/members/invite/',
+  MEMBER_BULK_INVITE: '/api/members/bulk-invite/',
+  MEMBER_SEND_INVITE_EMAIL: '/api/members/send-invite-email/',
+  DEPARTMENT: (id: string) => `/api/departments/${id}/`,
+  TEMP_ATTENDANCE: '/api/temp-attendance/',
+  TEMP_ATTENDANCE_CLAIM: '/api/temp-attendance/claim/',
+  NOTIFICATIONS: '/api/notifications/',
+  NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read/`,
+  NOTIFICATIONS_READ_ALL: '/api/notifications/read-all/',
+  NOTIFICATION_DELETE: (id: string) => `/api/notifications/${id}/`,
+  ACTIVITY_LOGS: '/api/activity-logs/',
+  ADMIN_USERS: '/api/user-roles/admins/',
+  ADMIN_INVITES: '/api/admin-invites/',
+  ADMIN_INVITE_SEND_EMAIL: '/api/admin-invites/send-email/',
   SCHEDULES: '/api/schedules/',
   SCHEDULE: (id: string) => `/api/schedules/${id}/`,
   SCHEDULES_BULK_UPDATE: '/api/schedules/bulk-update/',
-
-  // ── Auth ──
+  REPORTS_ATTENDANCE: '/api/reports/attendance/',
   PASSWORD_CHANGE: '/api/auth/password/change/',
-
-  // ── Health ──
-  HEALTH: '/api/health/',
 } as const;
