@@ -44,12 +44,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const clearSupabaseTokens = () => {
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('sb-'))
+    .forEach(k => localStorage.removeItem(k));
+};
+
 export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initDone = useRef(false);
+  const signedOut = useRef(false);
 
-  // Client-side override for when backend profile is stale about enrollment
   const overrideEnrollmentStatus = useCallback(() => {
     setUser(prev => prev ? { ...prev, face_enrolled: true } : prev);
   }, []);
@@ -61,8 +67,6 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('[DjangoAuth] Profile response:', { status, error, hasData: !!data });
       if (data && !error) {
         const profile = data as User;
-        // Django lazy provisioning may not copy names from Supabase metadata.
-        // Supplement empty names from Supabase auth user_metadata as fallback.
         if (!profile.first_name || !profile.last_name) {
           try {
             const { data: { user: sbUser } } = await supabase.auth.getUser();
@@ -97,17 +101,45 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     let mounted = true;
     let lastAccessToken: string | null = null;
 
+    const resolveInit = () => {
+      if (!initDone.current && mounted) {
+        initDone.current = true;
+        setIsLoading(false);
+      }
+    };
+
     const handleSession = async (session: any) => {
       if (!session) {
         if (mounted) setUser(null);
         return;
       }
+
+      // Guard: if we already processed a SIGNED_OUT, ignore stale SIGNED_IN
+      if (signedOut.current) {
+        console.log('[DjangoAuth] Ignoring session after SIGNED_OUT');
+        return;
+      }
+
       const token = session.access_token;
       if (token && token === lastAccessToken) {
         console.log('[DjangoAuth] Skipping duplicate session handling');
         return;
       }
       lastAccessToken = token;
+
+      // Verify the token is actually valid server-side
+      try {
+        const { data: { user: sbUser }, error: userError } = await supabase.auth.getUser();
+        if (userError || !sbUser) {
+          console.warn('[DjangoAuth] Session token invalid, treating as signed out');
+          if (mounted) setUser(null);
+          return;
+        }
+      } catch {
+        console.warn('[DjangoAuth] getUser check failed, treating as signed out');
+        if (mounted) setUser(null);
+        return;
+      }
 
       try {
         const profile = await fetchProfile();
@@ -122,16 +154,20 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted) return;
       console.log('[DjangoAuth] Auth state change:', event, !!session);
 
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        handleSession(session).finally(() => {
-          if (!initDone.current && mounted) {
-            initDone.current = true;
-            setIsLoading(false);
-          }
-        });
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         lastAccessToken = null;
-        if (mounted) setUser(null);
+        signedOut.current = true;
+        setUser(null);
+        resolveInit();
+        return;
+      }
+
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        // Reset the signed-out guard on a genuine new sign-in
+        if (event === 'SIGNED_IN') {
+          signedOut.current = false;
+        }
+        handleSession(session).finally(resolveInit);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         lastAccessToken = session.access_token;
       }
@@ -140,8 +176,7 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
     const fallbackTimer = setTimeout(() => {
       if (mounted && !initDone.current) {
         console.warn('[DjangoAuth] Fallback: resolving loading state');
-        initDone.current = true;
-        setIsLoading(false);
+        resolveInit();
       }
     }, 5000);
 
@@ -154,31 +189,32 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback(async (email: string, password: string) => {
     console.log('[DjangoAuth] Login attempt for:', email);
+    signedOut.current = false;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.error('[DjangoAuth] Supabase login error:', error.message);
       return { error: error.message };
     }
     console.log('[DjangoAuth] Supabase login successful, fetching profile...');
-    
+
     const profile = await fetchProfile();
     if (profile) {
       setUser(profile);
       return {};
     }
-    
+
     console.error('[DjangoAuth] Profile fetch failed after login');
     return { error: 'Login succeeded but the server is temporarily unavailable. Please try again in a moment.' };
   }, [fetchProfile]);
 
   const logout = useCallback(async () => {
+    signedOut.current = true;
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (err) {
-      console.error('[DjangoAuth] signOut error, clearing manually:', err);
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-      keys.forEach(k => localStorage.removeItem(k));
+      console.error('[DjangoAuth] signOut error:', err);
     }
+    clearSupabaseTokens();
     setUser(null);
   }, []);
 
@@ -207,8 +243,6 @@ export const DjangoAuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: 'No user returned from signup.' };
     }
 
-    // Supabase returns a user with empty identities when email already exists
-    // (email confirmation enabled). Detect this to prevent duplicate "check your email" messages.
     if (signUpData.user.identities && signUpData.user.identities.length === 0) {
       return { existingUser: true };
     }
