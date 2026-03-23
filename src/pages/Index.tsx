@@ -22,13 +22,13 @@ const Index = () => {
   // If user lands on / with an auth hash (email confirmation redirect), 
   // or is already authenticated, redirect appropriately
   useEffect(() => {
-    // Check for auth hash fragment from email confirmation
     const hash = window.location.hash;
     if (hash && hash.includes('access_token') && hash.includes('type=signup')) {
-      // Supabase will process the hash. Once auth resolves, redirect.
+      // Email verification complete — redirect to welcome page
+      navigate('/email-verified', { replace: true });
       return;
     }
-  }, []);
+  }, [navigate]);
 
   // Redirect authenticated users who land on home page
   useEffect(() => {
