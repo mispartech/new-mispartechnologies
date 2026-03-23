@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
+import EmailVerified from "./pages/EmailVerified";
 import Logout from "./pages/Logout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DjangoAuthProvider } from "@/contexts/DjangoAuthContext";
