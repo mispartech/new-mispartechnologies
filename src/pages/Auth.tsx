@@ -108,7 +108,7 @@ const AuthLeftPanel = () => {
           <span className="text-lg font-bold text-foreground">Mispar Technologies</span>
         </div>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Enterprise-grade facial recognition for secure, seamless attendance management.
+          Smart attendance powered by AI facial recognition — fast, secure, and effortless.
         </p>
       </div>
     </div>
