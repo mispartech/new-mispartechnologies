@@ -103,9 +103,9 @@ const ResetPassword = () => {
               <Scan className="w-7 h-7 text-[hsl(var(--electric-cyan))]" />
               <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Set New Password</h1>
+            <h1 className="text-2xl font-bold text-foreground">Create New Password</h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Enter your new password below
+              Choose a strong password for your account
             </p>
           </div>
 
