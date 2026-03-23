@@ -315,10 +315,14 @@ const Auth = () => {
                 <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
               </div>
               <h1 className="text-2xl font-bold text-foreground">
-                {isForgotPassword ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}
+                {isForgotPassword ? 'Forgot Your Password?' : isLogin ? 'Welcome Back 👋' : 'Get Started'}
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                {isForgotPassword ? 'Enter your email to receive a reset link' : isLogin ? 'Sign in to your secure dashboard' : 'Start your face recognition journey'}
+                {isForgotPassword 
+                  ? 'No worries! Enter your email and we\'ll send you a reset link.' 
+                  : isLogin 
+                    ? 'Sign in to access your attendance dashboard' 
+                    : 'Create your admin account to set up your organization'}
               </p>
             </div>
 
