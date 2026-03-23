@@ -182,40 +182,41 @@ const Auth = () => {
       if (isLogin) {
         const result = await login(email, password);
         if (result.error) {
+          let title = 'Unable to sign in';
           let description = result.error;
           if (result.error.includes('Invalid login credentials')) {
-            description = 'Invalid email or password. Please try again.';
+            title = 'Incorrect credentials';
+            description = 'The email or password you entered doesn\'t match our records. Please double-check and try again.';
           } else if (result.error.includes('Email not confirmed')) {
-            description = 'Please verify your email before signing in.';
+            title = 'Email not yet verified';
+            description = 'We sent you a verification email when you signed up. Please check your inbox (and spam folder) to confirm your email before signing in.';
           }
-          toast({ title: 'Login failed', description, variant: 'destructive' });
+          toast({ title, description, variant: 'destructive' });
           return;
         }
-        toast({ title: 'Welcome back!', description: 'You have successfully logged in.' });
+        toast({ title: '👋 Welcome back!', description: 'Great to see you again. Redirecting to your dashboard...' });
       } else {
         const result = await register({ email, password, first_name: firstName, last_name: lastName });
         if (result.error) {
-          // Check for "already registered" type errors
           if (result.error.toLowerCase().includes('already registered') || result.error.toLowerCase().includes('already been registered')) {
-            setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+            setInfoBanner('It looks like an account with this email already exists. If you\'ve already verified your email, go ahead and sign in below.');
             setIsLogin(true);
             setErrors({});
             setTouched({});
             return;
           }
-          toast({ title: 'Sign up failed', description: result.error, variant: 'destructive' });
+          toast({ title: 'Registration didn\'t go through', description: result.error, variant: 'destructive' });
           return;
         }
         if (result.existingUser) {
-          // Supabase returned empty identities — email already taken
-          setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+          setInfoBanner('An account with this email already exists. If you\'ve verified your email, you can sign in below. Otherwise, check your inbox for the verification link.');
           setIsLogin(true);
           setErrors({});
           setTouched({});
           return;
         }
-        toast({ title: 'Check your email', description: 'A verification link has been sent. Please confirm before signing in.' });
-        setInfoBanner('A verification link has been sent to your email. Once verified, you can sign in below.');
+        toast({ title: '📧 Check your inbox!', description: `We've sent a verification link to ${email}. Click the link to activate your account.` });
+        setInfoBanner(`Almost there! We've sent a verification email to ${email}. Once you confirm, come back here to sign in.`);
         setIsLogin(true);
         setErrors({});
         setTouched({});
