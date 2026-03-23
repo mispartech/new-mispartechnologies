@@ -108,7 +108,7 @@ const AuthLeftPanel = () => {
           <span className="text-lg font-bold text-foreground">Mispar Technologies</span>
         </div>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Enterprise-grade facial recognition for secure, seamless attendance management.
+          Smart attendance powered by AI facial recognition — fast, secure, and effortless.
         </p>
       </div>
     </div>
@@ -182,40 +182,41 @@ const Auth = () => {
       if (isLogin) {
         const result = await login(email, password);
         if (result.error) {
+          let title = 'Unable to sign in';
           let description = result.error;
           if (result.error.includes('Invalid login credentials')) {
-            description = 'Invalid email or password. Please try again.';
+            title = 'Incorrect credentials';
+            description = 'The email or password you entered doesn\'t match our records. Please double-check and try again.';
           } else if (result.error.includes('Email not confirmed')) {
-            description = 'Please verify your email before signing in.';
+            title = 'Email not yet verified';
+            description = 'We sent you a verification email when you signed up. Please check your inbox (and spam folder) to confirm your email before signing in.';
           }
-          toast({ title: 'Login failed', description, variant: 'destructive' });
+          toast({ title, description, variant: 'destructive' });
           return;
         }
-        toast({ title: 'Welcome back!', description: 'You have successfully logged in.' });
+        toast({ title: '👋 Welcome back!', description: 'Great to see you again. Redirecting to your dashboard...' });
       } else {
         const result = await register({ email, password, first_name: firstName, last_name: lastName });
         if (result.error) {
-          // Check for "already registered" type errors
           if (result.error.toLowerCase().includes('already registered') || result.error.toLowerCase().includes('already been registered')) {
-            setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+            setInfoBanner('It looks like an account with this email already exists. If you\'ve already verified your email, go ahead and sign in below.');
             setIsLogin(true);
             setErrors({});
             setTouched({});
             return;
           }
-          toast({ title: 'Sign up failed', description: result.error, variant: 'destructive' });
+          toast({ title: 'Registration didn\'t go through', description: result.error, variant: 'destructive' });
           return;
         }
         if (result.existingUser) {
-          // Supabase returned empty identities — email already taken
-          setInfoBanner('An account with this email already exists. If you have verified your email, you can sign in below.');
+          setInfoBanner('An account with this email already exists. If you\'ve verified your email, you can sign in below. Otherwise, check your inbox for the verification link.');
           setIsLogin(true);
           setErrors({});
           setTouched({});
           return;
         }
-        toast({ title: 'Check your email', description: 'A verification link has been sent. Please confirm before signing in.' });
-        setInfoBanner('A verification link has been sent to your email. Once verified, you can sign in below.');
+        toast({ title: '📧 Check your inbox!', description: `We've sent a verification link to ${email}. Click the link to activate your account.` });
+        setInfoBanner(`Almost there! We've sent a verification email to ${email}. Once you confirm, come back here to sign in.`);
         setIsLogin(true);
         setErrors({});
         setTouched({});
@@ -243,13 +244,14 @@ const Auth = () => {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        toast({ title: 'Couldn\'t send reset link', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'Check your email', description: 'A password reset link has been sent to your email.' });
+        toast({ title: '📧 Reset link sent!', description: `Check your inbox at ${email} for the password reset link.` });
+        setInfoBanner(`We've sent a password reset link to ${email}. Follow the link to create a new password, then come back to sign in.`);
         setIsForgotPassword(false);
       }
     } catch {
-      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Something went wrong', description: 'We couldn\'t process your request right now. Please try again in a moment.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -314,10 +316,14 @@ const Auth = () => {
                 <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
               </div>
               <h1 className="text-2xl font-bold text-foreground">
-                {isForgotPassword ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}
+                {isForgotPassword ? 'Forgot Your Password?' : isLogin ? 'Welcome Back 👋' : 'Get Started'}
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                {isForgotPassword ? 'Enter your email to receive a reset link' : isLogin ? 'Sign in to your secure dashboard' : 'Start your face recognition journey'}
+                {isForgotPassword 
+                  ? 'No worries! Enter your email and we\'ll send you a reset link.' 
+                  : isLogin 
+                    ? 'Sign in to access your attendance dashboard' 
+                    : 'Create your admin account to set up your organization'}
               </p>
             </div>
 

@@ -69,9 +69,9 @@ const ResetPassword = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
-        toast({ title: 'Reset failed', description: error.message, variant: 'destructive' });
+        toast({ title: 'Couldn\'t update password', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'Password updated', description: 'You can now sign in with your new password.' });
+        toast({ title: '🔒 Password updated!', description: 'Your new password is set. Sign in with it now.' });
         navigate('/auth', { replace: true });
       }
     } catch {
@@ -103,9 +103,9 @@ const ResetPassword = () => {
               <Scan className="w-7 h-7 text-[hsl(var(--electric-cyan))]" />
               <span className="text-xl font-bold text-foreground">Mispar Technologies</span>
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Set New Password</h1>
+            <h1 className="text-2xl font-bold text-foreground">Create New Password</h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Enter your new password below
+              Choose a strong password for your account
             </p>
           </div>
 
