@@ -244,13 +244,14 @@ const Auth = () => {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        toast({ title: 'Couldn\'t send reset link', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'Check your email', description: 'A password reset link has been sent to your email.' });
+        toast({ title: '📧 Reset link sent!', description: `Check your inbox at ${email} for the password reset link.` });
+        setInfoBanner(`We've sent a password reset link to ${email}. Follow the link to create a new password, then come back to sign in.`);
         setIsForgotPassword(false);
       }
     } catch {
-      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Something went wrong', description: 'We couldn\'t process your request right now. Please try again in a moment.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
