@@ -120,7 +120,7 @@ const TempMembersList = () => {
                               <AvatarImage src={member.face_roi_url || ''} />
                               <AvatarFallback className="bg-muted">V</AvatarFallback>
                             </Avatar>
-                            <span className="font-mono text-xs">{member.temp_face_id.slice(0, 12)}...</span>
+                            <span className="font-mono text-xs">{(member.temp_face_id || member.id || 'unknown').slice(0, 12)}...</span>
                           </div>
                         </TableCell>
                         <TableCell>{member.date}</TableCell>
@@ -155,7 +155,7 @@ const TempMembersList = () => {
                           <AvatarFallback className="bg-muted">V</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-mono text-xs">{member.temp_face_id.slice(0, 12)}...</p>
+                          <p className="font-mono text-xs">{(member.temp_face_id || member.id || 'unknown').slice(0, 12)}...</p>
                           <p className="text-sm text-muted-foreground">{member.date} at {member.time}</p>
                         </div>
                       </div>
