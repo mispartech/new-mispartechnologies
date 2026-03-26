@@ -205,7 +205,7 @@
   }
 
   .scan-line-slow {
-    animation: scan-line 6s linear infinite;
+    animation: scan-line 8s linear infinite;
   }
 
   /* Count-up animation helper */
@@ -262,6 +262,17 @@
   40% { transform: translateX(6px); }
   60% { transform: translateX(-4px); }
   80% { transform: translateX(4px); }
+}
+
+@keyframes data-stream {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: 0.4; }
+  80% { opacity: 0.3; }
+  100% { transform: translate(-60px, 20px); opacity: 0; }
+}
+
+.animate-data-stream {
+  animation: data-stream 3s ease-in-out infinite;
 }
 
 /* Custom scrollbar - desktop only */
