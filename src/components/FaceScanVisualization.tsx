@@ -65,7 +65,7 @@ const FaceScanVisualization = () => {
       const t4 = setTimeout(() => setShowFeatures(f => ({ ...f, mouth: true })), 1900);
 
       // Confidence counter during detecting
-      const confIntervals: NodeJS.Timeout[] = [];
+      const confIntervals: ReturnType<typeof setTimeout>[] = [];
       for (let i = 0; i <= 13; i++) {
         confIntervals.push(setTimeout(() => setConfidence(72 + i), 1000 + i * 150));
       }
@@ -434,7 +434,7 @@ const FaceScanVisualization = () => {
             { label: 'Identity Matched', activeOn: ['recognized', 'saved'] },
             { label: 'Record Saved', activeOn: ['saved'] },
           ].map((item) => {
-            const isActive = item.activeOn.includes(scanState);
+            const isActive = item.activeOn.includes(scanState as string);
             const stepColor = item.activeOn[0] === 'detecting' ? 'hsl(190 90% 50%)'
               : item.activeOn[0] === 'recognized' ? 'hsl(45 100% 60%)'
               : 'hsl(142 70% 50%)';
