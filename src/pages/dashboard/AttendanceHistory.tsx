@@ -152,7 +152,7 @@ const AttendanceHistory = () => {
   };
 
   const getMemberName = (record: AttendanceRecord) =>
-    record.member_name || `${record.profiles?.first_name || ''} ${record.profiles?.last_name || ''}`.trim() || 'Unknown';
+    record.member_name || 'Unknown';
 
   return (
     <div className="space-y-6">
