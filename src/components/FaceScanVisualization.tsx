@@ -221,7 +221,7 @@ const FaceScanVisualization = () => {
     return (
       <div
         className="absolute -top-8 left-1/2 -translate-x-1/2 transition-all duration-700 whitespace-nowrap"
-        style={{ opacity: scanState === 'fading' ? 0 : 1 }}
+        style={{ opacity: 1 }}
       >
         <div
           className="backdrop-blur-md px-3 py-1 rounded-md border transition-all duration-700"
