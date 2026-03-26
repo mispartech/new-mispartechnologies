@@ -30,6 +30,14 @@ export interface ApiResponse<T> {
   status: number;
 }
 
+/** Paginated envelope from Django REST Framework */
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 interface RequestOptions extends RequestInit {
   silent?: boolean;
   timeout?: number;
@@ -43,6 +51,26 @@ function notImplemented<T>(endpointName: string): ApiResponse<T> {
   return { status: 404, error: 'Feature not available yet. Backend endpoint pending.' };
 }
 
+/**
+ * Unwrap a paginated envelope into a plain array.
+ * If the response is already an array, return it as-is.
+ */
+function unwrapPaginated<T>(data: any): { items: T[]; count: number; next: string | null; previous: string | null } {
+  if (Array.isArray(data)) {
+    return { items: data as T[], count: data.length, next: null, previous: null };
+  }
+  if (data && typeof data === 'object' && 'results' in data) {
+    return {
+      items: Array.isArray(data.results) ? data.results : [],
+      count: data.count ?? 0,
+      next: data.next ?? null,
+      previous: data.previous ?? null,
+    };
+  }
+  // Fallback — wrap single object or return empty
+  return { items: data ? [data] : [], count: data ? 1 : 0, next: null, previous: null };
+}
+
 function getErrorNotification(status: number, serverMessage?: string): { title: string; description: string } | null {
   if (status === 400) {
     return { title: 'Validation Error', description: serverMessage || 'Please check your input and try again.' };
@@ -54,7 +82,6 @@ function getErrorNotification(status: number, serverMessage?: string): { title: 
     return { title: 'Access Denied', description: 'You do not have permission to perform this action.' };
   }
   if (status === 404) {
-    // Suppress 404 toasts globally
     return null;
   }
   if (status >= 500) {
@@ -147,7 +174,6 @@ class DjangoApiClient {
         : err instanceof Error ? err.message : 'Network error';
 
       if (IS_DEV) {
-        // Use warn instead of error to avoid noisy stack traces
         console.warn(`[DjangoApi] ${endpoint}:`, isTimeout ? 'TIMEOUT' : message);
       }
 
@@ -164,7 +190,6 @@ class DjangoApiClient {
   }
 
   private notifyError(status: number, message: string, endpoint: string, silent?: boolean, details?: any) {
-    // Use console.warn instead of console.error to avoid noisy stack traces
     if (IS_DEV) {
       console.warn(`[DjangoApi] ${status} ${endpoint}:`, message);
     }
@@ -205,22 +230,34 @@ class DjangoApiClient {
 
   // ═══════════════════════════ MEMBERS ═══════════════════════════
 
+  /**
+   * GET /api/members/ — returns paginated envelope { count, results, next, previous }
+   * This method unwraps it to return a plain array in data for backward compat.
+   */
   async getMembers(params?: {
-    organization_id?: string;
     role?: string;
     order_by?: string;
     limit?: number;
-  }): Promise<ApiResponse<any[]>> {
+    page?: number;
+    page_size?: number;
+  }): Promise<ApiResponse<any[]> & { count?: number; next?: string | null; previous?: string | null }> {
     const query = params
       ? '?' + new URLSearchParams(
           Object.fromEntries(
-            Object.entries(params).filter(([, v]) => v !== undefined),
-          ) as Record<string, string>,
+            Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]),
+          ),
         ).toString()
       : '';
-    return this.request(`${API_ROUTES.MEMBERS}${query}`);
+    const result = await this.request<any>(`${API_ROUTES.MEMBERS}${query}`);
+    if (result.error) return result as any;
+
+    const { items, count, next, previous } = unwrapPaginated(result.data);
+    return { data: items, status: result.status, count, next, previous };
   }
 
+  /**
+   * POST /api/members/ — create a new member (REST: POST to collection)
+   */
   async createMember(data: {
     email: string;
     first_name: string;
@@ -228,15 +265,13 @@ class DjangoApiClient {
     phone_number?: string;
     gender?: string;
     department_id?: string;
-    organization_id: string;
   }): Promise<ApiResponse<any>> {
-    return this.request(API_ROUTES.MEMBERS_CREATE, {
+    return this.request(API_ROUTES.MEMBERS, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  // ── Stub: getMember (single) — not yet implemented ──
   async getMember(id: string): Promise<ApiResponse<any>> {
     return notImplemented(`/api/members/${id}/`);
   }
@@ -249,8 +284,14 @@ class DjangoApiClient {
     return notImplemented(`/api/members/${id}/ DELETE`);
   }
 
+  /**
+   * POST /api/members/ — invite a member (backend sends email atomically)
+   */
   async inviteMember(data: any): Promise<ApiResponse<any>> {
-    return notImplemented('/api/members/invite/');
+    return this.request(API_ROUTES.MEMBERS, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async bulkInviteMembers(data: any): Promise<ApiResponse<any>> {
@@ -260,10 +301,12 @@ class DjangoApiClient {
   // ═══════════════════════════ DEPARTMENTS ═══════════════════════════
 
   async getDepartments(): Promise<ApiResponse<any[]>> {
-    return this.request(API_ROUTES.DEPARTMENTS);
+    const result = await this.request<any>(API_ROUTES.DEPARTMENTS);
+    if (result.error) return result as any;
+    const { items } = unwrapPaginated(result.data);
+    return { data: items, status: result.status };
   }
 
-  // ── Stub: single department CRUD — not yet confirmed ──
   async getDepartment(id: string): Promise<ApiResponse<any>> {
     return notImplemented(`/api/departments/${id}/`);
   }
@@ -271,7 +314,6 @@ class DjangoApiClient {
   async createDepartment(data: {
     name: string;
     description?: string;
-    organization_id: string;
   }): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.DEPARTMENTS, {
       method: 'POST',
@@ -289,21 +331,31 @@ class DjangoApiClient {
 
   // ═══════════════════════════ ATTENDANCE ═══════════════════════════
 
+  /**
+   * GET /api/attendance/ — returns paginated envelope
+   * Unwrapped to plain array for backward compat.
+   */
   async getAttendance(params?: {
     user_id?: string;
     start_date?: string;
     end_date?: string;
     limit?: number;
-  }, options?: { silent?: boolean }): Promise<ApiResponse<any[]>> {
+    page?: number;
+    page_size?: number;
+  }, options?: { silent?: boolean }): Promise<ApiResponse<any[]> & { count?: number; next?: string | null; previous?: string | null }> {
     const query = params
       ? '?' +
         new URLSearchParams(
           Object.fromEntries(
-            Object.entries(params).filter(([, v]) => v !== undefined),
-          ) as Record<string, string>,
+            Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]),
+          ),
         ).toString()
       : '';
-    return this.request(`${API_ROUTES.ATTENDANCE}${query}`, { silent: options?.silent });
+    const result = await this.request<any>(`${API_ROUTES.ATTENDANCE}${query}`, { silent: options?.silent });
+    if (result.error) return result as any;
+
+    const { items, count, next, previous } = unwrapPaginated(result.data);
+    return { data: items, status: result.status, count, next, previous };
   }
 
   async markAttendance(data: {
@@ -317,14 +369,42 @@ class DjangoApiClient {
     });
   }
 
-  // ═══════════════════════════ TEMP ATTENDANCE — STUB ═══════════════════════════
+  // ═══════════════════════════ TEMP ATTENDANCE ═══════════════════════════
 
-  async getTempAttendance(_params?: any): Promise<ApiResponse<any[]>> {
-    return notImplemented('/api/temp-attendance/');
+  async getTempAttendance(params?: {
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<ApiResponse<any[]>> {
+    const query = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]),
+          ),
+        ).toString()
+      : '';
+    const result = await this.request<any>(`${API_ROUTES.TEMP_ATTENDANCE}${query}`);
+    if (result.error) return result as any;
+    const { items } = unwrapPaginated(result.data);
+    return { data: items, status: result.status };
   }
 
-  async claimVisitor(_data: any): Promise<ApiResponse<any>> {
-    return notImplemented('/api/temp-attendance/claim/');
+  async claimVisitor(data: {
+    temp_face_id?: string;
+    temp_attendance_id?: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    password?: string;
+    phone_number?: string;
+    gender?: string;
+    department_id?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.TEMP_ATTENDANCE_CLAIM, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // ═══════════════════════════ ORGANIZATION SETTINGS ═══════════════════════════
@@ -358,17 +438,6 @@ class DjangoApiClient {
     return notImplemented('/api/notifications/delete/');
   }
 
-  // ═══════════════════════════ ACTIVITY LOGS — STUB ═══════════════════════════
-
-  async getActivityLogs(_params?: any): Promise<ApiResponse<any[]>> {
-    return notImplemented('/api/activity-logs/');
-  }
-
-  async createActivityLog(_data: any): Promise<ApiResponse<any>> {
-    // Silently no-op — don't even warn on every call since this fires frequently
-    return { status: 200, data: null as any };
-  }
-
   // ═══════════════════════════ ADMIN USERS — STUB ═══════════════════════════
 
   async getAdminUsers(): Promise<ApiResponse<any[]>> {
@@ -381,15 +450,14 @@ class DjangoApiClient {
     return notImplemented('/api/admin-invites/');
   }
 
+  /**
+   * POST /api/admin-invites/ — single call; backend sends email atomically
+   */
   async createAdminInvite(_data: any): Promise<ApiResponse<any>> {
     return notImplemented('/api/admin-invites/ POST');
   }
 
-  async sendAdminInviteEmail(_data: any): Promise<ApiResponse<void>> {
-    return notImplemented('/api/admin-invites/send-email/');
-  }
-
-  // ═══════════════════════════ INVITES (MEMBER) — STUB ═══════════════════════════
+  // ═══════════════════════════ INVITES (MEMBER) ═══════════════════════════
 
   async getInvite(token: string): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.ACCEPT_INVITE(token));
@@ -461,7 +529,6 @@ class DjangoApiClient {
       body: JSON.stringify({
         frame: imageDataUrl,
         mode: 'RECOGNIZE',
-        organization_id: organizationId,
       }),
       silent: options?.silent,
       timeout: options?.timeout,
@@ -509,18 +576,6 @@ class DjangoApiClient {
 
   async bulkUpdateSchedules(_updates: any): Promise<ApiResponse<void>> {
     return notImplemented('/api/schedules/bulk-update/');
-  }
-
-  // ═══════════════════════════ SEND INVITE EMAILS — STUB ═══════════════════════════
-
-  async sendMemberInviteEmail(_data: any): Promise<ApiResponse<void>> {
-    return notImplemented('/api/members/send-invite-email/');
-  }
-
-  // ═══════════════════════════ PASSWORD — STUB ═══════════════════════════
-
-  async updatePassword(_currentPassword: string, _newPassword: string): Promise<ApiResponse<void>> {
-    return notImplemented('/api/auth/password/change/');
   }
 
   // ═══════════════════════════ HEALTH CHECK ═══════════════════════════
