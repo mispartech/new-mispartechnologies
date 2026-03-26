@@ -25,10 +25,11 @@ interface AttendanceRecord {
   confidence_score: number | null;
   face_detections: number | null;
   created_at: string;
-  profiles?: { first_name: string | null; last_name: string | null; email: string | null; department_id: string | null; department?: string | null; };
   member_name?: string;
   member_email?: string;
   department_id?: string;
+  department_name?: string;
+  face_image_url?: string;
 }
 
 interface TempAttendanceRecord {
@@ -106,11 +107,10 @@ const AttendanceHistory = () => {
 
   const filteredMembers = useMemo(() =>
     attendanceRecords.filter(record => {
-      const fullName = record.member_name || `${record.profiles?.first_name || ''} ${record.profiles?.last_name || ''}`.toLowerCase();
-      const email = record.member_email || record.profiles?.email || '';
+      const fullName = record.member_name || '';
+      const email = record.member_email || '';
       const matchesSearch = !searchQuery || fullName.toLowerCase().includes(searchQuery.toLowerCase()) || email.toLowerCase().includes(searchQuery.toLowerCase());
-      const deptId = record.department_id || record.profiles?.department_id;
-      const matchesDepartment = selectedDepartment === 'all' || deptId === selectedDepartment;
+      const matchesDepartment = selectedDepartment === 'all' || record.department_id === selectedDepartment;
       return matchesSearch && matchesDepartment;
     }), [attendanceRecords, searchQuery, selectedDepartment]);
 
@@ -136,7 +136,7 @@ const AttendanceHistory = () => {
     const headers = ['Date', 'Time', 'Type', 'Name/ID', 'Confidence', 'Detections'];
     const rows: string[][] = [];
     filteredMembers.forEach(record => {
-      const name = record.member_name || `${record.profiles?.first_name || ''} ${record.profiles?.last_name || ''}`.trim() || 'Unknown';
+      const name = record.member_name || 'Unknown';
       rows.push([record.date, record.time, getTerm('title', true), name, record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : 'N/A', String(record.face_detections || 1)]);
     });
     filteredVisitors.forEach(record => { rows.push([record.date, record.time, 'Visitor', record.temp_face_id, 'N/A', String(record.face_detections || 1)]); });
@@ -152,7 +152,7 @@ const AttendanceHistory = () => {
   };
 
   const getMemberName = (record: AttendanceRecord) =>
-    record.member_name || `${record.profiles?.first_name || ''} ${record.profiles?.last_name || ''}`.trim() || 'Unknown';
+    record.member_name || 'Unknown';
 
   return (
     <div className="space-y-6">

@@ -26,15 +26,28 @@ const AdminManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Use /api/members/ and filter by admin roles client-side
-      const result = await djangoApi.getMembers();
-      if (!result.error && result.data) {
-        const adminRoles = ['super_admin', 'admin', 'manager'];
-        const adminMembers = result.data.filter((m: any) =>
-          adminRoles.includes(m.role?.toLowerCase?.().replace(/\s+/g, '_') || '')
-        );
-        setAdmins(adminMembers);
-      }
+      // Server-side role filtering via query params
+      const [superAdminRes, adminRes, managerRes] = await Promise.all([
+        djangoApi.getMembers({ role: 'super_admin' }),
+        djangoApi.getMembers({ role: 'admin' }),
+        djangoApi.getMembers({ role: 'manager' }),
+      ]);
+
+      const merged: Admin[] = [
+        ...(superAdminRes.data || []),
+        ...(adminRes.data || []),
+        ...(managerRes.data || []),
+      ];
+
+      // Deduplicate by id
+      const seen = new Set<string>();
+      const deduped = merged.filter(m => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+
+      setAdmins(deduped);
     } catch (error: any) {
       toast({ title: 'Error', description: 'Failed to load admin data.', variant: 'destructive' });
     } finally {
@@ -87,7 +100,6 @@ const AdminManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Admin invites section — coming soon */}
       <Card>
         <CardHeader><CardTitle className="text-lg">Admin Invitations</CardTitle><CardDescription>Invite new administrators to your organization</CardDescription></CardHeader>
         <CardContent className="py-8 text-center text-muted-foreground">

@@ -53,7 +53,7 @@ const DepartmentsList = () => {
       return;
     }
     try {
-      const result = await djangoApi.createDepartment({ name: formData.name, description: formData.description, organization_id: '' });
+      const result = await djangoApi.createDepartment({ name: formData.name, description: formData.description });
       if (result.error) throw new Error(result.error);
       toast({ title: 'Success', description: 'Department created successfully' });
       setIsCreateOpen(false);

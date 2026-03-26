@@ -70,8 +70,8 @@ const ProfileSettings = () => {
     if (passwords.new.length < 6) { toast({ title: 'Weak Password', description: 'Password must be at least 6 characters.', variant: 'destructive' }); return; }
     setIsLoading(true);
     try {
-      const result = await djangoApi.updatePassword(passwords.current, passwords.new);
-      if (result.error) throw new Error(result.error);
+      const { error } = await supabase.auth.updateUser({ password: passwords.new });
+      if (error) throw error;
       setPasswords({ current: '', new: '', confirm: '' });
       toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
     } catch (error: any) {

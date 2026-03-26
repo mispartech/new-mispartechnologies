@@ -34,19 +34,14 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
     e.preventDefault();
     setLoading(true);
     try {
-      // Get current profile to find organization_id
-      const { data: profile, error: profileError } = await djangoApi.getProfile();
-      if (profileError) throw new Error(profileError);
-      if (!profile?.organization_id) throw new Error('No organization found. Please complete onboarding first.');
-
-      const { data: invite, error: inviteError } = await djangoApi.inviteMember({
+      // Single call — backend derives org from JWT and sends invite email atomically
+      const { error: inviteError } = await djangoApi.inviteMember({
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone_number: formData.phone_number || undefined,
         gender: formData.gender || undefined,
         department_id: formData.department_id || undefined,
-        organization_id: profile.organization_id,
       });
 
       if (inviteError) throw new Error(inviteError);

@@ -220,14 +220,14 @@ const DashboardHome = () => {
                   <div key={record.id} className="flex items-center justify-between group hover:bg-muted/30 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9">
-                        <AvatarImage src={record.profiles?.face_image_url || record.face_image_url} />
+                        <AvatarImage src={record.face_image_url} />
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {record.profiles?.first_name?.[0] || record.first_name?.[0] || 'U'}
+                          {(record.member_name || record.first_name || 'U')[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">
-                          {record.profiles?.first_name || record.first_name} {record.profiles?.last_name || record.last_name}
+                          {record.member_name || `${record.first_name || ''} ${record.last_name || ''}`.trim() || 'Unknown'}
                         </p>
                         <p className="text-xs text-muted-foreground">{record.date} at {record.time}</p>
                       </div>

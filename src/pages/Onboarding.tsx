@@ -376,14 +376,31 @@ const Onboarding = () => {
     // Skip backend draft save if final submit is in progress
     if (isSubmittingRef.current) return;
 
-    // Debounced save to Django backend (draft mode — camelCase, is_draft flag)
+    // Debounced save to Django backend (draft mode — always snake_case)
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
       if (isSubmittingRef.current) return; // double-check
       console.log('[Onboarding] Saving draft to backend, step:', step);
       saveOnboardingSession({
         step,
-        data: { ...(data as unknown as Record<string, unknown>), is_draft: true },
+        data: {
+          organization_name: data.organizationName,
+          organization_type: data.organizationType,
+          industry: data.industry,
+          size_range: data.sizeRange,
+          admin_first_name: data.adminFirstName,
+          admin_last_name: data.adminLastName,
+          job_title: data.adminRole,
+          service_schedules: data.serviceSchedules.map((s: any) => ({
+            name: s.name,
+            description: s.description,
+            day_of_week: s.dayOfWeek,
+            start_time: s.startTime,
+            end_time: s.endTime,
+            is_active: s.isActive,
+          })),
+          is_draft: true,
+        },
       }).catch((e) => {
         console.warn('[Onboarding] Failed to save draft:', e);
       });
