@@ -1,152 +1,98 @@
 
 
-## Problem Analysis
+## Problem
 
-There are **three interconnected issues** causing the broken logout and missing login button:
+The hero section face visualization is static, robotic, and doesn't convey the real-world experience of face recognition. The current SVG face has static feature boxes, a slow scan line, and no sense of movement or life. Users don't immediately understand what the product does.
 
-### Issue 1: Logout page never actually signs out
+## Vision
 
-The console on `/logout` shows:
-```
-[DjangoAuth] Auth state change: SIGNED_IN
-[DjangoAuth] Fetching profile from Django...
-```
+Transform the right side of the hero into a **cinematic simulation** of a person walking into frame and being detected, recognized, and logged — all in ~10 seconds. The face should move naturally (simulating a person approaching a camera), cvzone-style corner brackets should dynamically track the face, and the entire sequence should tell a story at first glance.
 
-This means when the `/logout` page loads, the `DjangoAuthProvider` initializes first, finds the existing Supabase session, and fires a `SIGNED_IN` event which triggers a profile fetch to Django (which returns 500). Meanwhile, the `Logout` component's `useEffect` calls `logout()` which calls `supabase.auth.signOut()`. 
+## Design Concept
 
-The likely problem: `supabase.auth.signOut()` may be failing silently (network issue or error), and even if it does fail, the Supabase tokens remain in `localStorage`. The `finally` block then redirects to `/` where the stale session is picked up again -- creating a loop.
+```text
+Timeline (10s loop):
 
-### Issue 2: Login button not showing on the navbar
-
-The Navbar conditionally renders based on `isLoading`:
-- If `isLoading` is `true` -> shows a skeleton placeholder
-- If `isAuthenticated` is `true` -> shows user dropdown
-- If neither -> shows Login button
-
-Since the Django profile fetch returns 500, `user` is `null` and `isAuthenticated` is `false`. However, the `onAuthStateChange` SIGNED_IN handler calls `fetchProfile()` which takes up to 15 seconds (timeout) before failing. During that time, `isLoading` may already be `false` from `initialize()`, but there's a **race condition**: `initialize()` and `onAuthStateChange` both call `fetchProfile()` simultaneously, causing duplicate requests and potential state confusion.
-
-The real issue: the Supabase session exists (stale tokens in localStorage) so it keeps reporting `SIGNED_IN`, but the Django backend returns 500. The app is stuck in a state where `isAuthenticated` is `false` but Supabase thinks the user is signed in.
-
-### Issue 3: No Django logout endpoint needed
-
-**No, you do not need a Django API logout endpoint.** Supabase manages the session entirely client-side (JWT in localStorage). Calling `supabase.auth.signOut()` clears the local session. Django is stateless -- it just validates the JWT on each request.
-
----
-
-## Fix Plan
-
-### 1. Harden the `logout()` function in `DjangoAuthContext.tsx`
-
-- Use `supabase.auth.signOut({ scope: 'local' })` to ensure local tokens are cleared even if the server-side revocation fails
-- Wrap in try/catch so it never throws
-- As a safety net, manually remove Supabase keys from localStorage if signOut fails
-
-### 2. Fix the `Logout.tsx` component
-
-- Skip the auth provider initialization entirely by calling `supabase.auth.signOut({ scope: 'local' })` directly (before the provider can trigger SIGNED_IN)
-- Clear user state and redirect immediately
-- Don't rely on the auth context `logout()` which races with initialization
-
-### 3. Prevent duplicate profile fetches in `DjangoAuthContext.tsx`
-
-- Add a flag so that when `initialize()` already fetched (or attempted to fetch) the profile, the `onAuthStateChange` SIGNED_IN handler for `INITIAL_SESSION` doesn't trigger a second fetch
-- Handle `INITIAL_SESSION` event properly (it fires alongside `initialize()`)
-
-### 4. Unify the `DashboardHeader.tsx` logout
-
-- Replace direct `supabase.auth.signOut()` call with `useDjangoAuth().logout()` for consistency
-
----
-
-## Technical Details
-
-### File: `src/contexts/DjangoAuthContext.tsx`
-
-Changes to the `logout` function:
-```typescript
-const logout = useCallback(async () => {
-  try {
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch (err) {
-    console.error('[DjangoAuth] signOut error, clearing manually:', err);
-    // Fallback: manually clear Supabase tokens from localStorage
-    const keys = Object.keys(localStorage).filter(k =>
-      k.startsWith('sb-')
-    );
-    keys.forEach(k => localStorage.removeItem(k));
-  }
-  setUser(null);
-}, []);
+0-1s    Face silhouette enters from right, slightly off-center
+1-3s    DETECTING — cyan corners snap onto face, scan line sweeps,
+        confidence ticks up (72%→85%), label: "Detecting Face..."
+3-5s    RECOGNIZED — corners turn amber, name appears
+        "Adaeze Okonkwo — 96%", feature boxes highlight
+5-7s    SAVED — corners turn green, checkmark pulse,
+        "Attendance Saved ✓ — 99%", subtle celebration glow
+7-9s    Face drifts slightly, data fades, ready for reset
+9-10s   Smooth crossfade back to start
 ```
 
-Changes to `onAuthStateChange` to prevent double-fetch race:
-- Track whether `initialize()` has already completed
-- Skip profile fetch on `INITIAL_SESSION` since `initialize()` handles it
-- Only fetch profile on explicit `SIGNED_IN` (actual new login)
+## Plan
 
-### File: `src/pages/Logout.tsx`
+### 1. Rewrite `FaceScanVisualization.tsx` — Dynamic face with motion
 
-Rewrite to bypass the auth context race condition:
-```typescript
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+**Face silhouette improvements:**
+- Replace the current SVG with a cleaner, minimal gender-neutral silhouette (smooth head, simple eyes with pupils, subtle nose bridge, gentle curved smile — no neck/shoulder lines that look skeletal)
+- Add CSS `transform: translate()` animation so the face **drifts horizontally and vertically** within the frame, simulating a person in motion walking toward a camera
+- Use `requestAnimationFrame`-driven position updates for smooth 60fps movement with subtle easing
 
-const Logout = () => {
-  const hasRun = useRef(false);
+**cvzone-style corner brackets that track the face:**
+- Instead of static corner divs at fixed positions, render 4 corner bracket pairs (8 L-shaped elements) that are **positioned relative to the face's current animated position**
+- Corners should appear with a slight "snap" animation (scale from 0.8→1) when transitioning from no-detection to detecting
+- Corner positions update in sync with the face drift animation, creating the illusion of real-time tracking
+- Corner thickness: 3px, length: ~20% of face box width (matching FaceOverlay.tsx pattern)
 
-  useEffect(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
+**Feature detection boxes (eyes, nose, mouth):**
+- These also move with the face position
+- They fade in sequentially during the detecting phase (eyes first, then nose, then mouth) with 200ms stagger
+- Each box has a thin border + label (L_EYE, R_EYE, NOSE, MOUTH) with confidence %
 
-    const doLogout = async () => {
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch (err) {
-        console.error('[Logout] signOut failed, clearing manually:', err);
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-'))
-          .forEach(k => localStorage.removeItem(k));
-      } finally {
-        window.location.href = '/';
-      }
-    };
+### 2. State-driven color transitions with motion
 
-    doLogout();
-  }, []);
+**Three states, color-coded (unchanged concept, improved execution):**
+- **Detecting** (0-3s): Cyan `hsl(190 90% 50%)` — corners pulse subtly, confidence increments from 72→85%
+- **Recognized** (3-6s): Amber `hsl(45 100% 60%)` — corners solidify, name label slides in, confidence jumps to 96%
+- **Saved** (6-9s): Green `hsl(142 70% 50%)` — brief glow burst on corners, checkmark appears, confidence at 99%
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-muted-foreground">Signing out...</p>
-    </div>
-  );
-};
-```
+**The face continues drifting slightly throughout** — it never stops moving, reinforcing the "live camera" feel.
 
-### File: `src/components/dashboard/DashboardHeader.tsx`
+### 3. Top status label — dynamic content
 
-Replace the direct Supabase call with the unified auth context:
-```typescript
-import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
-// ...
-const { logout } = useDjangoAuth();
+- Positioned above the tracking frame (moves with it)
+- Shows contextual text per state:
+  - Detecting: `Scanning... — 72% — Detecting Face...`
+  - Recognized: `Adaeze Okonkwo — 96% — Face Recognized`
+  - Saved: `Adaeze Okonkwo — 99% — Attendance Saved ✓`
 
-const handleLogout = async () => {
-  setIsLoggingOut(true);
-  try {
-    await logout();
-    window.location.href = '/';
-  } catch {
-    // fallback
-    window.location.href = '/';
-  }
-};
-```
+### 4. Side status timeline (desktop XL)
 
-### Summary of changes
+- Keep the 3-step vertical indicator (Face Detected → Identity Matched → Record Saved)
+- Each step lights up progressively as the animation advances
+- Add a subtle connecting line between dots that fills with color
 
-| File | What Changes |
+### 5. Ambient effects
+
+- **Scan line**: Keep the horizontal sweep but sync its color with the current state
+- **Data stream particles**: Replace generic floating dots with tiny data-point particles that flow toward the face during detection (like the system "reading" the face)
+- **Radial glow**: Pulses color-matched to current state behind the face area
+- **Grid overlay**: Subtle, unchanged
+
+### 6. Mobile/tablet version
+
+- Face is centered, smaller, semi-transparent (opacity 0.25)
+- Still animated (drifting motion + state changes)
+- Corner brackets and feature boxes included but simplified (no labels on mobile)
+- No status timeline on mobile
+
+### 7. CSS animations (`src/index.css` + `tailwind.config.ts`)
+
+- Add `face-drift` keyframe for the natural wandering motion
+- Add `corner-snap` keyframe for bracket appearance
+- Add `confidence-tick` for the number incrementing effect
+- Keep existing `scan-line-slow` but parameterize color via CSS custom property
+
+### Files to modify
+
+| File | Change |
 |---|---|
-| `DjangoAuthContext.tsx` | Harden `logout()` with `scope: 'local'` and localStorage fallback; fix `onAuthStateChange` to skip duplicate fetches on `INITIAL_SESSION` |
-| `Logout.tsx` | Call `supabase.auth.signOut` directly to avoid race with provider initialization; always redirect via `window.location.href` |
-| `DashboardHeader.tsx` | Use `useDjangoAuth().logout()` instead of direct `supabase.auth.signOut()` |
+| `src/components/FaceScanVisualization.tsx` | Complete rewrite with motion system, dynamic tracking corners, sequential feature detection |
+| `src/index.css` | Add face-drift, corner-snap keyframes |
+| `tailwind.config.ts` | Add new animation entries |
 
