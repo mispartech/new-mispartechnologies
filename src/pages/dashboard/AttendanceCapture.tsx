@@ -219,7 +219,12 @@ const AttendanceCapture = () => {
             }));
 
             if (soundEnabled) {
-              new Audio('/success.mp3').play().catch(() => {});
+              try {
+                const audio = new Audio('/success.mp3');
+                audio.play().catch(() => {});
+              } catch {
+                // Sound file not available — skip silently
+              }
             }
 
             const isNew = face.attendanceMarked === true;

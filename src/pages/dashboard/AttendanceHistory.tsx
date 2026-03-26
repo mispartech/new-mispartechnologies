@@ -122,7 +122,11 @@ const AttendanceHistory = () => {
     let data: Array<{ type: 'member' | 'visitor'; record: AttendanceRecord | TempAttendanceRecord }> = [];
     if (viewType !== 'visitors') filteredMembers.forEach(record => data.push({ type: 'member', record }));
     if (viewType !== 'members') filteredVisitors.forEach(record => data.push({ type: 'visitor', record }));
-    data.sort((a, b) => new Date(`${b.record.date}T${b.record.time}`).getTime() - new Date(`${a.record.date}T${a.record.time}`).getTime());
+    data.sort((a, b) => {
+      const tA = new Date(`${a.record.date || ''}T${a.record.time || '00:00:00'}`).getTime();
+      const tB = new Date(`${b.record.date || ''}T${b.record.time || '00:00:00'}`).getTime();
+      return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+    });
     return data;
   }, [filteredMembers, filteredVisitors, viewType]);
 
@@ -199,8 +203,8 @@ const AttendanceHistory = () => {
                   <TableBody>
                     {paginatedData.map(({ type, record }) => (
                       <TableRow key={record.id}>
-                        <TableCell>{format(new Date(record.date), 'MMM d, yyyy')}</TableCell>
-                        <TableCell>{record.time.slice(0, 5)}</TableCell>
+                        <TableCell>{record.date ? (() => { try { const d = new Date(record.date); return isNaN(d.getTime()) ? record.date : format(d, 'MMM d, yyyy'); } catch { return record.date || '—'; } })() : '—'}</TableCell>
+                        <TableCell>{record.time ? String(record.time).slice(0, 5) : '—'}</TableCell>
                         <TableCell><Badge variant={type === 'member' ? 'default' : 'secondary'}>{type === 'member' ? getTerm('title', true) : 'Visitor'}</Badge></TableCell>
                         <TableCell className="font-medium">{type === 'member' ? getMemberName(record as AttendanceRecord) : (record as TempAttendanceRecord).temp_face_id}</TableCell>
                         <TableCell>
