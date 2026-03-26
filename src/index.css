@@ -204,6 +204,10 @@
     animation: scan-line 3s linear infinite;
   }
 
+  .scan-line-slow {
+    animation: scan-line 6s linear infinite;
+  }
+
   /* Count-up animation helper */
   .count-up {
     font-variant-numeric: tabular-nums;
