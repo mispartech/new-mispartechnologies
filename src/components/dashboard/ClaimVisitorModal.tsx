@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { djangoApi } from '@/lib/api/client';
 import { useToast } from '@/hooks/use-toast';
-import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +19,6 @@ const ClaimVisitorModal = ({ isOpen, onClose, visitor, onSuccess }: ClaimVisitor
   const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({ email: '', password: '', firstName: '', lastName: '', phoneNumber: '', gender: '', departmentId: '' });
   const { toast } = useToast();
-  const { logActivity } = useActivityLogger();
 
   useEffect(() => {
     if (isOpen) {
@@ -44,9 +42,9 @@ const ClaimVisitorModal = ({ isOpen, onClose, visitor, onSuccess }: ClaimVisitor
 
     setLoading(true);
     try {
-      // All claim logic is handled by Django
       const result = await djangoApi.claimVisitor({
         temp_attendance_id: visitor.id,
+        temp_face_id: visitor.temp_face_id,
         email: formData.email,
         password: formData.password,
         first_name: formData.firstName,
@@ -57,11 +55,6 @@ const ClaimVisitorModal = ({ isOpen, onClose, visitor, onSuccess }: ClaimVisitor
       });
 
       if (result.error) throw new Error(result.error);
-
-      await logActivity({
-        action: 'claim', entityType: 'visitor', entityId: visitor.id,
-        metadata: { temp_face_id: visitor.temp_face_id, name: `${formData.firstName} ${formData.lastName}` },
-      });
 
       toast({ title: 'Visitor Registered', description: `${formData.firstName} ${formData.lastName} has been registered as a member.` });
       onSuccess();

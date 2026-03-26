@@ -21,13 +21,11 @@ interface AttendanceRecord {
   time: string;
   confidence_score: number;
   recognized_emotion: string;
-  profiles?: {
-    first_name: string;
-    last_name: string;
-    face_image_url: string;
-    department_id?: string;
-    departments?: { name: string };
-  };
+  member_name?: string;
+  member_email?: string;
+  department_id?: string;
+  department_name?: string;
+  face_image_url?: string;
 }
 
 const AttendanceLogs = () => {
@@ -63,13 +61,13 @@ const AttendanceLogs = () => {
       let filtered = data || [];
       if (departmentFilter !== 'all') {
         filtered = filtered.filter(
-          (a: any) => a.profiles?.department_id === departmentFilter
+          (a: any) => a.department_id === departmentFilter
         );
       }
 
       setAttendance(filtered);
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      console.warn('Error fetching attendance:', error);
     } finally {
       setLoading(false);
     }
@@ -77,17 +75,17 @@ const AttendanceLogs = () => {
 
   const filteredAttendance = attendance.filter(record => {
     if (!searchQuery) return true;
-    const name = `${record.profiles?.first_name} ${record.profiles?.last_name}`.toLowerCase();
+    const name = (record.member_name || '').toLowerCase();
     return name.includes(searchQuery.toLowerCase());
   });
 
   const exportToCSV = () => {
     const headers = ['Name', 'Date', 'Time', 'Department', 'Confidence'];
     const rows = filteredAttendance.map(record => [
-      `${record.profiles?.first_name} ${record.profiles?.last_name}`,
+      record.member_name || 'Unknown',
       record.date,
       record.time,
-      record.profiles?.departments?.name || 'N/A',
+      record.department_name || 'N/A',
       record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : 'N/A'
     ]);
     
@@ -221,14 +219,13 @@ const AttendanceLogs = () => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={record.profiles?.face_image_url} />
+                            <AvatarImage src={record.face_image_url} />
                             <AvatarFallback className="bg-primary/10 text-primary">
-                              {record.profiles?.first_name?.[0]}
-                              {record.profiles?.last_name?.[0]}
+                              {record.member_name?.[0] || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <span className="font-medium">
-                            {record.profiles?.first_name} {record.profiles?.last_name}
+                            {record.member_name || 'Unknown'}
                           </span>
                         </div>
                       </TableCell>
@@ -238,7 +235,7 @@ const AttendanceLogs = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {record.profiles?.departments?.name || (
+                        {record.department_name || (
                           <span className="text-muted-foreground">Unassigned</span>
                         )}
                       </TableCell>
@@ -271,18 +268,17 @@ const AttendanceLogs = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={record.profiles?.face_image_url} />
+                        <AvatarImage src={record.face_image_url} />
                         <AvatarFallback className="bg-primary/10 text-primary">
-                          {record.profiles?.first_name?.[0]}
-                          {record.profiles?.last_name?.[0]}
+                          {record.member_name?.[0] || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">
-                          {record.profiles?.first_name} {record.profiles?.last_name}
+                          {record.member_name || 'Unknown'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {record.profiles?.departments?.name || 'Unassigned'}
+                          {record.department_name || 'Unassigned'}
                         </p>
                       </div>
                     </div>
