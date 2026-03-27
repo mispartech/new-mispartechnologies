@@ -233,7 +233,8 @@ const AttendanceCapture = () => {
 
             if (soundEnabled) {
               try {
-                const audio = new Audio('/success.mp3');
+                const audio = new Audio('/success.wav');
+                audio.volume = soundVolume;
                 audio.play().catch(() => {});
               } catch {
                 // Sound file not available — skip silently
@@ -256,7 +257,7 @@ const AttendanceCapture = () => {
     } finally {
       processingRef.current = false;
     }
-  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, toast, engineState, stopCaptureLoop]);
+  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, toast, engineState, stopCaptureLoop]);
 
   // ── Start capture loop with setInterval (⑤ 500ms) ──
   const startCaptureLoop = useCallback(() => {
