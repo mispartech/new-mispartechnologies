@@ -160,6 +160,53 @@ const OrganizationSettings = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="sound">
+          <Card>
+            <CardHeader><CardTitle>Sound & Alert Settings</CardTitle><CardDescription>Configure audio feedback for attendance events</CardDescription></CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div><p className="font-medium">Enable Sound Notifications</p><p className="text-sm text-muted-foreground">Play a chime when attendance is successfully recorded</p></div>
+                <Switch checked={settings.enableSounds} onCheckedChange={(checked) => {
+                  setSettings(prev => ({ ...prev, enableSounds: checked }));
+                  localStorage.setItem('attendance_sound_enabled', String(checked));
+                }} />
+              </div>
+              <div className={settings.enableSounds ? '' : 'opacity-50 pointer-events-none'}>
+                <Label>Volume</Label>
+                <p className="text-sm text-muted-foreground mb-3">Adjust the notification sound volume</p>
+                <div className="flex items-center gap-4">
+                  <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Slider
+                    value={[settings.soundVolume * 100]}
+                    onValueChange={(val) => {
+                      const v = val[0] / 100;
+                      setSettings(prev => ({ ...prev, soundVolume: v }));
+                      localStorage.setItem('attendance_sound_volume', String(v));
+                    }}
+                    max={100}
+                    min={10}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-mono w-10 text-right text-muted-foreground">{Math.round(settings.soundVolume * 100)}%</span>
+                </div>
+              </div>
+              <div className={settings.enableSounds ? '' : 'opacity-50 pointer-events-none'}>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                  try {
+                    const audio = new Audio('/success.wav');
+                    audio.volume = settings.soundVolume;
+                    audio.play().catch(() => {});
+                  } catch {}
+                }}>
+                  <Volume2 className="w-4 h-4" />
+                  Test Sound
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="notifications">
           <Card>
             <CardHeader><CardTitle>Notification Settings</CardTitle><CardDescription>Configure notification preferences</CardDescription></CardHeader>
