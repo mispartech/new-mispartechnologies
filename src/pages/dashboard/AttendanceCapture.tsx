@@ -47,6 +47,50 @@ const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) 
  */
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
+/** Filtered recent recognitions list */
+const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const cutoffs = { '1min': 60_000, '1hour': 3_600_000, '24hours': 86_400_000 };
+    const cutoff = cutoffs[filter];
+    return persons.filter(p => now - p.timestamp.getTime() < cutoff);
+  }, [persons, filter]);
+
+  if (filtered.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-4">
+        No recognitions in this time range
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      {filtered.map((person, index) => (
+        <div
+          key={`${person.id}-${index}`}
+          className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 transition-colors hover:bg-muted/80"
+        >
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
+          }`} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {person.name || 'Unknown'}
+            </p>
+            <p className="text-xs text-muted-foreground font-mono">
+              {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </p>
+          </div>
+          <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
+            {person.type === 'member' ? 'Member' : 'Visitor'}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AttendanceCapture = () => {
   const { profile } = useOutletContext<{ profile: any }>();
   const [isCameraOn, setIsCameraOn] = useState(false);
