@@ -11,8 +11,10 @@ interface BoundingBox {
 export interface FaceOverlayData {
   bbox: number[]; // [x1, y1, x2, y2] from cvzone.cornerRect
   name?: string;
+  type?: 'member' | 'visitor' | 'unstable';
   attendanceStatus: AttendanceStatus;
   confidence?: number | null;
+  requiresClaim?: boolean;
 }
 
 interface FaceOverlayProps {
@@ -21,119 +23,79 @@ interface FaceOverlayProps {
   videoHeight: number;
   containerWidth: number;
   containerHeight: number;
+  onClaimVisitor?: (faceId: string) => void;
 }
 
-// Random colors for detection animation
+// Color cycling for UNSTABLE/detecting
 const DETECTION_COLORS = [
   'hsl(var(--primary))',
-  'hsl(280, 70%, 60%)', // Purple
-  'hsl(200, 80%, 55%)', // Blue
-  'hsl(35, 90%, 55%)', // Orange
-  'hsl(320, 70%, 55%)', // Pink
-  'hsl(170, 70%, 45%)', // Teal
-  'hsl(45, 90%, 55%)', // Yellow
+  'hsl(280, 70%, 60%)',
+  'hsl(200, 80%, 55%)',
+  'hsl(35, 90%, 55%)',
+  'hsl(320, 70%, 55%)',
+  'hsl(170, 70%, 45%)',
+  'hsl(45, 90%, 55%)',
 ];
 
-const SUCCESS_COLOR = 'hsl(142, 76%, 45%)'; // Green for confirmed
+const STATUS_COLORS: Record<string, string> = {
+  marked: 'hsl(142, 76%, 45%)',          // Green — attendance just marked
+  already_marked: 'hsl(200, 80%, 55%)',   // Blue — already recorded today
+  new_visitor: 'hsl(35, 90%, 55%)',       // Orange — new visitor
+  returning_visitor: 'hsl(280, 70%, 60%)',// Purple — returning visitor
+};
 
-/**
- * Converts cvzone.cornerRect bounding box format [x1, y1, x2, y2] to position/size
- * cvzone.cornerRect uses: x1, y1, x2, y2 = bbox | w, h = x2 - x1, y2 - y1
- */
 const parseBoundingBox = (bbox: number[]): BoundingBox | null => {
   if (!bbox || !Array.isArray(bbox) || bbox.length < 4) return null;
-  
-  // Validate all values are valid numbers
   const values = bbox.slice(0, 4);
-  if (!values.every(v => typeof v === 'number' && !isNaN(v) && isFinite(v))) {
-    return null;
-  }
-  
+  if (!values.every(v => typeof v === 'number' && !isNaN(v) && isFinite(v))) return null;
   const [x1, y1, x2, y2] = values;
-  
-  // Validate box has positive dimensions (at least 1 pixel)
   if (x2 <= x1 || y2 <= y1) return null;
-  
-  // Additional guard: ensure minimum reasonable size
-  const width = x2 - x1;
-  const height = y2 - y1;
-  if (width < 10 || height < 10) return null;
-  
+  if ((x2 - x1) < 10 || (y2 - y1) < 10) return null;
   return { x1, y1, x2, y2 };
 };
 
-/**
- * Generate a stable key for a face based on its bbox dimensions (x, y, width, height)
- * This ensures each unique face position gets a unique key without accumulation
- */
 const generateFaceKey = (bbox: number[]): string => {
   if (!bbox || bbox.length < 4) return `face-invalid-${Math.random()}`;
   const [x1, y1, x2, y2] = bbox;
-  const w = x2 - x1;
-  const h = y2 - y1;
-  // Round to nearest 5px for slight position stability while maintaining uniqueness
   const rx = Math.round(x1 / 5) * 5;
   const ry = Math.round(y1 / 5) * 5;
-  const rw = Math.round(w / 5) * 5;
-  const rh = Math.round(h / 5) * 5;
+  const rw = Math.round((x2 - x1) / 5) * 5;
+  const rh = Math.round((y2 - y1) / 5) * 5;
   return `face-${rx}-${ry}-${rw}-${rh}`;
 };
 
 const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, containerHeight }: FaceOverlayProps) => {
   const [colorIndex, setColorIndex] = useState(0);
 
-  // Animate color change during detection - 150ms cycle
+  // Animate color change for UNSTABLE/detecting faces
   useEffect(() => {
-    const hasDetectingFaces = faces.some(
-      f => f.attendanceStatus === 'detecting' || f.attendanceStatus === undefined
-    );
-
-    if (hasDetectingFaces) {
+    const hasDetecting = faces.some(f => f.attendanceStatus === 'detecting');
+    if (hasDetecting) {
       const interval = setInterval(() => {
         setColorIndex(prev => (prev + 1) % DETECTION_COLORS.length);
-      }, 150); // Fast color cycling every 150ms
+      }, 150);
       return () => clearInterval(interval);
     }
   }, [faces]);
 
-  // Calculate scale factors - recalculate on every render
   const scaleX = containerWidth > 0 && videoWidth > 0 ? containerWidth / videoWidth : 1;
   const scaleY = containerHeight > 0 && videoHeight > 0 ? containerHeight / videoHeight : 1;
 
-  // Early return if dimensions are invalid
   if (videoWidth === 0 || videoHeight === 0 || !faces || faces.length === 0) return null;
 
-  // Process faces - filter invalid and scale
   const validFaces = faces
     .filter(face => face && typeof face === 'object' && face.bbox)
-    .map((face, index) => {
+    .map((face) => {
       const box = parseBoundingBox(face.bbox);
       if (!box) return null;
-
-      // Calculate width and height from x1,y1,x2,y2 (cvzone format)
       const w = box.x2 - box.x1;
       const h = box.y2 - box.y1;
-
-      // Scale to container size - recalculated fresh each render
       const scaledX = box.x1 * scaleX;
       const scaledY = box.y1 * scaleY;
       const scaledW = w * scaleX;
       const scaledH = h * scaleY;
-
-      // Cap corner length to 25% of face dimensions to prevent overlap
-      const maxCornerByWidth = scaledW * 0.25;
-      const maxCornerByHeight = scaledH * 0.25;
-      const cornerLength = Math.min(30, maxCornerByWidth, maxCornerByHeight);
-
-      return {
-        ...face,
-        key: generateFaceKey(face.bbox),
-        x: scaledX,
-        y: scaledY,
-        width: scaledW,
-        height: scaledH,
-        cornerLength,
-      };
+      const cornerLength = Math.min(30, scaledW * 0.25, scaledH * 0.25);
+      return { ...face, key: generateFaceKey(face.bbox), x: scaledX, y: scaledY, width: scaledW, height: scaledH, cornerLength };
     })
     .filter((face): face is NonNullable<typeof face> => face !== null);
 
@@ -144,142 +106,54 @@ const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, container
   return (
     <div className="absolute inset-0 pointer-events-none">
       {validFaces.map((face) => {
-        // Determine color and effects based on attendance status
+        const status = face.attendanceStatus;
+        const isDetecting = status === 'detecting';
+
+        // Determine color
         let currentColor: string;
         let showGlow = false;
-        let labelText = '';
-        let showLabel = false;
-
-        const status = face.attendanceStatus;
-
-        // Check for success states: confirmed (recognized member with attendance)
-        if (status === 'confirmed') {
-          currentColor = SUCCESS_COLOR;
-          showGlow = true;
-          labelText = face.name || 'Confirmed';
-          showLabel = true;
-        } else {
-          // Detecting or undefined - use animated colors, no glow
+        if (isDetecting) {
           currentColor = DETECTION_COLORS[colorIndex];
-          showGlow = false;
-          showLabel = false;
+        } else {
+          currentColor = STATUS_COLORS[status] || STATUS_COLORS.marked;
+          showGlow = true;
         }
 
         const glowStyle = showGlow ? `0 0 12px ${currentColor}, 0 0 24px ${currentColor}50` : 'none';
+        const transition = showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none';
+
+        // Build label
+        let labelText = '';
+        let showLabel = false;
+        if (status === 'marked' || status === 'already_marked') {
+          labelText = face.name || 'Member';
+          showLabel = true;
+        } else if (status === 'new_visitor' || status === 'returning_visitor') {
+          labelText = 'Visitor';
+          showLabel = true;
+        }
+
+        // Corner style factory
+        const cornerStyle = (left: number, top: number, w: number, h: number) => ({
+          left, top, width: w, height: h,
+          backgroundColor: currentColor,
+          boxShadow: glowStyle,
+          transition,
+        });
 
         return (
           <div key={face.key}>
-            {/* Corner rectangles - cvzone.cornerRect style - ONLY 8 divs, NO borders */}
-            
-            {/* Top-left corner - horizontal */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x,
-                top: face.y,
-                width: face.cornerLength,
-                height: cornerThickness,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            {/* Top-left corner - vertical */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x,
-                top: face.y,
-                width: cornerThickness,
-                height: face.cornerLength,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            
-            {/* Top-right corner - horizontal */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x + face.width - face.cornerLength,
-                top: face.y,
-                width: face.cornerLength,
-                height: cornerThickness,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            {/* Top-right corner - vertical */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x + face.width - cornerThickness,
-                top: face.y,
-                width: cornerThickness,
-                height: face.cornerLength,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            
-            {/* Bottom-left corner - horizontal */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x,
-                top: face.y + face.height - cornerThickness,
-                width: face.cornerLength,
-                height: cornerThickness,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            {/* Bottom-left corner - vertical */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x,
-                top: face.y + face.height - face.cornerLength,
-                width: cornerThickness,
-                height: face.cornerLength,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            
-            {/* Bottom-right corner - horizontal */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x + face.width - face.cornerLength,
-                top: face.y + face.height - cornerThickness,
-                width: face.cornerLength,
-                height: cornerThickness,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
-            {/* Bottom-right corner - vertical */}
-            <div
-              className="absolute"
-              style={{
-                left: face.x + face.width - cornerThickness,
-                top: face.y + face.height - face.cornerLength,
-                width: cornerThickness,
-                height: face.cornerLength,
-                backgroundColor: currentColor,
-                boxShadow: glowStyle,
-                transition: showGlow ? 'background-color 0.2s, box-shadow 0.2s' : 'none',
-              }}
-            />
+            {/* 8 corner pieces — cvzone.cornerRect style */}
+            <div className="absolute" style={cornerStyle(face.x, face.y, face.cornerLength, cornerThickness)} />
+            <div className="absolute" style={cornerStyle(face.x, face.y, cornerThickness, face.cornerLength)} />
+            <div className="absolute" style={cornerStyle(face.x + face.width - face.cornerLength, face.y, face.cornerLength, cornerThickness)} />
+            <div className="absolute" style={cornerStyle(face.x + face.width - cornerThickness, face.y, cornerThickness, face.cornerLength)} />
+            <div className="absolute" style={cornerStyle(face.x, face.y + face.height - cornerThickness, face.cornerLength, cornerThickness)} />
+            <div className="absolute" style={cornerStyle(face.x, face.y + face.height - face.cornerLength, cornerThickness, face.cornerLength)} />
+            <div className="absolute" style={cornerStyle(face.x + face.width - face.cornerLength, face.y + face.height - cornerThickness, face.cornerLength, cornerThickness)} />
+            <div className="absolute" style={cornerStyle(face.x + face.width - cornerThickness, face.y + face.height - face.cornerLength, cornerThickness, face.cornerLength)} />
 
-            {/* Name/status label - only show when confirmed or visitor */}
+            {/* Label for recognized faces */}
             {showLabel && (
               <div
                 className="absolute text-white text-xs px-2 py-1 rounded-b-md font-medium whitespace-nowrap"
@@ -291,17 +165,18 @@ const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, container
                   boxShadow: `0 2px 8px ${currentColor}50`,
                 }}
               >
-                <span className="truncate block">{labelText}</span>
-                {status === 'confirmed' && face.confidence != null && (
-                  <span className="text-white/80 text-[10px]">
-                    {Math.round(face.confidence * 100)}%
-                  </span>
+                <span className="truncate block">
+                  {labelText}
+                  {face.confidence != null && ` · ${Math.round(face.confidence * 100)}%`}
+                </span>
+                {status === 'already_marked' && (
+                  <span className="text-white/70 text-[10px]">Already recorded</span>
                 )}
               </div>
             )}
 
-            {/* Detecting indicator - pulsing animation */}
-            {(status === 'detecting' || status === undefined) && (
+            {/* Detecting spinner for UNSTABLE */}
+            {isDetecting && (
               <div
                 className="absolute text-white text-xs px-2 py-1 rounded-md font-medium animate-pulse whitespace-nowrap"
                 style={{

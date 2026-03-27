@@ -38,13 +38,6 @@ const CAPTURE_INTERVAL_MS = 500;       // 500ms between frames (2 FPS)
 const PAUSE_DURATION_MS = 3000;        // Pause 3s after confirmed attendance
 const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) request
 
-/**
- * Recognition engine state machine:
- * idle         → camera off, nothing happening
- * initializing → first API call in progress (model may be downloading)
- * ready        → model loaded, normal scanning active
- * error        → 500 or fatal error — capture stopped
- */
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
 /** Filtered recent recognitions list */
@@ -78,9 +71,14 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
             <p className="text-sm font-medium truncate">
               {person.name || 'Unknown'}
             </p>
-            <p className="text-xs text-muted-foreground font-mono">
-              {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground font-mono">
+                {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+              {person.attendanceStatus === 'already_marked' && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1">Seen again</Badge>
+              )}
+            </div>
           </div>
           <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
             {person.type === 'member' ? 'Member' : 'Visitor'}
@@ -100,7 +98,7 @@ const AttendanceCapture = () => {
     const saved = localStorage.getItem('attendance_sound_enabled');
     return saved !== null ? saved === 'true' : true;
   });
-  const [soundVolume, setSoundVolume] = useState(() => {
+  const [soundVolume] = useState(() => {
     const saved = localStorage.getItem('attendance_sound_volume');
     return saved !== null ? parseFloat(saved) : 0.7;
   });
@@ -127,25 +125,19 @@ const AttendanceCapture = () => {
     checkHealth, 
     isProcessing, 
     trackedFaces, 
-    scanningBboxes,
     clearFaces,
     pruneStalefaces 
   } = useFaceRecognition();
 
-  // Convert TrackedFace to FaceOverlayData
+  // Convert TrackedFace to FaceOverlayData — includes type info for proper coloring
   const facesForOverlay: FaceOverlayData[] = trackedFaces.map(face => ({
     bbox: face.bbox,
     name: face.name,
+    type: face.type,
     attendanceStatus: face.attendanceStatus,
     confidence: face.confidence,
+    requiresClaim: face.requiresClaim,
   }));
-
-  const scanningFacesForOverlay: FaceOverlayData[] = scanningBboxes.map(bbox => ({
-    bbox,
-    attendanceStatus: 'detecting' as const,
-  }));
-
-  const allFacesForOverlay = [...facesForOverlay, ...scanningFacesForOverlay];
 
   // ── Health check on mount ──
   useEffect(() => {
@@ -197,7 +189,7 @@ const AttendanceCapture = () => {
   // ── Core: capture a frame and send to API ──
   const captureAndRecognize = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
-    if (processingRef.current) return; // skip if previous call still in-flight
+    if (processingRef.current) return;
     if (Date.now() < pausedUntilRef.current) return;
     if (videoRef.current.readyState < 2) return;
 
@@ -212,7 +204,6 @@ const AttendanceCapture = () => {
 
     setVideoDimensions({ width: video.videoWidth, height: video.videoHeight });
 
-    // ⑥ Send full data URL: "data:image/jpeg;base64,..."
     const frameDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
     const isFirst = isFirstCallRef.current;
@@ -233,7 +224,7 @@ const AttendanceCapture = () => {
         },
       );
 
-      // ④⑦ Handle 500 → stop loop, show error
+      // Handle 500 → stop loop
       if (!result.success && result.httpStatus && result.httpStatus >= 500) {
         setEngineState('error');
         setError('Face recognition temporarily unavailable.\nPlease refresh the page.');
@@ -241,7 +232,6 @@ const AttendanceCapture = () => {
         return;
       }
 
-      // If we were initializing, we're now ready
       if (engineState === 'initializing' || (isFirst && result.success)) {
         setEngineState('ready');
       }
@@ -252,45 +242,77 @@ const AttendanceCapture = () => {
         }
 
         for (const face of result.faces) {
-          if (face.attendanceStatus === 'detecting') continue;
+          // Skip UNSTABLE faces — they're just detecting
+          if (face.type === 'unstable') continue;
 
           const person: RecognizedPerson = {
             id: face.id,
-            type: 'member',
+            type: face.type === 'member' ? 'member' : 'visitor',
             name: face.name,
             confidence: face.confidence,
             timestamp: new Date(),
-            attendanceStatus: face.attendanceMarked ? 'marked' : 'detecting',
+            attendanceStatus: face.attendanceStatus,
           };
 
+          // Deduplicate within 30s window
           const exists = recognizedPersons.find(
             p => p.id === person.id && (Date.now() - p.timestamp.getTime()) < 30000,
           );
 
           if (!exists) {
-            setRecognizedPersons(prev => [person, ...prev.slice(0, 19)]);
-            setStats(prev => ({
-              total: prev.total + 1,
-              members: prev.members + 1,
-              visitors: prev.visitors,
-            }));
+            setRecognizedPersons(prev => [person, ...prev.slice(0, 49)]);
 
-            if (soundEnabled) {
+            // Update stats
+            if (face.type === 'member') {
+              setStats(prev => ({
+                total: prev.total + 1,
+                members: prev.members + 1,
+                visitors: prev.visitors,
+              }));
+            } else {
+              setStats(prev => ({
+                total: prev.total + 1,
+                members: prev.members,
+                visitors: prev.visitors + 1,
+              }));
+            }
+
+            // Play sound for new attendance
+            if (soundEnabled && (face.attendanceStatus === 'marked' || face.attendanceStatus === 'new_visitor')) {
               try {
                 const audio = new Audio('/success.wav');
                 audio.volume = soundVolume;
                 audio.play().catch(() => {});
               } catch {
-                // Sound file not available — skip silently
+                // Sound file not available
               }
             }
 
-            const isNew = face.attendanceMarked === true;
-            toast({
-              title: 'Member Recognized',
-              description: `${person.name || 'Unknown'} - ${isNew ? 'Attendance marked' : 'Already recorded'}`,
-              variant: isNew ? 'default' : undefined,
-            });
+            // Toast notification
+            const isNewAttendance = face.attendanceStatus === 'marked';
+            const isAlreadyMarked = face.attendanceStatus === 'already_marked';
+            const isVisitor = face.type === 'visitor';
+
+            if (isVisitor) {
+              toast({
+                title: 'Visitor Detected',
+                description: face.requiresClaim
+                  ? 'New visitor — can be claimed as a member'
+                  : face.attendanceStatus === 'returning_visitor'
+                    ? 'Returning visitor recorded'
+                    : 'New visitor recorded',
+              });
+            } else {
+              toast({
+                title: isNewAttendance ? 'Attendance Marked' : 'Member Recognized',
+                description: `${person.name || 'Unknown'} — ${
+                  isNewAttendance ? 'Attendance recorded' :
+                  isAlreadyMarked ? 'Already recorded today' :
+                  'Recognized'
+                }`,
+                variant: isNewAttendance ? 'default' : undefined,
+              });
+            }
           }
         }
       }
@@ -303,7 +325,7 @@ const AttendanceCapture = () => {
     }
   }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, toast, engineState, stopCaptureLoop]);
 
-  // ── Start capture loop with setInterval (⑤ 500ms) ──
+  // ── Start capture loop ──
   const startCaptureLoop = useCallback(() => {
     stopCaptureLoop();
     intervalRef.current = setInterval(captureAndRecognize, CAPTURE_INTERVAL_MS);
@@ -366,14 +388,12 @@ const AttendanceCapture = () => {
     processingRef.current = false;
   }, [stopCaptureLoop, clearFaces]);
 
-  // ── Start/stop capture when camera toggles ──
   useEffect(() => {
     if (isCameraOn) startCaptureLoop();
     else stopCaptureLoop();
     return () => stopCaptureLoop();
   }, [isCameraOn, startCaptureLoop, stopCaptureLoop]);
 
-  // Cleanup on unmount
   useEffect(() => () => stopCamera(), [stopCamera]);
 
   const resetSession = () => {
@@ -391,9 +411,11 @@ const AttendanceCapture = () => {
     }
   };
 
-  // ── Render camera overlay content based on engine state ──
+  // Show "Scanning for faces…" only when NO faces at all (faces_count === 0)
+  // When only UNSTABLE faces exist, the overlay boxes handle it
+  const hasAnyFaces = trackedFaces.length > 0;
+
   const renderCameraOverlay = () => {
-    // ④ Fatal error state
     if (engineState === 'error') {
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 z-10">
@@ -404,12 +426,7 @@ const AttendanceCapture = () => {
           <p className="text-destructive/80 text-sm text-center mt-1">
             Please refresh the page.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() => window.location.reload()}
-          >
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.reload()}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
@@ -417,7 +434,6 @@ const AttendanceCapture = () => {
       );
     }
 
-    // ①② Initializing state (first API call — model loading)
     if (engineState === 'initializing') {
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm z-10">
@@ -430,8 +446,8 @@ const AttendanceCapture = () => {
       );
     }
 
-    // ③ Ready — scanning state
-    if (engineState === 'ready' && allFacesForOverlay.length === 0 && isCameraOn) {
+    // Only show "Scanning..." when faces_count === 0 (no faces at all, not even UNSTABLE)
+    if (engineState === 'ready' && !hasAnyFaces && isCameraOn) {
       return (
         <div className="absolute top-3 left-3 z-10">
           <Badge variant="secondary" className="gap-1.5 bg-background/70 backdrop-blur-sm">
@@ -568,10 +584,10 @@ const AttendanceCapture = () => {
               />
               <canvas ref={canvasRef} className="hidden" />
 
-              {/* Face detection overlay */}
-              {isCameraOn && engineState === 'ready' && allFacesForOverlay.length > 0 && (
+              {/* Face detection overlay — renders for ALL face types including UNSTABLE */}
+              {isCameraOn && engineState === 'ready' && facesForOverlay.length > 0 && (
                 <FaceOverlay
-                  faces={allFacesForOverlay}
+                  faces={facesForOverlay}
                   videoWidth={videoDimensions.width}
                   videoHeight={videoDimensions.height}
                   containerWidth={containerDimensions.width}
@@ -579,10 +595,8 @@ const AttendanceCapture = () => {
                 />
               )}
 
-              {/* State-based overlays */}
               {isCameraOn && renderCameraOverlay()}
 
-              {/* Placeholder when camera is off */}
               {!isCameraOn && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
                   {isCameraStarting ? (

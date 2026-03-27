@@ -2,41 +2,71 @@ import { useState, useCallback, useRef } from 'react';
 import { djangoApi } from '@/lib/api/client';
 
 /**
- * Backend response types - matches Django API contract (single-face only)
+ * Backend face types from /api/recognize-frame/
  */
-type ResponseType = 'KNOWN' | 'TEMP' | null;
+type FaceType = 'KNOWN' | 'TEMP' | 'UNSTABLE';
 
-export type AttendanceStatus = 'detecting' | 'confirmed';
+/**
+ * Backend attendance_status values:
+ * - marked: first recognition today
+ * - already_marked: seen again same day
+ * - new_visitor: first-time unknown face
+ * - returning_visitor: previously seen unknown face
+ * - detecting: UNSTABLE only
+ */
+export type AttendanceStatus =
+  | 'marked'
+  | 'already_marked'
+  | 'new_visitor'
+  | 'returning_visitor'
+  | 'detecting';
 
 export interface TrackedFace {
   id: string;
   name: string;
-  type: 'member' | 'visitor';
+  type: 'member' | 'visitor' | 'unstable';
   confidence: number | null;
   bbox: number[];
   attendanceStatus: AttendanceStatus;
-  attendanceMarked?: boolean;
-  requiresClaim?: boolean;
+  attendanceMarked: boolean;
+  requiresClaim: boolean;
+  attendanceRecord?: {
+    id: string;
+    date: string;
+    time: string;
+    face_detections: number;
+  };
   lastSeen: number;
 }
 
-/**
- * Django API response format — single-face only (no legacy faces array)
- */
+/** Single face entry from the backend faces[] array */
+interface ApiFace {
+  type: FaceType;
+  bbox?: number[];
+  user_id?: string;
+  temp_user_id?: string;
+  name?: string;
+  confidence?: number;
+  attendance_status?: string;
+  attendance_record?: {
+    id: string;
+    date: string;
+    time: string;
+    face_detections: number;
+  };
+  requires_claim?: boolean;
+}
+
+/** New multi-face response from /api/recognize-frame/ */
 interface DjangoResponse {
   success: boolean;
   code?: string;
-  type?: ResponseType;
-  user_id?: string;
-  temp_user_id?: string;
-  confidence?: number;
-  attendance_marked?: boolean;
-  requires_claim?: boolean;
-  name?: string;
-  bbox?: number[];
-  message?: string;
-  error?: string;
   timestamp?: string;
+  faces_count?: number;
+  faces?: ApiFace[];
+  // Legacy single-face fields (ignored but kept for safety)
+  error?: string;
+  message?: string;
 }
 
 interface RegistrationResult {
@@ -58,50 +88,73 @@ interface HealthCheckResult {
 const FACE_TIMEOUT_MS = 3000;
 
 /**
- * Parse Django response into TrackedFace array — single-face format only
+ * Parse the new multi-face response into TrackedFace array
  */
-const parseDjangoResponse = (response: DjangoResponse): {
-  faces: TrackedFace[];
-  scanningBboxes: number[][];
-} => {
-  const faces: TrackedFace[] = [];
-  const scanningBboxes: number[][] = [];
+const parseDjangoResponse = (response: DjangoResponse): TrackedFace[] => {
   const now = Date.now();
+  const faces: TrackedFace[] = [];
 
-  if (response.type === 'KNOWN' && response.user_id) {
-    faces.push({
-      id: response.user_id,
-      name: response.name || 'Member',
-      type: 'member',
-      confidence: response.confidence || null,
-      bbox: response.bbox || [],
-      attendanceStatus: response.attendance_marked ? 'confirmed' : 'detecting',
-      attendanceMarked: response.attendance_marked,
-      lastSeen: now,
-    });
-  } else if (response.type === 'TEMP' && response.temp_user_id) {
-    if (response.bbox && response.bbox.length >= 4) {
-      scanningBboxes.push(response.bbox);
+  if (!response.faces || !Array.isArray(response.faces)) return faces;
+
+  for (const apiFace of response.faces) {
+    if (apiFace.type === 'KNOWN' && apiFace.user_id) {
+      faces.push({
+        id: apiFace.user_id,
+        name: apiFace.name || 'Member',
+        type: 'member',
+        confidence: apiFace.confidence ?? null,
+        bbox: apiFace.bbox || [],
+        attendanceStatus: (apiFace.attendance_status as AttendanceStatus) || 'marked',
+        attendanceMarked: apiFace.attendance_status === 'marked' || apiFace.attendance_status === 'already_marked',
+        requiresClaim: false,
+        attendanceRecord: apiFace.attendance_record,
+        lastSeen: now,
+      });
+    } else if (apiFace.type === 'TEMP' && apiFace.temp_user_id) {
+      faces.push({
+        id: apiFace.temp_user_id,
+        name: 'Visitor',
+        type: 'visitor',
+        confidence: apiFace.confidence ?? null,
+        bbox: apiFace.bbox || [],
+        attendanceStatus: (apiFace.attendance_status as AttendanceStatus) || 'new_visitor',
+        attendanceMarked: apiFace.attendance_status === 'new_visitor' || apiFace.attendance_status === 'returning_visitor',
+        requiresClaim: apiFace.requires_claim ?? true,
+        attendanceRecord: apiFace.attendance_record,
+        lastSeen: now,
+      });
+    } else if (apiFace.type === 'UNSTABLE') {
+      faces.push({
+        id: `unstable-${now}-${Math.random().toString(36).slice(2, 6)}`,
+        name: '',
+        type: 'unstable',
+        confidence: null,
+        bbox: apiFace.bbox || [],
+        attendanceStatus: 'detecting',
+        attendanceMarked: false,
+        requiresClaim: false,
+        lastSeen: now,
+      });
     }
   }
 
-  return { faces, scanningBboxes };
+  return faces;
 };
 
 export const useFaceRecognition = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trackedFaces, setTrackedFaces] = useState<TrackedFace[]>([]);
-  const [scanningBboxes, setScanningBboxes] = useState<number[][]>([]);
   const lastUpdateRef = useRef<number>(Date.now());
 
   const shouldPauseCapture = useCallback((): boolean => {
-    return trackedFaces.some(face => face.attendanceStatus === 'confirmed');
+    return trackedFaces.some(
+      face => face.attendanceStatus === 'marked' || face.attendanceStatus === 'already_marked'
+    );
   }, [trackedFaces]);
 
   const clearFaces = useCallback(() => {
     setTrackedFaces([]);
-    setScanningBboxes([]);
     lastUpdateRef.current = Date.now();
   }, []);
 
@@ -119,7 +172,6 @@ export const useFaceRecognition = () => {
   ): Promise<{
     success: boolean;
     faces: TrackedFace[];
-    scanningBboxes: number[][];
     shouldPause: boolean;
     error?: string;
     httpStatus?: number;
@@ -132,7 +184,7 @@ export const useFaceRecognition = () => {
 
       if (result.error) {
         setError(result.error);
-        return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: result.error, httpStatus: result.status };
+        return { success: false, faces: trackedFaces, shouldPause: false, error: result.error, httpStatus: result.status };
       }
 
       const response = result.data as DjangoResponse;
@@ -140,48 +192,30 @@ export const useFaceRecognition = () => {
       if (!response.success) {
         const msg = response.error || response.message || 'Recognition failed';
         setError(msg);
-        return {
-          success: false,
-          faces: trackedFaces,
-          scanningBboxes,
-          shouldPause: false,
-          error: msg,
-          httpStatus: result.status,
-        };
+        return { success: false, faces: trackedFaces, shouldPause: false, error: msg, httpStatus: result.status };
       }
 
-      const { faces: newFaces, scanningBboxes: newScanningBboxes } = parseDjangoResponse(response);
-
-      if (response.code === 'NO_FACE') {
+      // NO_FACE — clear everything
+      if (response.code === 'NO_FACE' || (response.faces_count === 0)) {
         setTrackedFaces([]);
-        setScanningBboxes([]);
-        return { success: true, faces: [], scanningBboxes: [], shouldPause: false };
+        return { success: true, faces: [], shouldPause: false };
       }
 
-      setScanningBboxes(newScanningBboxes);
+      const newFaces = parseDjangoResponse(response);
 
-      if (newFaces.length > 0) {
-        setTrackedFaces(newFaces);
-        lastUpdateRef.current = Date.now();
-        const shouldPause = newFaces.some(f => f.attendanceMarked);
-        return { success: true, faces: newFaces, scanningBboxes: newScanningBboxes, shouldPause };
-      }
+      setTrackedFaces(newFaces);
+      lastUpdateRef.current = Date.now();
 
-      if (newScanningBboxes.length > 0) {
-        return { success: true, faces: [], scanningBboxes: newScanningBboxes, shouldPause: false };
-      }
-
-      setTrackedFaces([]);
-      setScanningBboxes([]);
-      return { success: true, faces: [], scanningBboxes: [], shouldPause: false };
+      const shouldPause = newFaces.some(f => f.attendanceStatus === 'marked');
+      return { success: true, faces: newFaces, shouldPause };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Recognition failed';
       setError(errorMessage);
-      return { success: false, faces: trackedFaces, scanningBboxes, shouldPause: false, error: errorMessage, httpStatus: 0 };
+      return { success: false, faces: trackedFaces, shouldPause: false, error: errorMessage, httpStatus: 0 };
     } finally {
       setIsProcessing(false);
     }
-  }, [trackedFaces, scanningBboxes]);
+  }, [trackedFaces]);
 
   const registerFace = useCallback(async (
     imageBase64: string,
@@ -261,7 +295,6 @@ export const useFaceRecognition = () => {
     checkHealth,
     isProcessing,
     trackedFaces,
-    scanningBboxes,
     error,
     clearError,
     clearFaces,
