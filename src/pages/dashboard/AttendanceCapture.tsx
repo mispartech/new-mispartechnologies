@@ -568,44 +568,34 @@ const AttendanceCapture = () => {
 
         {/* Recent Recognitions */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
-              <span>Recent</span>
-              <Button variant="ghost" size="sm" onClick={resetSession}>
-                <RefreshCw className="w-4 h-4" />
-              </Button>
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                Recent
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={resetSession}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
             </CardTitle>
+            <div className="pt-1">
+              <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
+                <SelectTrigger className="h-8 text-xs w-full">
+                  <Filter className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1min">Last Minute</SelectItem>
+                  <SelectItem value="1hour">Last Hour</SelectItem>
+                  <SelectItem value="24hours">Last 24 Hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {recognizedPersons.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No recognitions yet
-                </p>
-              ) : (
-                recognizedPersons.map((person, index) => (
-                  <div
-                    key={`${person.id}-${index}`}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
-                  >
-                    <div className={`w-2 h-2 rounded-full ${
-                      person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {person.name || 'Unknown'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {person.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                    <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs">
-                      {person.type === 'member' ? 'Member' : 'Visitor'}
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
+            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} />
           </CardContent>
         </Card>
       </div>
