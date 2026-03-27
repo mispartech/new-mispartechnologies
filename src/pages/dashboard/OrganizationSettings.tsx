@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bell, Save, CheckCircle, Sparkles } from 'lucide-react';
+import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Feature labels for display
@@ -48,7 +49,7 @@ const OrganizationSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [settings, setSettings] = useState({ autoMarkAttendance: true, recognitionThreshold: 0.7, allowMultipleCheckins: false, sendNotifications: true, requireApproval: false, trackLocation: false, enableSounds: true });
+  const [settings, setSettings] = useState({ autoMarkAttendance: true, recognitionThreshold: 0.7, allowMultipleCheckins: false, sendNotifications: true, requireApproval: false, trackLocation: false, enableSounds: true, soundVolume: 0.7 });
   const { toast } = useToast();
 
   useEffect(() => { fetchOrganization(); }, [profile]);
@@ -103,6 +104,7 @@ const OrganizationSettings = () => {
           <TabsTrigger value="general" className="gap-2"><Building2 className="w-4 h-4" />General</TabsTrigger>
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>
+          <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
         </TabsList>
 
