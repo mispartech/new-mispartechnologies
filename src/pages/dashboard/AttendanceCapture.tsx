@@ -425,7 +425,11 @@ const AttendanceCapture = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setSoundEnabled(!soundEnabled)}
+            onClick={() => {
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              localStorage.setItem('attendance_sound_enabled', String(next));
+            }}
             className="h-8 w-8 sm:h-9 sm:w-9"
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
