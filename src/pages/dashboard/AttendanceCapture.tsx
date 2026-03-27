@@ -1,8 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { 
   Camera, 
   CameraOff, 
@@ -14,6 +17,8 @@ import {
   AlertTriangle,
   Loader2,
   ScanFace,
+  Clock,
+  Filter,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -47,7 +52,15 @@ const AttendanceCapture = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
   const [recognizedPersons, setRecognizedPersons] = useState<RecognizedPerson[]>([]);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('attendance_sound_enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [soundVolume, setSoundVolume] = useState(() => {
+    const saved = localStorage.getItem('attendance_sound_volume');
+    return saved !== null ? parseFloat(saved) : 0.7;
+  });
+  const [recentFilter, setRecentFilter] = useState<'1min' | '1hour' | '24hours'>('24hours');
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [engineState, setEngineState] = useState<EngineState>('idle');
