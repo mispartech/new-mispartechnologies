@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bell, Save, CheckCircle, Sparkles } from 'lucide-react';
+import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Feature labels for display
@@ -48,7 +49,7 @@ const OrganizationSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [settings, setSettings] = useState({ autoMarkAttendance: true, recognitionThreshold: 0.7, allowMultipleCheckins: false, sendNotifications: true, requireApproval: false, trackLocation: false, enableSounds: true });
+  const [settings, setSettings] = useState({ autoMarkAttendance: true, recognitionThreshold: 0.7, allowMultipleCheckins: false, sendNotifications: true, requireApproval: false, trackLocation: false, enableSounds: true, soundVolume: 0.7 });
   const { toast } = useToast();
 
   useEffect(() => { fetchOrganization(); }, [profile]);
@@ -103,6 +104,7 @@ const OrganizationSettings = () => {
           <TabsTrigger value="general" className="gap-2"><Building2 className="w-4 h-4" />General</TabsTrigger>
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>
+          <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
         </TabsList>
 
@@ -154,6 +156,53 @@ const OrganizationSettings = () => {
                 <div key={key} className="flex items-center justify-between"><div><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{desc}</p></div><Switch checked={(settings as any)[key]} onCheckedChange={(checked) => setSettings(prev => ({ ...prev, [key]: checked }))} /></div>
               ))}
               <div><Label>Recognition Threshold</Label><p className="text-sm text-muted-foreground mb-2">Minimum confidence level required (0.5 - 0.9)</p><Input type="number" min="0.5" max="0.9" step="0.05" value={settings.recognitionThreshold} onChange={(e) => setSettings(prev => ({ ...prev, recognitionThreshold: parseFloat(e.target.value) }))} className="w-32" /></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sound">
+          <Card>
+            <CardHeader><CardTitle>Sound & Alert Settings</CardTitle><CardDescription>Configure audio feedback for attendance events</CardDescription></CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div><p className="font-medium">Enable Sound Notifications</p><p className="text-sm text-muted-foreground">Play a chime when attendance is successfully recorded</p></div>
+                <Switch checked={settings.enableSounds} onCheckedChange={(checked) => {
+                  setSettings(prev => ({ ...prev, enableSounds: checked }));
+                  localStorage.setItem('attendance_sound_enabled', String(checked));
+                }} />
+              </div>
+              <div className={settings.enableSounds ? '' : 'opacity-50 pointer-events-none'}>
+                <Label>Volume</Label>
+                <p className="text-sm text-muted-foreground mb-3">Adjust the notification sound volume</p>
+                <div className="flex items-center gap-4">
+                  <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Slider
+                    value={[settings.soundVolume * 100]}
+                    onValueChange={(val) => {
+                      const v = val[0] / 100;
+                      setSettings(prev => ({ ...prev, soundVolume: v }));
+                      localStorage.setItem('attendance_sound_volume', String(v));
+                    }}
+                    max={100}
+                    min={10}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-mono w-10 text-right text-muted-foreground">{Math.round(settings.soundVolume * 100)}%</span>
+                </div>
+              </div>
+              <div className={settings.enableSounds ? '' : 'opacity-50 pointer-events-none'}>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                  try {
+                    const audio = new Audio('/success.wav');
+                    audio.volume = settings.soundVolume;
+                    audio.play().catch(() => {});
+                  } catch {}
+                }}>
+                  <Volume2 className="w-4 h-4" />
+                  Test Sound
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

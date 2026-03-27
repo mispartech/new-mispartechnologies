@@ -1,8 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { 
   Camera, 
   CameraOff, 
@@ -14,6 +17,8 @@ import {
   AlertTriangle,
   Loader2,
   ScanFace,
+  Clock,
+  Filter,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -42,12 +47,64 @@ const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) 
  */
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
+/** Filtered recent recognitions list */
+const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const cutoffs = { '1min': 60_000, '1hour': 3_600_000, '24hours': 86_400_000 };
+    const cutoff = cutoffs[filter];
+    return persons.filter(p => now - p.timestamp.getTime() < cutoff);
+  }, [persons, filter]);
+
+  if (filtered.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-4">
+        No recognitions in this time range
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      {filtered.map((person, index) => (
+        <div
+          key={`${person.id}-${index}`}
+          className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 transition-colors hover:bg-muted/80"
+        >
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
+          }`} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {person.name || 'Unknown'}
+            </p>
+            <p className="text-xs text-muted-foreground font-mono">
+              {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </p>
+          </div>
+          <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
+            {person.type === 'member' ? 'Member' : 'Visitor'}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AttendanceCapture = () => {
   const { profile } = useOutletContext<{ profile: any }>();
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
   const [recognizedPersons, setRecognizedPersons] = useState<RecognizedPerson[]>([]);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('attendance_sound_enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [soundVolume, setSoundVolume] = useState(() => {
+    const saved = localStorage.getItem('attendance_sound_volume');
+    return saved !== null ? parseFloat(saved) : 0.7;
+  });
+  const [recentFilter, setRecentFilter] = useState<'1min' | '1hour' | '24hours'>('24hours');
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [engineState, setEngineState] = useState<EngineState>('idle');
@@ -220,7 +277,8 @@ const AttendanceCapture = () => {
 
             if (soundEnabled) {
               try {
-                const audio = new Audio('/success.mp3');
+                const audio = new Audio('/success.wav');
+                audio.volume = soundVolume;
                 audio.play().catch(() => {});
               } catch {
                 // Sound file not available — skip silently
@@ -243,7 +301,7 @@ const AttendanceCapture = () => {
     } finally {
       processingRef.current = false;
     }
-  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, toast, engineState, stopCaptureLoop]);
+  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, toast, engineState, stopCaptureLoop]);
 
   // ── Start capture loop with setInterval (⑤ 500ms) ──
   const startCaptureLoop = useCallback(() => {
@@ -411,7 +469,11 @@ const AttendanceCapture = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setSoundEnabled(!soundEnabled)}
+            onClick={() => {
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              localStorage.setItem('attendance_sound_enabled', String(next));
+            }}
             className="h-8 w-8 sm:h-9 sm:w-9"
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -550,44 +612,34 @@ const AttendanceCapture = () => {
 
         {/* Recent Recognitions */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
-              <span>Recent</span>
-              <Button variant="ghost" size="sm" onClick={resetSession}>
-                <RefreshCw className="w-4 h-4" />
-              </Button>
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                Recent
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={resetSession}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
             </CardTitle>
+            <div className="pt-1">
+              <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
+                <SelectTrigger className="h-8 text-xs w-full">
+                  <Filter className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1min">Last Minute</SelectItem>
+                  <SelectItem value="1hour">Last Hour</SelectItem>
+                  <SelectItem value="24hours">Last 24 Hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {recognizedPersons.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No recognitions yet
-                </p>
-              ) : (
-                recognizedPersons.map((person, index) => (
-                  <div
-                    key={`${person.id}-${index}`}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
-                  >
-                    <div className={`w-2 h-2 rounded-full ${
-                      person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {person.name || 'Unknown'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {person.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                    <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs">
-                      {person.type === 'member' ? 'Member' : 'Visitor'}
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
+            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} />
           </CardContent>
         </Card>
       </div>
