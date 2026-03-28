@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Camera, 
   CameraOff, 
@@ -19,6 +22,7 @@ import {
   ScanFace,
   Clock,
   Filter,
+  Eye,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -31,6 +35,7 @@ interface RecognizedPerson {
   confidence?: number | null;
   timestamp: Date;
   attendanceStatus?: string;
+  faceImageUrl?: string;
 }
 
 // ── Throttle / timing config ──
