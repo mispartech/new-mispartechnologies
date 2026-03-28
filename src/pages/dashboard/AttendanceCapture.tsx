@@ -254,6 +254,8 @@ const AttendanceCapture = () => {
     attendanceStatus: face.attendanceStatus,
     confidence: face.confidence,
     requiresClaim: face.requiresClaim,
+    gender: face.gender,
+    ageRange: face.ageRange,
   }));
 
   // ── Health check on mount ──
@@ -369,7 +371,28 @@ const AttendanceCapture = () => {
             confidence: face.confidence,
             timestamp: new Date(),
             attendanceStatus: face.attendanceStatus,
+            gender: face.gender,
+            ageRange: face.ageRange,
+            faceRoiUrl: face.attendanceRecord?.face_roi_url || null,
           };
+
+          // Poll for face_roi after 3s if just marked and no face_roi yet
+          if ((face.attendanceStatus === 'marked' || face.attendanceStatus === 'new_visitor') && !face.attendanceRecord?.face_roi_url) {
+            setTimeout(async () => {
+              try {
+                const today = new Date().toISOString().split('T')[0];
+                const result = await djangoApi.getAttendance({ start_date: today, end_date: today });
+                if (!result.error && result.data) {
+                  const match = result.data.find((r: any) => r.user_id === face.id || r.id === face.attendanceRecord?.id);
+                  if (match?.face_roi) {
+                    setRecognizedPersons(prev => prev.map(p =>
+                      p.id === face.id ? { ...p, faceRoiUrl: match.face_roi } : p
+                    ));
+                  }
+                }
+              } catch { /* polling is best-effort */ }
+            }, 3000);
+          }
 
           // Deduplicate within 30s window
           const exists = recognizedPersons.find(
