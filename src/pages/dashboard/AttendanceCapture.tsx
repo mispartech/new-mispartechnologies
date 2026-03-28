@@ -823,8 +823,9 @@ const AttendanceCapture = () => {
                 </Button>
               </div>
             </CardTitle>
-            <div className="pt-1">
-              <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
+            <p className="text-xs text-muted-foreground">
+              {format(new Date(), 'EEEE, MMM d, yyyy')}
+            </p>
                 <SelectTrigger className="h-8 text-xs w-full">
                   <Filter className="w-3 h-3 mr-1.5 text-muted-foreground" />
                   <SelectValue />
