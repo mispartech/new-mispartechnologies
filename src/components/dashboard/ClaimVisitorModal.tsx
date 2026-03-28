@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, UserPlus, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface TempMember { id: string; temp_face_id: string; face_roi_url: string | null; date: string; time: string; face_detections: number; }
+interface TempMember { id: string; temp_face_id?: string; temp_user_id?: string; face_roi_url?: string | null; face_roi?: string | null; date?: string; time?: string; created_at?: string; face_detections?: number; detection_count?: number; status?: string; }
 interface ClaimVisitorModalProps { isOpen: boolean; onClose: () => void; visitor: TempMember | null; onSuccess: () => void; }
 interface Department { id: string; name: string; }
 
@@ -44,7 +44,7 @@ const ClaimVisitorModal = ({ isOpen, onClose, visitor, onSuccess }: ClaimVisitor
     try {
       const result = await djangoApi.claimVisitor({
         temp_attendance_id: visitor.id,
-        temp_face_id: visitor.temp_face_id,
+        temp_face_id: visitor.temp_face_id || visitor.temp_user_id,
         email: formData.email,
         password: formData.password,
         first_name: formData.firstName,
@@ -77,11 +77,11 @@ const ClaimVisitorModal = ({ isOpen, onClose, visitor, onSuccess }: ClaimVisitor
         </DialogHeader>
 
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-          <Avatar className="h-16 w-16"><AvatarImage src={visitor.face_roi_url || ''} alt="Visitor" /><AvatarFallback>V</AvatarFallback></Avatar>
+          <Avatar className="h-16 w-16"><AvatarImage src={visitor.face_roi_url || visitor.face_roi || ''} alt="Visitor" /><AvatarFallback>V</AvatarFallback></Avatar>
           <div>
-            <p className="font-medium">Temp ID: {visitor.temp_face_id.slice(0, 12)}...</p>
-            <p className="text-sm text-muted-foreground">First seen: {visitor.date} at {visitor.time}</p>
-            <p className="text-sm text-muted-foreground">Appearances: {visitor.face_detections}</p>
+            <p className="font-medium">Temp ID: {(visitor.temp_face_id || visitor.temp_user_id || visitor.id || '').slice(0, 12)}...</p>
+            <p className="text-sm text-muted-foreground">First seen: {visitor.date || (visitor.created_at ? new Date(visitor.created_at).toLocaleDateString() : '—')} at {visitor.time || (visitor.created_at ? new Date(visitor.created_at).toLocaleTimeString() : '—')}</p>
+            <p className="text-sm text-muted-foreground">Appearances: {visitor.face_detections ?? visitor.detection_count ?? 0}</p>
           </div>
         </div>
 
