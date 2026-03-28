@@ -31,6 +31,7 @@ interface RecognizedPerson {
   confidence?: number | null;
   timestamp: Date;
   attendanceStatus?: string;
+  faceImageUrl?: string;
 }
 
 // ── Throttle / timing config ──
