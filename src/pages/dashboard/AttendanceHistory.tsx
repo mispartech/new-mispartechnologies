@@ -238,6 +238,20 @@ const AttendanceHistory = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Face ROI Lightbox */}
+      <Dialog open={!!faceRoiPreview} onOpenChange={() => setFaceRoiPreview(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Face Snapshot</DialogTitle>
+          </DialogHeader>
+          {faceRoiPreview && (
+            <div className="flex justify-center">
+              <img src={faceRoiPreview} alt="Face snapshot" className="max-w-full max-h-[400px] rounded-lg object-contain" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
