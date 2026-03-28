@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
 import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay';
 import { djangoApi } from '@/lib/api/client';
+import { format } from 'date-fns';
 
 interface RecognizedPerson {
   id: string;
@@ -259,6 +260,49 @@ const AttendanceCapture = () => {
     ageRange: face.ageRange,
   }));
 
+  // ── Fetch today's attendance on mount ──
+  const fetchTodayAttendance = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const result = await djangoApi.getAttendance({ start_date: today, end_date: today });
+      if (!result.error && Array.isArray(result.data)) {
+        const records = result.data;
+        let members = 0;
+        let visitors = 0;
+        const persons: RecognizedPerson[] = records.map((r: any) => {
+          const isMember = !r.is_temp && !r.is_visitor;
+          if (isMember) members++; else visitors++;
+          return {
+            id: r.user_id || r.id,
+            type: isMember ? 'member' : 'visitor',
+            name: r.member_name || r.name || 'Unknown',
+            confidence: r.confidence_score ?? r.confidence ?? null,
+            timestamp: new Date(r.timestamp || `${r.date}T${r.time || '00:00:00'}`),
+            attendanceStatus: r.attendance_status || 'marked',
+            gender: r.gender,
+            ageRange: r.age_range,
+            faceRoiUrl: r.face_roi || null,
+          } as RecognizedPerson;
+        });
+        // Sort newest first
+        persons.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setRecognizedPersons(prev => {
+          // Merge: keep live session entries, add API entries that aren't duplicates
+          const existingIds = new Set(prev.map(p => p.id));
+          const newFromApi = persons.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newFromApi].slice(0, 100);
+        });
+        setStats(prev => ({
+          total: Math.max(prev.total, records.length),
+          members: Math.max(prev.members, members),
+          visitors: Math.max(prev.visitors, visitors),
+        }));
+      }
+    } catch {
+      // Non-critical — stats will still work from live session
+    }
+  }, []);
+
   // ── Health check on mount ──
   useEffect(() => {
     const checkApiHealth = async () => {
@@ -276,7 +320,8 @@ const AttendanceCapture = () => {
       }
     };
     checkApiHealth();
-  }, [checkHealth, toast]);
+    fetchTodayAttendance();
+  }, [checkHealth, toast, fetchTodayAttendance]);
 
   // ── Container resize tracking ──
   useEffect(() => {
@@ -779,6 +824,9 @@ const AttendanceCapture = () => {
                 </Button>
               </div>
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {format(new Date(), 'EEEE, MMM d, yyyy')}
+            </p>
             <div className="pt-1">
               <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
                 <SelectTrigger className="h-8 text-xs w-full">
