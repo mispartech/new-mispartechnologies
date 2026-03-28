@@ -9,12 +9,14 @@ interface BoundingBox {
 }
 
 export interface FaceOverlayData {
-  bbox: number[]; // [x1, y1, x2, y2] from cvzone.cornerRect
+  bbox: number[];
   name?: string;
   type?: 'member' | 'visitor' | 'unstable';
   attendanceStatus: AttendanceStatus;
   confidence?: number | null;
   requiresClaim?: boolean;
+  gender?: string;
+  ageRange?: string;
 }
 
 interface FaceOverlayProps {
@@ -169,6 +171,11 @@ const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, container
                   {labelText}
                   {face.confidence != null && ` · ${Math.round(face.confidence * 100)}%`}
                 </span>
+                {face.gender && face.gender !== 'unknown' && (
+                  <span className="text-white/80 text-[10px]">
+                    {face.gender}{face.ageRange ? ` · ${face.ageRange}` : ''}
+                  </span>
+                )}
                 {status === 'already_marked' && (
                   <span className="text-white/70 text-[10px]">Already recorded</span>
                 )}

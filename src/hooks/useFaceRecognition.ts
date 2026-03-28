@@ -30,11 +30,14 @@ export interface TrackedFace {
   attendanceStatus: AttendanceStatus;
   attendanceMarked: boolean;
   requiresClaim: boolean;
+  gender?: string;
+  ageRange?: string;
   attendanceRecord?: {
     id: string;
     date: string;
     time: string;
     face_detections: number;
+    face_roi_url?: string | null;
   };
   lastSeen: number;
 }
@@ -48,11 +51,14 @@ interface ApiFace {
   name?: string;
   confidence?: number;
   attendance_status?: string;
+  gender?: 'Male' | 'Female' | 'unknown';
+  age_range?: string;
   attendance_record?: {
     id: string;
     date: string;
     time: string;
     face_detections: number;
+    face_roi_url?: string | null;
   };
   requires_claim?: boolean;
 }
@@ -107,6 +113,8 @@ const parseDjangoResponse = (response: DjangoResponse): TrackedFace[] => {
         attendanceStatus: (apiFace.attendance_status as AttendanceStatus) || 'marked',
         attendanceMarked: apiFace.attendance_status === 'marked' || apiFace.attendance_status === 'already_marked',
         requiresClaim: false,
+        gender: apiFace.gender,
+        ageRange: apiFace.age_range,
         attendanceRecord: apiFace.attendance_record,
         lastSeen: now,
       });
@@ -120,6 +128,8 @@ const parseDjangoResponse = (response: DjangoResponse): TrackedFace[] => {
         attendanceStatus: (apiFace.attendance_status as AttendanceStatus) || 'new_visitor',
         attendanceMarked: apiFace.attendance_status === 'new_visitor' || apiFace.attendance_status === 'returning_visitor',
         requiresClaim: apiFace.requires_claim ?? true,
+        gender: apiFace.gender,
+        ageRange: apiFace.age_range,
         attendanceRecord: apiFace.attendance_record,
         lastSeen: now,
       });

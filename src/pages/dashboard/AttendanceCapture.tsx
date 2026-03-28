@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
 import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay';
+import { djangoApi } from '@/lib/api/client';
 
 interface RecognizedPerson {
   id: string;
@@ -36,6 +37,9 @@ interface RecognizedPerson {
   timestamp: Date;
   attendanceStatus?: string;
   faceImageUrl?: string;
+  gender?: string;
+  ageRange?: string;
+  faceRoiUrl?: string | null;
 }
 
 // ── Throttle / timing config ──
@@ -45,8 +49,10 @@ const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) 
 
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
-/** Filtered recent recognitions list */
+/** Filtered recent recognitions list with View mode */
 const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
+  const [selectedPerson, setSelectedPerson] = useState<RecognizedPerson | null>(null);
+
   const filtered = useMemo(() => {
     const now = Date.now();
     const cutoffs = { '1min': 60_000, '1hour': 3_600_000, '24hours': 86_400_000 };
@@ -63,34 +69,141 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
   }
 
   return (
-    <div className="space-y-2 max-h-[400px] overflow-y-auto">
-      {filtered.map((person, index) => (
-        <div
-          key={`${person.id}-${index}`}
-          className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 transition-colors hover:bg-muted/80"
-        >
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
-          }`} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {person.name || 'Unknown'}
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground font-mono">
-                {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    <>
+      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        {filtered.map((person, index) => (
+          <div
+            key={`${person.id}-${index}`}
+            className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 transition-colors hover:bg-muted/80"
+          >
+            {/* Face thumbnail or colored dot */}
+            {person.faceRoiUrl ? (
+              <img
+                src={person.faceRoiUrl}
+                alt=""
+                className={`w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ${
+                  person.type === 'member' ? 'ring-primary' : 'ring-amber-500'
+                }`}
+              />
+            ) : (
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                person.type === 'member' ? 'bg-primary' : 'bg-amber-500'
+              }`} />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {person.name || 'Unknown'}
               </p>
-              {person.attendanceStatus === 'already_marked' && (
-                <Badge variant="outline" className="text-[10px] h-4 px-1">Seen again</Badge>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-muted-foreground font-mono">
+                  {person.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </p>
+                {person.gender && person.gender !== 'unknown' && (
+                  <span className="text-[10px] text-muted-foreground">{person.gender}{person.ageRange ? ` · ${person.ageRange}` : ''}</span>
+                )}
+                {person.attendanceStatus === 'already_marked' && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1">Seen again</Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setSelectedPerson(person)}
+              >
+                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+              </Button>
+              <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs">
+                {person.type === 'member' ? 'Member' : 'Visitor'}
+              </Badge>
             </div>
           </div>
-          <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
-            {person.type === 'member' ? 'Member' : 'Visitor'}
-          </Badge>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* View detail modal */}
+      <Dialog open={!!selectedPerson} onOpenChange={() => setSelectedPerson(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScanFace className="w-5 h-5 text-primary" />
+              Recognition Detail
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPerson && (
+            <div className="space-y-4">
+              {/* Face snapshot */}
+              {selectedPerson.faceRoiUrl ? (
+                <div className="flex justify-center">
+                  <img
+                    src={selectedPerson.faceRoiUrl}
+                    alt="Captured face"
+                    className="max-w-full max-h-[240px] rounded-lg object-contain border border-border shadow-sm"
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+                    <ScanFace className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                </div>
+              )}
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Name</p>
+                  <p className="font-medium">{selectedPerson.name || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Type</p>
+                  <Badge variant={selectedPerson.type === 'member' ? 'default' : 'secondary'}>
+                    {selectedPerson.type === 'member' ? 'Member' : 'Visitor'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Timestamp</p>
+                  <p className="font-mono text-xs">
+                    {selectedPerson.timestamp.toLocaleString('en-GB', {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Confidence</p>
+                  <p className="font-medium">
+                    {selectedPerson.confidence != null
+                      ? `${Math.round(selectedPerson.confidence * 100)}%`
+                      : 'N/A'}
+                  </p>
+                </div>
+                {selectedPerson.gender && selectedPerson.gender !== 'unknown' && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Gender</p>
+                    <p className="font-medium capitalize">{selectedPerson.gender}</p>
+                  </div>
+                )}
+                {selectedPerson.ageRange && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Age Range</p>
+                    <p className="font-medium">{selectedPerson.ageRange}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-muted-foreground text-xs">Status</p>
+                  <Badge variant="outline" className="capitalize mt-0.5">
+                    {selectedPerson.attendanceStatus?.replace('_', ' ') || 'Recorded'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
@@ -142,6 +255,8 @@ const AttendanceCapture = () => {
     attendanceStatus: face.attendanceStatus,
     confidence: face.confidence,
     requiresClaim: face.requiresClaim,
+    gender: face.gender,
+    ageRange: face.ageRange,
   }));
 
   // ── Health check on mount ──
@@ -257,7 +372,28 @@ const AttendanceCapture = () => {
             confidence: face.confidence,
             timestamp: new Date(),
             attendanceStatus: face.attendanceStatus,
+            gender: face.gender,
+            ageRange: face.ageRange,
+            faceRoiUrl: face.attendanceRecord?.face_roi_url || null,
           };
+
+          // Poll for face_roi after 3s if just marked and no face_roi yet
+          if ((face.attendanceStatus === 'marked' || face.attendanceStatus === 'new_visitor') && !face.attendanceRecord?.face_roi_url) {
+            setTimeout(async () => {
+              try {
+                const today = new Date().toISOString().split('T')[0];
+                const result = await djangoApi.getAttendance({ start_date: today, end_date: today });
+                if (!result.error && result.data) {
+                  const match = result.data.find((r: any) => r.user_id === face.id || r.id === face.attendanceRecord?.id);
+                  if (match?.face_roi) {
+                    setRecognizedPersons(prev => prev.map(p =>
+                      p.id === face.id ? { ...p, faceRoiUrl: match.face_roi } : p
+                    ));
+                  }
+                }
+              } catch { /* polling is best-effort */ }
+            }, 3000);
+          }
 
           // Deduplicate within 30s window
           const exists = recognizedPersons.find(
@@ -542,10 +678,10 @@ const AttendanceCapture = () => {
             <p className="text-xs text-muted-foreground">Members</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
           <CardContent className="p-3 sm:pt-4">
-            <div className="text-xl sm:text-2xl font-bold text-accent-foreground">{stats.visitors}</div>
-            <p className="text-xs text-muted-foreground">Visitors</p>
+            <div className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.visitors}</div>
+            <p className="text-xs text-amber-600/80 dark:text-amber-500/80">Visitors</p>
           </CardContent>
         </Card>
       </div>
