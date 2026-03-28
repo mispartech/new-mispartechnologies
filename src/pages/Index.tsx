@@ -8,6 +8,7 @@ import RoadmapSection from '@/components/RoadmapSection';
 import DemoSection from '@/components/DemoSection';
 import TestimonialSection from '@/components/TestimonialSection';
 import PrivacyTrustSection from '@/components/PrivacyTrustSection';
+import PricingSection from '@/components/PricingSection';
 import CTASection from '@/components/CTASection';
 import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
@@ -62,6 +63,7 @@ const Index = () => {
         <SolutionsSection />
         <TestimonialSection />
         <PrivacyTrustSection />
+        <PricingSection />
         <RoadmapSection />
         <DemoSection />
         <CTASection onRequestDemo={openDemoModal} />
