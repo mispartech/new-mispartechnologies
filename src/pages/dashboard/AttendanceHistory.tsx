@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, Download, RefreshCw, Search, Users, UserCheck, Clock, Filter, Building2 } from 'lucide-react';
+import { CalendarIcon, Download, RefreshCw, Search, Users, UserCheck, Clock, Filter, Building2, Eye, X } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { djangoApi } from '@/lib/api/client';
@@ -30,6 +30,9 @@ interface AttendanceRecord {
   department_id?: string;
   department_name?: string;
   face_image_url?: string;
+  gender?: string | null;
+  age_range?: string | null;
+  face_roi?: string | null;
 }
 
 interface TempAttendanceRecord {

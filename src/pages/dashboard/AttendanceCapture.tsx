@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
 import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay';
+import { djangoApi } from '@/lib/api/client';
 
 interface RecognizedPerson {
   id: string;
