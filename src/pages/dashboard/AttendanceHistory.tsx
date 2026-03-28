@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ const AttendanceHistory = () => {
   const [stats, setStats] = useState({ total: 0, members: 0, visitors: 0, avgConfidence: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [faceRoiPreview, setFaceRoiPreview] = useState<string | null>(null);
   const { toast } = useToast();
   const { getTerm, personPlural } = useTerminology();
 
@@ -202,20 +204,29 @@ const AttendanceHistory = () => {
             <>
               <div className="rounded-md border overflow-x-auto">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Time</TableHead><TableHead>Type</TableHead><TableHead>Name / ID</TableHead><TableHead>Confidence</TableHead><TableHead>Detections</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Time</TableHead><TableHead>Type</TableHead><TableHead>Name / ID</TableHead><TableHead>Gender</TableHead><TableHead>Age Range</TableHead><TableHead>Confidence</TableHead><TableHead>Detections</TableHead><TableHead>Face</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {paginatedData.map(({ type, record }) => (
                       <TableRow key={record.id}>
                         <TableCell>{record.date ? (() => { try { const d = new Date(record.date); return isNaN(d.getTime()) ? record.date : format(d, 'MMM d, yyyy'); } catch { return record.date || '—'; } })() : '—'}</TableCell>
-                        <TableCell>{record.time ? String(record.time).slice(0, 5) : '—'}</TableCell>
+                        <TableCell>{record.time ? String(record.time).slice(0, 8) : '—'}</TableCell>
                         <TableCell><Badge variant={type === 'member' ? 'default' : 'secondary'}>{type === 'member' ? getTerm('title', true) : 'Visitor'}</Badge></TableCell>
                         <TableCell className="font-medium">{type === 'member' ? getMemberName(record as AttendanceRecord) : (record as TempAttendanceRecord).temp_face_id}</TableCell>
+                        <TableCell className="capitalize">{type === 'member' ? ((record as AttendanceRecord).gender || '—') : '—'}</TableCell>
+                        <TableCell>{type === 'member' ? ((record as AttendanceRecord).age_range || '—') : '—'}</TableCell>
                         <TableCell>
                           {type === 'member' && (record as AttendanceRecord).confidence_score ? (
                             <Badge variant={(record as AttendanceRecord).confidence_score! > 0.8 ? 'default' : 'secondary'}>{Math.round((record as AttendanceRecord).confidence_score! * 100)}%</Badge>
                           ) : <span className="text-muted-foreground">N/A</span>}
                         </TableCell>
                         <TableCell>{record.face_detections || 1}</TableCell>
+                        <TableCell>
+                          {type === 'member' && (record as AttendanceRecord).face_roi ? (
+                            <button onClick={() => setFaceRoiPreview((record as AttendanceRecord).face_roi!)} className="focus:outline-none">
+                              <img src={(record as AttendanceRecord).face_roi!} alt="Face" className="w-12 h-12 rounded object-cover border border-border hover:ring-2 hover:ring-primary transition-all cursor-pointer" />
+                            </button>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="text-green-600">Recorded</Badge></TableCell>
                       </TableRow>
                     ))}
