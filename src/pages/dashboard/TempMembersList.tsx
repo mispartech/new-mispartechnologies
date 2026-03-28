@@ -13,13 +13,38 @@ import { format } from 'date-fns';
 
 interface TempMember {
   id: string;
-  temp_face_id: string;
-  face_roi_url: string | null;
-  date: string;
-  time: string;
-  face_detections: number;
+  temp_face_id?: string;
+  temp_user_id?: string;
+  face_roi_url?: string | null;
+  face_roi?: string | null;
+  date?: string;
+  time?: string;
+  created_at?: string;
+  face_detections?: number;
+  detection_count?: number;
   status?: string;
+  gender?: string;
+  age_range?: string;
 }
+
+/** Safely extract display fields from varying backend shapes */
+const getTempId = (m: TempMember) => m.temp_face_id || m.temp_user_id || m.id || 'unknown';
+const getTempDate = (m: TempMember) => {
+  if (m.date) return m.date;
+  if (m.created_at) {
+    try { return new Date(m.created_at).toLocaleDateString(); } catch { return '—'; }
+  }
+  return '—';
+};
+const getTempTime = (m: TempMember) => {
+  if (m.time) return m.time;
+  if (m.created_at) {
+    try { return new Date(m.created_at).toLocaleTimeString(); } catch { return '—'; }
+  }
+  return '—';
+};
+const getTempAppearances = (m: TempMember) => m.face_detections ?? m.detection_count ?? 0;
+const getTempImage = (m: TempMember) => m.face_roi_url || m.face_roi || '';
 
 const TempMembersList = () => {
   const { getTerm } = useTerminology();
@@ -62,7 +87,7 @@ const TempMembersList = () => {
     setIsClaimOpen(false);
     setSelectedVisitor(null);
     fetchTempMembers();
-    toast({ title: 'Success', description: 'Visitor has been registered as a member.' });
+    toast({ title: 'Success', description: `Visitor has been registered as a ${getTerm('singular')}.` });
   };
 
   if (loading) {
@@ -117,15 +142,15 @@ const TempMembersList = () => {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={member.face_roi_url || ''} />
+                              <AvatarImage src={getTempImage(member)} />
                               <AvatarFallback className="bg-muted">V</AvatarFallback>
                             </Avatar>
-                            <span className="font-mono text-xs">{(member.temp_face_id || member.id || 'unknown').slice(0, 12)}...</span>
+                            <span className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</span>
                           </div>
                         </TableCell>
-                        <TableCell>{member.date}</TableCell>
-                        <TableCell>{member.time}</TableCell>
-                        <TableCell>{member.face_detections}</TableCell>
+                        <TableCell>{getTempDate(member)}</TableCell>
+                        <TableCell>{getTempTime(member)}</TableCell>
+                        <TableCell>{getTempAppearances(member)}</TableCell>
                         <TableCell>
                           <Badge variant={member.status === 'claimed' ? 'default' : 'secondary'}>
                             {member.status || 'unclaimed'}
@@ -151,12 +176,12 @@ const TempMembersList = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={member.face_roi_url || ''} />
+                          <AvatarImage src={getTempImage(member)} />
                           <AvatarFallback className="bg-muted">V</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-mono text-xs">{(member.temp_face_id || member.id || 'unknown').slice(0, 12)}...</p>
-                          <p className="text-sm text-muted-foreground">{member.date} at {member.time}</p>
+                          <p className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</p>
+                          <p className="text-sm text-muted-foreground">{getTempDate(member)} at {getTempTime(member)}</p>
                         </div>
                       </div>
                       <Badge variant={member.status === 'claimed' ? 'default' : 'secondary'}>
@@ -164,7 +189,7 @@ const TempMembersList = () => {
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Appearances: {member.face_detections}</span>
+                      <span className="text-xs text-muted-foreground">Appearances: {getTempAppearances(member)}</span>
                       {member.status !== 'claimed' && (
                         <Button size="sm" variant="outline" onClick={() => handleClaim(member)}>
                           Claim
