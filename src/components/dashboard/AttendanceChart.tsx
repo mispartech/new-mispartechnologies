@@ -11,7 +11,7 @@ import { useTerminology } from '@/contexts/TerminologyContext';
 interface AttendanceChartProps { organizationId?: string; userId?: string; showVisitors?: boolean; }
 interface DailyData { date: string; displayDate: string; members: number; visitors: number; total: number; }
 
-const CHART_COLORS = { members: 'hsl(var(--primary))', visitors: 'hsl(var(--secondary))', total: 'hsl(var(--accent))' };
+const CHART_COLORS = { members: 'hsl(var(--primary))', visitors: 'hsl(30, 90%, 50%)', total: 'hsl(var(--accent))' };
 const PIE_COLORS = ['hsl(270, 60%, 50%)', 'hsl(300, 40%, 50%)', 'hsl(220, 60%, 50%)', 'hsl(160, 60%, 50%)', 'hsl(30, 60%, 50%)', 'hsl(0, 60%, 50%)', 'hsl(90, 60%, 50%)'];
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -43,8 +43,22 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
         };
         if (userId) params.user_id = userId;
 
-        const res = await djangoApi.getAttendance(params, { silent: true });
-        setRawRecords(Array.isArray(res.data) ? res.data : []);
+        const [memberRes, tempRes] = await Promise.all([
+          djangoApi.getAttendance(params, { silent: true }),
+          !userId && showVisitors
+            ? djangoApi.getTempAttendance({ start_date: params.start_date, end_date: params.end_date })
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        const memberData = Array.isArray(memberRes.data) ? memberRes.data : [];
+        const tempData = Array.isArray(tempRes.data) ? tempRes.data : [];
+
+        // Tag records so chart data can distinguish them
+        const tagged = [
+          ...memberData.map((r: any) => ({ ...r, _type: 'member' })),
+          ...tempData.map((r: any) => ({ ...r, _type: 'visitor' })),
+        ];
+        setRawRecords(tagged);
       } catch {
         setRawRecords([]);
       } finally {
@@ -67,8 +81,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
       if (!dateStr) return;
       const entry = dateMap.get(dateStr);
       if (!entry) return;
-      const isVisitor = record.is_visitor || record.record_type === 'visitor';
-      if (isVisitor) {
+      if (record._type === 'visitor') {
         entry.visitors++;
       } else {
         entry.members++;
@@ -168,7 +181,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="members" name={getTerm('title', true) + 's'} fill={CHART_COLORS.members} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="members" name={getTerm('plural', true)} fill={CHART_COLORS.members} radius={[4, 4, 0, 0]} />
                 {showVisitors && !userId && <Bar dataKey="visitors" name="Visitors" fill={CHART_COLORS.visitors} radius={[4, 4, 0, 0]} />}
               </BarChart>
             </ResponsiveContainer>
@@ -182,7 +195,8 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Line type="monotone" dataKey="total" name="Total" stroke={CHART_COLORS.total} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="members" name={getTerm('title', true) + 's'} stroke={CHART_COLORS.members} strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="members" name={getTerm('plural', true)} stroke={CHART_COLORS.members} strokeWidth={2} dot={{ r: 3 }} />
+                {showVisitors && !userId && <Line type="monotone" dataKey="visitors" name="Visitors" stroke={CHART_COLORS.visitors} strokeWidth={2} dot={{ r: 3 }} />}
               </LineChart>
             </ResponsiveContainer>
           </TabsContent>
