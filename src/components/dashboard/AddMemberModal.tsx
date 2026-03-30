@@ -49,8 +49,8 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
       if (inviteError) throw new Error(inviteError);
 
       toast({ 
-        title: 'Member Invited', 
-        description: 'An email has been sent to the member to set up their account.' 
+        title: `${getTerm('title')} Invited`, 
+        description: `An email has been sent to the ${getTerm('singular')} to set up their account.` 
       });
 
       onSuccess();
