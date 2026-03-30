@@ -59,7 +59,7 @@ const MembersList = () => {
       setMembers(result.data || []);
     } catch (error) {
       console.error('Error fetching members:', error);
-      toast({ title: 'Error', description: 'Failed to fetch members', variant: 'destructive' });
+      toast({ title: 'Error', description: `Failed to fetch ${personPlural}`, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
