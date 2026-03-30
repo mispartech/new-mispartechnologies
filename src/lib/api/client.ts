@@ -407,6 +407,22 @@ class DjangoApiClient {
     });
   }
 
+  // ═══════════════════════════ TEMP ATTENDANCE CLUSTERS ═══════════════════════════
+
+  async getTempAttendanceClusters(): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.TEMP_ATTENDANCE_CLUSTERS);
+  }
+
+  async mergeTempAttendanceClusters(data: {
+    primary_id: string;
+    merge_ids: string[];
+  }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.TEMP_ATTENDANCE_CLUSTERS_MERGE, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // ═══════════════════════════ ORGANIZATION SETTINGS ═══════════════════════════
 
   async getOrgSettings(options?: { silent?: boolean }): Promise<ApiResponse<any>> {

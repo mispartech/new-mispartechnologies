@@ -28,6 +28,8 @@ export const API_ROUTES = {
   // ── Temp Attendance ──
   TEMP_ATTENDANCE: '/api/temp-attendance/',
   TEMP_ATTENDANCE_CLAIM: '/api/temp-attendance/claim/',
+  TEMP_ATTENDANCE_CLUSTERS: '/api/temp-attendance/clusters/',
+  TEMP_ATTENDANCE_CLUSTERS_MERGE: '/api/temp-attendance/clusters/merge/',
 
   // ── Face Recognition ──
   FACE_ENROLL: '/api/face/enroll/',

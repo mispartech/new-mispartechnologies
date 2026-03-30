@@ -189,7 +189,7 @@ const TempMembersList = () => {
                           <AvatarFallback className="bg-muted">V</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</p>
+                          <p className="font-mono text-xs">{getTempId(member)}</p>
                           <p className="text-sm text-muted-foreground">{getTempDate(member)} at {getTempTime(member)}</p>
                         </div>
                       </div>
