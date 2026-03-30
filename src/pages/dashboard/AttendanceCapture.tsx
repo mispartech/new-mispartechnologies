@@ -117,7 +117,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
                 <Eye className="w-3.5 h-3.5 text-muted-foreground" />
               </Button>
               <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs">
-                {person.type === 'member' ? 'Member' : 'Visitor'}
+                {person.type === 'member' ? getTerm('title') : 'Visitor'}
               </Badge>
             </div>
           </div>
