@@ -199,15 +199,7 @@ const featuresByType: Record<OrganizationType, { id: string; label: string; desc
   ],
 };
 
-const rolesByType: Record<OrganizationType, string[]> = {
-  church: ['Parish Pastor', 'Associate Pastor', 'Church Admin', 'Secretary', 'Head Usher'],
-  corporate: ['CEO', 'HR Manager', 'Department Head', 'Office Manager', 'Admin'],
-  school: ['Principal', 'Vice Principal', 'Admin Officer', 'Head Teacher', 'Registrar'],
-  hospital: ['Medical Director', 'HR Manager', 'Department Head', 'Admin Officer', 'Shift Supervisor'],
-  government: ['Department Head', 'HR Director', 'Admin Officer', 'Unit Supervisor', 'Records Officer'],
-  nonprofit: ['Executive Director', 'Program Manager', 'Volunteer Coordinator', 'Admin', 'Office Manager'],
-  other: ['Administrator', 'Manager', 'Supervisor', 'Coordinator', 'Other'],
-};
+// rolesByType is now imported from '@/lib/roleConfig'
 
 // Dynamic labels based on organization type
 const getScheduleLabel = (type: OrganizationType | null) => {
