@@ -176,7 +176,7 @@ const AttendanceHistory = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><Users className="w-5 h-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Total Records</span></div><p className="text-2xl font-bold mt-1">{stats.total}</p></CardContent></Card>
         <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><UserCheck className="w-5 h-5 text-primary" /><span className="text-sm text-muted-foreground capitalize">{personPlural}</span></div><p className="text-2xl font-bold mt-1 text-primary">{stats.members}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><Users className="w-5 h-5 text-accent-foreground" /><span className="text-sm text-muted-foreground">Visitors</span></div><p className="text-2xl font-bold mt-1 text-accent-foreground">{stats.visitors}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><Users className="w-5 h-5 text-orange-500" /><span className="text-sm text-muted-foreground">Visitors</span></div><p className="text-2xl font-bold mt-1 text-orange-600">{stats.visitors}</p></CardContent></Card>
         <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><Clock className="w-5 h-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Avg Confidence</span></div><p className="text-2xl font-bold mt-1">{stats.avgConfidence}%</p></CardContent></Card>
       </div>
 

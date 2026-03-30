@@ -195,7 +195,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Line type="monotone" dataKey="total" name="Total" stroke={CHART_COLORS.total} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="members" name={getTerm('title', true) + 's'} stroke={CHART_COLORS.members} strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="members" name={getTerm('plural', true)} stroke={CHART_COLORS.members} strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </TabsContent>
