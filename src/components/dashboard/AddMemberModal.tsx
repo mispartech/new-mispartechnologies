@@ -24,6 +24,7 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
     phone_number: '', gender: '', department_id: ''
   });
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   useEffect(() => {
     if (isOpen) {
