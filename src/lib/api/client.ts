@@ -275,15 +275,20 @@ class DjangoApiClient {
   }
 
   async getMember(id: string): Promise<ApiResponse<any>> {
-    return notImplemented(`/api/members/${id}/`);
+    return this.request(API_ROUTES.MEMBER(id));
   }
 
   async updateMember(id: string, data: Partial<any>): Promise<ApiResponse<any>> {
-    return notImplemented(`/api/members/${id}/ PATCH`);
+    return this.request(API_ROUTES.MEMBER(id), {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 
   async deleteMember(id: string): Promise<ApiResponse<void>> {
-    return notImplemented(`/api/members/${id}/ DELETE`);
+    return this.request(API_ROUTES.MEMBER(id), {
+      method: 'DELETE',
+    });
   }
 
   /**
