@@ -59,19 +59,19 @@ const MembersList = () => {
       setMembers(result.data || []);
     } catch (error) {
       console.error('Error fetching members:', error);
-      toast({ title: 'Error', description: 'Failed to fetch members', variant: 'destructive' });
+      toast({ title: 'Error', description: `Failed to fetch ${personPlural}`, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (memberId: string) => {
-    if (!confirm('Are you sure you want to delete this member?')) return;
+    if (!confirm(`Are you sure you want to delete this ${personSingular}?`)) return;
     try {
       const result = await djangoApi.deleteMember(memberId);
       if (result.error) throw new Error(result.error);
       setMembers(members.filter(m => m.id !== memberId));
-      toast({ title: 'Success', description: 'Member deleted successfully' });
+      toast({ title: 'Success', description: `${getTerm('title')} deleted successfully` });
     } catch (error) {
       console.error('Error deleting member:', error);
       toast({ title: 'Error', description: 'Failed to delete member', variant: 'destructive' });

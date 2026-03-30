@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface EditMemberModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
     first_name: '', last_name: '', phone_number: '', gender: '', department_id: ''
   });
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   useEffect(() => {
     if (isOpen && member) {
@@ -48,7 +50,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
       });
       
       if (error) throw new Error(error);
-      toast({ title: 'Success', description: 'Member updated successfully' });
+      toast({ title: 'Success', description: `${getTerm('title')} updated successfully` });
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -61,7 +63,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Edit Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Edit {getTerm('title')}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

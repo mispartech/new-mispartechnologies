@@ -29,6 +29,7 @@ import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
 import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay';
 import { djangoApi } from '@/lib/api/client';
 import { format } from 'date-fns';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface RecognizedPerson {
   id: string;
@@ -53,6 +54,7 @@ type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 /** Filtered recent recognitions list with View mode */
 const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
   const [selectedPerson, setSelectedPerson] = useState<RecognizedPerson | null>(null);
+  const { getTerm } = useTerminology();
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -117,7 +119,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
                 <Eye className="w-3.5 h-3.5 text-muted-foreground" />
               </Button>
               <Badge variant={person.type === 'member' ? 'default' : 'secondary'} className="text-xs">
-                {person.type === 'member' ? 'Member' : 'Visitor'}
+                {person.type === 'member' ? getTerm('title') : 'Visitor'}
               </Badge>
             </div>
           </div>
@@ -161,7 +163,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
                 <div>
                   <p className="text-muted-foreground text-xs">Type</p>
                   <Badge variant={selectedPerson.type === 'member' ? 'default' : 'secondary'}>
-                    {selectedPerson.type === 'member' ? 'Member' : 'Visitor'}
+                    {selectedPerson.type === 'member' ? getTerm('title') : 'Visitor'}
                   </Badge>
                 </div>
                 <div>
@@ -210,6 +212,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
 
 const AttendanceCapture = () => {
   const { profile } = useOutletContext<{ profile: any }>();
+  const { getTerm } = useTerminology();
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
   const [recognizedPersons, setRecognizedPersons] = useState<RecognizedPerson[]>([]);
@@ -778,6 +781,7 @@ const AttendanceCapture = () => {
                   videoHeight={videoDimensions.height}
                   containerWidth={containerDimensions.width}
                   containerHeight={containerDimensions.height}
+                  personLabel={getTerm('title')}
                 />
               )}
 

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { djangoApi } from "@/lib/api/client";
 import { Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface ImportMembersModalProps { isOpen: boolean; onClose: () => void; onSuccess: () => void; }
 interface ParsedMember { email: string; firstName: string; lastName: string; phoneNumber: string; gender: string; department: string; isValid: boolean; error?: string; }
@@ -23,6 +24,7 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   const fetchDepartments = async () => {
     const result = await djangoApi.getDepartments();
@@ -137,7 +139,7 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Import Members from CSV/Excel</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Import {getTerm('plural', true)} from CSV/Excel</DialogTitle></DialogHeader>
         <div className="space-y-6">
           {!file ? (
             <div className="space-y-4">

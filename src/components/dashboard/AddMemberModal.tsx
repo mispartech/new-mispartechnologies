@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail } from 'lucide-react';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
     phone_number: '', gender: '', department_id: ''
   });
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   useEffect(() => {
     if (isOpen) {
@@ -47,8 +49,8 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
       if (inviteError) throw new Error(inviteError);
 
       toast({ 
-        title: 'Member Invited', 
-        description: 'An email has been sent to the member to set up their account.' 
+        title: `${getTerm('title')} Invited`, 
+        description: `An email has been sent to the ${getTerm('singular')} to set up their account.` 
       });
 
       onSuccess();
@@ -64,12 +66,12 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Add New Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Add New {getTerm('title')}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Alert className="bg-primary/5 border-primary/20">
             <Mail className="h-4 w-4" />
             <AlertDescription>
-              The member will receive an email invitation to set their password and complete face enrollment.
+              The {getTerm('singular')} will receive an email invitation to set their password and complete face enrollment.
             </AlertDescription>
           </Alert>
 

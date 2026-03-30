@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, startOfMonth, startOfWeek, isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardContext { user: any; profile: any; session: any; }
 
@@ -27,6 +28,7 @@ const getGreeting = () => {
 
 const MemberDashboard = () => {
   const { profile } = useOutletContext<DashboardContext>();
+  const { getTerm } = useTerminology();
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,7 +138,7 @@ const MemberDashboard = () => {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-muted-foreground">{getGreeting()},</p>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">
-              {profile?.first_name || 'Member'} {profile?.last_name || ''} 👋
+              {profile?.first_name || getTerm('title')} {profile?.last_name || ''} 👋
             </h1>
             <div className="flex flex-wrap gap-2 mt-2">
               {profile?.organization_name && (

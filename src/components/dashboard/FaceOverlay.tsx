@@ -26,6 +26,7 @@ interface FaceOverlayProps {
   containerWidth: number;
   containerHeight: number;
   onClaimVisitor?: (faceId: string) => void;
+  personLabel?: string;
 }
 
 // Color cycling for UNSTABLE/detecting
@@ -66,7 +67,7 @@ const generateFaceKey = (bbox: number[]): string => {
   return `face-${rx}-${ry}-${rw}-${rh}`;
 };
 
-const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, containerHeight }: FaceOverlayProps) => {
+const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, containerHeight, personLabel }: FaceOverlayProps) => {
   const [colorIndex, setColorIndex] = useState(0);
 
   // Animate color change for UNSTABLE/detecting faces
@@ -128,7 +129,7 @@ const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, container
         let labelText = '';
         let showLabel = false;
         if (status === 'marked' || status === 'already_marked') {
-          labelText = face.name || 'Member';
+          labelText = face.name || personLabel || 'Member';
           showLabel = true;
         } else if (status === 'new_visitor' || status === 'returning_visitor') {
           labelText = 'Visitor';

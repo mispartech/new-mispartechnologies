@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Camera, Upload, Search, CheckCircle2, XCircle, RefreshCw, User, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface Member { id: string; first_name: string; last_name: string; email: string; face_image_url: string | null; department?: string; }
 
@@ -23,6 +24,7 @@ const FaceGallery = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { personPlural } = useTerminology();
 
   useEffect(() => { fetchMembers(); }, []);
 
@@ -102,7 +104,7 @@ const FaceGallery = () => {
       <Card><CardContent className="pt-6"><div className="flex flex-col sm:flex-row gap-4"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" /></div><div className="flex gap-2"><Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>All</Button><Button variant={filter === 'registered' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('registered')}>Registered</Button><Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('pending')}>Pending</Button></div></div></CardContent></Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {isLoading ? Array.from({ length: 12 }).map((_, i) => (<Card key={i} className="animate-pulse"><CardContent className="p-4"><div className="aspect-square bg-muted rounded-lg mb-3" /><div className="h-4 bg-muted rounded mb-2" /><div className="h-3 bg-muted rounded w-2/3" /></CardContent></Card>)) : filteredMembers.length === 0 ? (<div className="col-span-full text-center py-12 text-muted-foreground">No members found</div>) : filteredMembers.map((member) => (
+        {isLoading ? Array.from({ length: 12 }).map((_, i) => (<Card key={i} className="animate-pulse"><CardContent className="p-4"><div className="aspect-square bg-muted rounded-lg mb-3" /><div className="h-4 bg-muted rounded mb-2" /><div className="h-3 bg-muted rounded w-2/3" /></CardContent></Card>)) : filteredMembers.length === 0 ? (<div className="col-span-full text-center py-12 text-muted-foreground">No {personPlural} found</div>) : filteredMembers.map((member) => (
           <Card key={member.id} className="group overflow-hidden">
             <CardContent className="p-4">
               <div className="relative aspect-square mb-3">

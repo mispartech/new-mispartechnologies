@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardHeaderProps {
   user: User;
@@ -19,15 +20,13 @@ interface DashboardHeaderProps {
   onMenuToggle: () => void;
 }
 
-// Route → breadcrumb label map
-const ROUTE_LABELS: Record<string, string> = {
+// Static route labels (non-dynamic ones)
+const STATIC_ROUTE_LABELS: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/attendance': 'Mark Attendance',
   '/dashboard/attendance-logs': 'Attendance Logs',
   '/dashboard/attendance-history': 'Attendance History',
   '/dashboard/attendance-summary': 'Attendance Summary',
-  '/dashboard/members': 'Members',
-  '/dashboard/temp-members': 'Temporary Members',
   '/dashboard/departments': 'Departments',
   '/dashboard/face-gallery': 'Face Gallery',
   '/dashboard/face-enrollment': 'Face Enrollment',
@@ -42,6 +41,8 @@ const ROUTE_LABELS: Record<string, string> = {
   '/dashboard/my-attendance': 'My Attendance',
   '/dashboard/my-schedule': 'My Schedule',
   '/dashboard/streaks': 'Streaks & Badges',
+  '/dashboard/visitor-review': 'Visitor Review',
+  '/dashboard/temp-members': 'Temp Visitors',
 };
 
 const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) => {
@@ -49,6 +50,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
   const location = useLocation();
   const { toast } = useToast();
   const { logout } = useDjangoAuth();
+  const { getTerm } = useTerminology();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -75,7 +77,10 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
     return user.email || 'User';
   };
 
-  const breadcrumbLabel = ROUTE_LABELS[location.pathname] || '';
+  const breadcrumbLabel = useMemo(() => {
+    if (location.pathname === '/dashboard/members') return getTerm('plural', true);
+    return STATIC_ROUTE_LABELS[location.pathname] || '';
+  }, [location.pathname, getTerm]);
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-auto z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
