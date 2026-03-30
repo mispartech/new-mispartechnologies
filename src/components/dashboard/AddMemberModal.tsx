@@ -66,7 +66,7 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Add New Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Add New {getTerm('title')}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Alert className="bg-primary/5 border-primary/20">
             <Mail className="h-4 w-4" />
