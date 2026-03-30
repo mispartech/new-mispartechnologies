@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardHeaderProps {
   user: User;
@@ -19,15 +20,13 @@ interface DashboardHeaderProps {
   onMenuToggle: () => void;
 }
 
-// Route → breadcrumb label map
-const ROUTE_LABELS: Record<string, string> = {
+// Static route labels (non-dynamic ones)
+const STATIC_ROUTE_LABELS: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/attendance': 'Mark Attendance',
   '/dashboard/attendance-logs': 'Attendance Logs',
   '/dashboard/attendance-history': 'Attendance History',
   '/dashboard/attendance-summary': 'Attendance Summary',
-  '/dashboard/members': 'Members',
-  '/dashboard/temp-members': 'Temporary Members',
   '/dashboard/departments': 'Departments',
   '/dashboard/face-gallery': 'Face Gallery',
   '/dashboard/face-enrollment': 'Face Enrollment',
@@ -42,6 +41,8 @@ const ROUTE_LABELS: Record<string, string> = {
   '/dashboard/my-attendance': 'My Attendance',
   '/dashboard/my-schedule': 'My Schedule',
   '/dashboard/streaks': 'Streaks & Badges',
+  '/dashboard/visitor-review': 'Visitor Review',
+  '/dashboard/temp-members': 'Temp Visitors',
 };
 
 const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) => {
