@@ -43,8 +43,22 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
         };
         if (userId) params.user_id = userId;
 
-        const res = await djangoApi.getAttendance(params, { silent: true });
-        setRawRecords(Array.isArray(res.data) ? res.data : []);
+        const [memberRes, tempRes] = await Promise.all([
+          djangoApi.getAttendance(params, { silent: true }),
+          !userId && showVisitors
+            ? djangoApi.getTempAttendance({ start_date: params.start_date, end_date: params.end_date })
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        const memberData = Array.isArray(memberRes.data) ? memberRes.data : [];
+        const tempData = Array.isArray(tempRes.data) ? tempRes.data : [];
+
+        // Tag records so chart data can distinguish them
+        const tagged = [
+          ...memberData.map((r: any) => ({ ...r, _type: 'member' })),
+          ...tempData.map((r: any) => ({ ...r, _type: 'visitor' })),
+        ];
+        setRawRecords(tagged);
       } catch {
         setRawRecords([]);
       } finally {
