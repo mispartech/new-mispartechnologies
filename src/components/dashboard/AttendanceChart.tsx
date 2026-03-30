@@ -11,7 +11,7 @@ import { useTerminology } from '@/contexts/TerminologyContext';
 interface AttendanceChartProps { organizationId?: string; userId?: string; showVisitors?: boolean; }
 interface DailyData { date: string; displayDate: string; members: number; visitors: number; total: number; }
 
-const CHART_COLORS = { members: 'hsl(var(--primary))', visitors: 'hsl(var(--secondary))', total: 'hsl(var(--accent))' };
+const CHART_COLORS = { members: 'hsl(var(--primary))', visitors: 'hsl(30, 90%, 50%)', total: 'hsl(var(--accent))' };
 const PIE_COLORS = ['hsl(270, 60%, 50%)', 'hsl(300, 40%, 50%)', 'hsl(220, 60%, 50%)', 'hsl(160, 60%, 50%)', 'hsl(30, 60%, 50%)', 'hsl(0, 60%, 50%)', 'hsl(90, 60%, 50%)'];
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
