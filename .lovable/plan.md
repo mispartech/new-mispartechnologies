@@ -2,103 +2,72 @@
 
 ## Problem
 
-The app inconsistently uses "Member", "Employee", "Visitor", "Student", "Staff" across different pages, sidebar labels, breadcrumbs, modals, toasts, and face overlays. The `TerminologyContext` exists and works correctly, but many components still have hardcoded strings instead of using `getTerm()`.
+The Admin Management page is read-only — admins can't invite new admin/manager users. The `rolesByType` in onboarding defines industry-specific job titles (Parish Pastor, CEO, etc.) but these are only used during onboarding, not in admin invitation. The existing `POST /api/members/` endpoint handles member creation, but there's no way to create users with elevated roles (admin/manager) from the dashboard. Additionally, the backend needs a new endpoint or parameter to support role assignment during invitation.
 
-The user's rule: **"Visitor" should always mean unknown/temporary faces.** The dynamic term (employee, member, student, staff) should apply to registered/known people — driven by the organization type selected during onboarding.
+## Approach
 
-## Organization Types (from Onboarding)
+### Phase 1: Frontend — Admin Invitation UI
 
-| Type | Registered Person Term | Plural |
-|---|---|---|
-| church / religious / nonprofit | Member | Members |
-| corporate / business / government | Employee | Employees |
-| school / university / education | Student | Students |
-| hospital / healthcare / clinic | Staff | Staff |
-| other | Member | Members |
+**Replace the "coming soon" Admin Invitations card** with a functional invite form.
 
-**"Visitor"** stays constant across all org types — it always refers to unrecognized/temporary faces.
+#### New component: `InviteAdminModal.tsx`
+- Form fields: First Name, Last Name, Email, Phone (optional), Role (select), Job Title (select/text)
+- **Role selector**: Only shows roles the current user can assign:
+  - `super_admin` can assign: `admin`, `manager`
+  - `admin` can assign: `manager`
+  - `manager` cannot invite admins (hide the invite button)
+- **Job Title selector**: Dynamic based on organization type from `TerminologyContext` — reuse the `rolesByType` mapping from Onboarding (extract to shared constant)
+- On submit: calls `POST /api/members/` with `{ email, first_name, last_name, role, job_title, ... }`
+- The backend sends an invitation email; the invitee clicks the link, sets their password, and lands on their dashboard
 
-## Files Requiring Changes
+#### Changes to `AdminManagement.tsx`
+- Add "Invite Admin" button in the header (visible to super_admin/admin only)
+- Replace "coming soon" card with a pending invitations table (fetch members with `status=pending` and admin roles)
+- Add role change dropdown per admin row (super_admin only) — calls `PATCH /api/members/{id}/` to update role
+- Add "Revoke" action to demote an admin back to member
 
-### 1. `src/components/dashboard/DashboardHeader.tsx`
-- The `ROUTE_LABELS` map has hardcoded `'Members'`, `'Temporary Members'`. Make these dynamic by consuming `useTerminology` and computing labels from `getTerm()` at render time instead of a static object.
-- Breadcrumb for `/dashboard/members` → `getTerm('plural', true)`
-- Breadcrumb for `/dashboard/temp-members` → `"Temp Visitors"` (visitors are always "Visitor")
-
-### 2. `src/components/dashboard/FaceOverlay.tsx`
-- Line 131: fallback `'Member'` → use a prop or pass terminology down. Since FaceOverlay is a canvas-adjacent component without context access, add a `personLabel` prop defaulting to `'Member'` and have `AttendanceCapture` pass `getTerm('title')`.
-
-### 3. `src/pages/dashboard/AttendanceCapture.tsx`
-- Lines 120, 164: hardcoded `'Member'` in Badge → replace with `getTerm('title')`
-- "Visitor" stays as-is (correct per user's rule)
-- Pass `personLabel={getTerm('title')}` to `FaceOverlay`
-- Add `useTerminology` import
-
-### 4. `src/components/dashboard/AddMemberModal.tsx`
-- Dialog title: `"Add New Member"` → `"Add New {getTerm('title')}"`
-- Toast: `"Member Invited"` → `"{getTerm('title')} Invited"`
-- Alert description: `"The member will receive..."` → `"The {getTerm('singular')} will receive..."`
-- Add `useTerminology` import
-
-### 5. `src/components/dashboard/EditMemberModal.tsx`
-- Dialog title likely says "Edit Member" → make dynamic
-- Add `useTerminology` import
-
-### 6. `src/components/dashboard/ImportMembersModal.tsx`
-- Title and labels → make dynamic
-- Add `useTerminology` import
-
-### 7. `src/pages/dashboard/MembersList.tsx`
-- Line 62: toast `'Failed to fetch members'` → dynamic
-- Line 69: confirm `'delete this member'` → dynamic
-- Line 74: toast `'Member deleted successfully'` → dynamic
-- These are minor string replacements using existing `personSingular`/`personPlural`
-
-### 8. `src/pages/dashboard/TempMembersList.tsx`
-- Page title: `"Temporary {getTerm('plural', true)}"` → Change to **"Temporary Visitors"** since temp = visitors, always
-- Subtitle: already says "Unregistered visitors" — correct
-- Sidebar label `Temp {getTerm('plural')}` in DashboardSidebar → Change to **"Temp Visitors"** (constant)
-
-### 9. `src/components/dashboard/DashboardSidebar.tsx`
-- Line 76: `Temp ${getTerm('plural', true)}` → `"Temp Visitors"` (visitors = constant term)
-- Line 75: `getTerm('plural', true)` for `/dashboard/members` → already correct
-
-### 10. `src/pages/dashboard/FaceGallery.tsx`
-- Line 105: `"No members found"` → `"No {personPlural} found"` using `useTerminology`
-
-### 11. `src/pages/dashboard/MemberDashboard.tsx`
-- Line 139: fallback `'Member'` → `getTerm('title')` (already has access via context)
-
-### 12. `src/components/dashboard/FaceOverlay.tsx`
-- Line 131: `face.name || 'Member'` → `face.name || personLabel` (new prop)
-- Line 134: `'Visitor'` stays as-is
-
-## Summary of Terminology Rules
-
+#### Shared role config: `src/lib/roleConfig.ts`
+Extract the `rolesByType` job-title mapping from `Onboarding.tsx` into a shared module so both Onboarding and InviteAdminModal can import it. Also define:
 ```text
-┌─────────────────────┬──────────────────────────┐
-│ Context             │ Label                    │
-├─────────────────────┼──────────────────────────┤
-│ Known/registered    │ Dynamic: getTerm()       │
-│ Unknown/temporary   │ Always: "Visitor"        │
-│ Sidebar nav items   │ Dynamic for registered,  │
-│                     │ "Temp Visitors" for temp  │
-│ Breadcrumbs         │ Same as sidebar          │
-│ Face overlay labels │ Dynamic for known,       │
-│                     │ "Visitor" for unknown    │
-│ Toasts & modals     │ Dynamic for registered   │
-└─────────────────────┴──────────────────────────┘
+ADMIN_ROLES = ['super_admin', 'admin', 'manager']
+ASSIGNABLE_ROLES: { super_admin → [admin, manager], admin → [manager] }
+SYSTEM_ROLES = ['super_admin', 'admin', 'manager', 'member', 'pending']
 ```
 
-## Implementation Order
+### Phase 2: Backend Requirements (Prompt for You)
 
-1. Update `DashboardSidebar` — fix "Temp Visitors" label
-2. Update `DashboardHeader` — make breadcrumb labels dynamic
-3. Update `AttendanceCapture` — replace hardcoded "Member" badges with `getTerm('title')`
-4. Update `FaceOverlay` — add `personLabel` prop
-5. Update `AddMemberModal`, `EditMemberModal`, `ImportMembersModal` — dynamic dialog titles/toasts
-6. Update `MembersList` — dynamic toast/confirm messages
-7. Update `TempMembersList` — "Temporary Visitors" title
-8. Update `FaceGallery` — dynamic empty state
-9. Update `MemberDashboard` — dynamic fallback name
+The frontend will call these endpoints. Here's what the backend needs:
+
+1. **`POST /api/members/`** — already exists but needs to accept an optional `role` field (default: `member`). When `role` is `admin` or `manager`:
+   - Validate that the requesting user has permission to assign that role (super_admin can assign admin/manager, admin can assign manager)
+   - Create the user with the specified role
+   - Send invitation email with a password-setup link
+
+2. **`PATCH /api/members/{id}/`** — update a member's role/job_title (not yet implemented, currently a stub). Needed for:
+   - Promoting a member to admin/manager
+   - Demoting an admin back to member
+   - Permission check: only super_admin can change roles of admin-level users
+
+3. **`GET /api/members/?status=pending&role=admin,manager`** — the existing members endpoint should support filtering by `status` to show pending invitations
+
+### Phase 3: API Client Updates
+
+- Move `MEMBER` route from `FUTURE_ROUTES` to `API_ROUTES`
+- Implement `updateMember(id, data)` and `deleteMember(id)` (currently stubs returning 404)
+- Add `role` and `job_title` to the `inviteMember` payload type
+
+### Files to Create/Modify
+
+| File | Change |
+|---|---|
+| `src/lib/roleConfig.ts` | **New** — shared role/job-title mappings |
+| `src/components/dashboard/InviteAdminModal.tsx` | **New** — admin invitation modal |
+| `src/pages/dashboard/AdminManagement.tsx` | Add invite button, pending invites table, role actions |
+| `src/pages/Onboarding.tsx` | Import `rolesByType` from shared module instead of inline |
+| `src/lib/api/apiRoutes.ts` | Move `MEMBER(id)` to `API_ROUTES` |
+| `src/lib/api/client.ts` | Implement `updateMember`, `deleteMember`; add `role`/`job_title` to invite payload |
+
+### Backend Prompt
+
+After approval, I'll provide you a detailed Django implementation prompt covering the `PATCH /api/members/{id}/` endpoint, role permission validation, and status filtering.
 
