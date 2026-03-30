@@ -63,7 +63,7 @@ const AttendanceSimulation = () => {
         if (!videoRef.current || videoRef.current.readyState < 2) return;
         const frame = captureFrame(videoRef.current);
         const result = await demoRecognizeFace(frame, demoId);
-        if (result.success && result.type === 'KNOWN') {
+        if (result.success && result.type === 'MEMBER') {
           setLiveConfidence(result.confidence || 98); setStatus('confirmed'); setShowConfetti(true);
           stopLive(); setTimeout(() => setShowConfetti(false), 4000);
         }

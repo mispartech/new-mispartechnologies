@@ -164,7 +164,7 @@ const InteractiveFaceDemo = ({ onComplete }: { onComplete: () => void }) => {
         const frame = captureFrame(videoRef.current);
         const result = await demoRecognizeFace(frame, demoId);
 
-        if (result.success && result.type === 'KNOWN') {
+        if (result.success && result.type === 'MEMBER') {
           setConfidenceScore(result.confidence || 98);
           setMatchedName(result.name || 'Demo User');
           setRecognizeState('matched');

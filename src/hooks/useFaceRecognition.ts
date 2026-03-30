@@ -118,7 +118,7 @@ const parseDjangoResponse = (response: DjangoResponse): TrackedFace[] => {
         attendanceRecord: apiFace.attendance_record,
         lastSeen: now,
       });
-    } else if (apiFace.type === 'TEMP' && apiFace.temp_user_id) {
+    } else if (apiFace.type === 'VISITOR' && apiFace.temp_user_id) {
       faces.push({
         id: apiFace.temp_user_id,
         name: 'Visitor',
