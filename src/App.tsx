@@ -95,6 +95,7 @@ const App = () => (
                 <Route path="my-schedule" element={<MySchedule />} />
                 <Route path="members" element={<MembersList />} />
                 <Route path="temp-members" element={<TempMembersList />} />
+                <Route path="visitor-review" element={<VisitorReview />} />
                 <Route path="attendance" element={<AttendanceCapture />} />
                 <Route path="attendance-logs" element={<AttendanceLogs />} />
                 <Route path="attendance-history" element={<AttendanceHistory />} />
