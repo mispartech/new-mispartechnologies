@@ -181,7 +181,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="members" name={getTerm('title', true) + 's'} fill={CHART_COLORS.members} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="members" name={getTerm('plural', true)} fill={CHART_COLORS.members} radius={[4, 4, 0, 0]} />
                 {showVisitors && !userId && <Bar dataKey="visitors" name="Visitors" fill={CHART_COLORS.visitors} radius={[4, 4, 0, 0]} />}
               </BarChart>
             </ResponsiveContainer>
