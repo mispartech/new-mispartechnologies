@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { rolesByType, type OrganizationType } from '@/lib/roleConfig';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 
 import Navbar from '@/components/Navbar';
