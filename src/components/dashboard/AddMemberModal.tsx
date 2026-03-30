@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail } from 'lucide-react';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface AddMemberModalProps {
   isOpen: boolean;
