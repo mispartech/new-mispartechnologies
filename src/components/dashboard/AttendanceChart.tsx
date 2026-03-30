@@ -81,8 +81,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
       if (!dateStr) return;
       const entry = dateMap.get(dateStr);
       if (!entry) return;
-      const isVisitor = record.is_visitor || record.record_type === 'visitor';
-      if (isVisitor) {
+      if (record._type === 'visitor') {
         entry.visitors++;
       } else {
         entry.members++;
