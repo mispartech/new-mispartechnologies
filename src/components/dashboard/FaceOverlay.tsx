@@ -26,6 +26,7 @@ interface FaceOverlayProps {
   containerWidth: number;
   containerHeight: number;
   onClaimVisitor?: (faceId: string) => void;
+  personLabel?: string;
 }
 
 // Color cycling for UNSTABLE/detecting
