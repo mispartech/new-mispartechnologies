@@ -28,7 +28,16 @@ interface TempMember {
 }
 
 /** Safely extract display fields from varying backend shapes */
-const getTempId = (m: TempMember) => m.temp_face_id || m.temp_user_id || m.id || 'unknown';
+const getTempId = (m: TempMember) => {
+  // Prefer temp_email as a human-readable identifier, truncated
+  if ((m as any).temp_email) {
+    const email = (m as any).temp_email as string;
+    // Show first part of email, e.g. "visitor_abc12..."
+    return email.length > 20 ? email.slice(0, 18) + '...' : email;
+  }
+  const raw = m.temp_face_id || m.temp_user_id || m.id || 'unknown';
+  return raw.slice(0, 12) + '...';
+};
 const getTempDate = (m: TempMember) => {
   if (m.date) return m.date;
   if (m.created_at) {
@@ -145,7 +154,7 @@ const TempMembersList = () => {
                               <AvatarImage src={getTempImage(member)} />
                               <AvatarFallback className="bg-muted">V</AvatarFallback>
                             </Avatar>
-                            <span className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</span>
+                            <span className="font-mono text-xs">{getTempId(member)}</span>
                           </div>
                         </TableCell>
                         <TableCell>{getTempDate(member)}</TableCell>
@@ -180,7 +189,7 @@ const TempMembersList = () => {
                           <AvatarFallback className="bg-muted">V</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</p>
+                          <p className="font-mono text-xs">{getTempId(member)}</p>
                           <p className="text-sm text-muted-foreground">{getTempDate(member)} at {getTempTime(member)}</p>
                         </div>
                       </div>

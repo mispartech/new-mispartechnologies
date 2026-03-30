@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, UserPlus, Building2, ScanFace, FileText, Settings,
   ChevronLeft, ChevronRight, Image, ClipboardList, UserCheck, Shield, Activity,
   CalendarClock, Globe, Calendar, History, TrendingUp, Trophy, Palette, ChevronDown,
+  SearchCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
@@ -73,6 +74,7 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
       items: [
         { label: getTerm('plural', true), icon: Users, href: '/dashboard/members', roles: ['super_admin', 'admin', 'manager'], isDynamic: true },
         { label: `Temp ${getTerm('plural', true)}`, icon: UserPlus, href: '/dashboard/temp-members', roles: ['super_admin', 'admin'], isDynamic: true },
+        { label: 'Visitor Review', icon: SearchCheck, href: '/dashboard/visitor-review', roles: ['super_admin', 'admin'] },
         { label: 'Departments', icon: Building2, href: '/dashboard/departments', roles: ['super_admin', 'admin'] },
         { label: 'Face Gallery', icon: Image, href: '/dashboard/face-gallery', roles: ['super_admin', 'admin'] },
         { label: 'Admin Management', icon: Shield, href: '/dashboard/admin-management', roles: ['super_admin', 'admin'] },
