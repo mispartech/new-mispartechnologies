@@ -211,6 +211,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
 
 const AttendanceCapture = () => {
   const { profile } = useOutletContext<{ profile: any }>();
+  const { getTerm } = useTerminology();
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
   const [recognizedPersons, setRecognizedPersons] = useState<RecognizedPerson[]>([]);
