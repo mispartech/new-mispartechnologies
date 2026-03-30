@@ -196,6 +196,7 @@ const AttendanceChart = ({ organizationId, userId, showVisitors = true }: Attend
                 <Legend />
                 <Line type="monotone" dataKey="total" name="Total" stroke={CHART_COLORS.total} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 <Line type="monotone" dataKey="members" name={getTerm('plural', true)} stroke={CHART_COLORS.members} strokeWidth={2} dot={{ r: 3 }} />
+                {showVisitors && !userId && <Line type="monotone" dataKey="visitors" name="Visitors" stroke={CHART_COLORS.visitors} strokeWidth={2} dot={{ r: 3 }} />}
               </LineChart>
             </ResponsiveContainer>
           </TabsContent>
