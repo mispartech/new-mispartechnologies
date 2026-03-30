@@ -22,6 +22,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
     first_name: '', last_name: '', phone_number: '', gender: '', department_id: ''
   });
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   useEffect(() => {
     if (isOpen && member) {
