@@ -16,6 +16,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardRouter from "./pages/dashboard/DashboardRouter";
 import MembersList from "./pages/dashboard/MembersList";
 import TempMembersList from "./pages/dashboard/TempMembersList";
+import VisitorReview from "./pages/dashboard/VisitorReview";
 import AttendanceCapture from "./pages/dashboard/AttendanceCapture";
 import AttendanceLogs from "./pages/dashboard/AttendanceLogs";
 import AttendanceHistory from "./pages/dashboard/AttendanceHistory";
