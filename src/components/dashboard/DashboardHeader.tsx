@@ -50,6 +50,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
   const location = useLocation();
   const { toast } = useToast();
   const { logout } = useDjangoAuth();
+  const { getTerm } = useTerminology();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
