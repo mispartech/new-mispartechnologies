@@ -29,6 +29,7 @@ import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
 import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay';
 import { djangoApi } from '@/lib/api/client';
 import { format } from 'date-fns';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface RecognizedPerson {
   id: string;
