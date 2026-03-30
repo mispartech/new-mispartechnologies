@@ -28,6 +28,7 @@ const getGreeting = () => {
 
 const MemberDashboard = () => {
   const { profile } = useOutletContext<DashboardContext>();
+  const { getTerm } = useTerminology();
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

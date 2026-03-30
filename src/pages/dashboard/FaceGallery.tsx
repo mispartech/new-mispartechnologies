@@ -24,6 +24,7 @@ const FaceGallery = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { personPlural } = useTerminology();
 
   useEffect(() => { fetchMembers(); }, []);
 

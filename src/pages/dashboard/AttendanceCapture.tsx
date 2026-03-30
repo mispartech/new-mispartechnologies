@@ -780,6 +780,7 @@ const AttendanceCapture = () => {
                   videoHeight={videoDimensions.height}
                   containerWidth={containerDimensions.width}
                   containerHeight={containerDimensions.height}
+                  personLabel={getTerm('title')}
                 />
               )}
 

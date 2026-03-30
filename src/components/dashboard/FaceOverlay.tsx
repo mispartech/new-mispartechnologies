@@ -67,7 +67,7 @@ const generateFaceKey = (bbox: number[]): string => {
   return `face-${rx}-${ry}-${rw}-${rh}`;
 };
 
-const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, containerHeight }: FaceOverlayProps) => {
+const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, containerHeight, personLabel }: FaceOverlayProps) => {
   const [colorIndex, setColorIndex] = useState(0);
 
   // Animate color change for UNSTABLE/detecting faces
