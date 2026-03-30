@@ -144,11 +144,18 @@ const VisitorReview = () => {
     <div className="space-y-6">
       <PageHeader
         title="Visitor Review"
-        description={`Review and manage visitor clusters detected by the system`}
+        subtitle="Review and manage visitor clusters detected by the system"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Visitor Review' },
         ]}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => fetchClusters(true)} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        }
+      />
         actions={
           <Button variant="outline" size="sm" onClick={() => fetchClusters(true)} disabled={refreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
