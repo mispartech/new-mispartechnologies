@@ -4,7 +4,7 @@ import { djangoApi } from '@/lib/api/client';
 /**
  * Backend face types from /api/recognize-frame/
  */
-type FaceType = 'KNOWN' | 'TEMP' | 'UNSTABLE';
+type FaceType = 'MEMBER' | 'VISITOR' | 'UNSTABLE';
 
 /**
  * Backend attendance_status values:
