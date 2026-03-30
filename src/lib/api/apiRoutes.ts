@@ -58,7 +58,6 @@ export const API_ROUTES = {
  * Kept here for reference so the frontend knows what's coming.
  */
 export const FUTURE_ROUTES = {
-  MEMBER: (id: string) => `/api/members/${id}/`,
   MEMBER_INVITE: '/api/members/invite/',
   MEMBER_BULK_INVITE: '/api/members/bulk-invite/',
   DEPARTMENT: (id: string) => `/api/departments/${id}/`,
