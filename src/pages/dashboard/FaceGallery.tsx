@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Camera, Upload, Search, CheckCircle2, XCircle, RefreshCw, User, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface Member { id: string; first_name: string; last_name: string; email: string; face_image_url: string | null; department?: string; }
 
