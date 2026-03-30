@@ -265,6 +265,8 @@ class DjangoApiClient {
     phone_number?: string;
     gender?: string;
     department_id?: string;
+    role?: string;
+    job_title?: string;
   }): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.MEMBERS, {
       method: 'POST',
