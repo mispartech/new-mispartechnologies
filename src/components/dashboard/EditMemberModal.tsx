@@ -50,7 +50,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
       });
       
       if (error) throw new Error(error);
-      toast({ title: 'Success', description: 'Member updated successfully' });
+      toast({ title: 'Success', description: `${getTerm('title')} updated successfully` });
       onSuccess();
       onClose();
     } catch (error: any) {
