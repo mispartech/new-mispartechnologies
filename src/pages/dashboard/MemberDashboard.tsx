@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, startOfMonth, startOfWeek, isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardContext { user: any; profile: any; session: any; }
 
