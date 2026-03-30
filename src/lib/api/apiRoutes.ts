@@ -17,6 +17,7 @@ export const API_ROUTES = {
 
   // ── Members ──
   MEMBERS: '/api/members/',
+  MEMBER: (id: string) => `/api/members/${id}/`,
 
   // ── Departments ──
   DEPARTMENTS: '/api/departments/',
