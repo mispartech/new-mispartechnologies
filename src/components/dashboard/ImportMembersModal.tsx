@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { djangoApi } from "@/lib/api/client";
 import { Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface ImportMembersModalProps { isOpen: boolean; onClose: () => void; onSuccess: () => void; }
 interface ParsedMember { email: string; firstName: string; lastName: string; phoneNumber: string; gender: string; department: string; isValid: boolean; error?: string; }
