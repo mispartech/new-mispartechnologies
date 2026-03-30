@@ -24,6 +24,7 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { getTerm } = useTerminology();
 
   const fetchDepartments = async () => {
     const result = await djangoApi.getDepartments();
