@@ -43,7 +43,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
-type OrganizationType = 'church' | 'corporate' | 'school' | 'hospital' | 'government' | 'nonprofit' | 'other';
+// OrganizationType is now imported from roleConfig
 
 interface ServiceSchedule {
   id: string;
