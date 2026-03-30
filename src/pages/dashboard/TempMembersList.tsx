@@ -154,7 +154,7 @@ const TempMembersList = () => {
                               <AvatarImage src={getTempImage(member)} />
                               <AvatarFallback className="bg-muted">V</AvatarFallback>
                             </Avatar>
-                            <span className="font-mono text-xs">{getTempId(member).slice(0, 12)}...</span>
+                            <span className="font-mono text-xs">{getTempId(member)}</span>
                           </div>
                         </TableCell>
                         <TableCell>{getTempDate(member)}</TableCell>
