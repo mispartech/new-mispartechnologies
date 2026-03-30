@@ -54,6 +54,7 @@ type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 /** Filtered recent recognitions list with View mode */
 const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
   const [selectedPerson, setSelectedPerson] = useState<RecognizedPerson | null>(null);
+  const { getTerm } = useTerminology();
 
   const filtered = useMemo(() => {
     const now = Date.now();
