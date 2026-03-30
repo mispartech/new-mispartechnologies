@@ -66,7 +66,7 @@ const MembersList = () => {
   };
 
   const handleDelete = async (memberId: string) => {
-    if (!confirm('Are you sure you want to delete this member?')) return;
+    if (!confirm(`Are you sure you want to delete this ${personSingular}?`)) return;
     try {
       const result = await djangoApi.deleteMember(memberId);
       if (result.error) throw new Error(result.error);
