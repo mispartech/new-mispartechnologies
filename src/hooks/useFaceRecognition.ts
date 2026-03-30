@@ -103,7 +103,7 @@ const parseDjangoResponse = (response: DjangoResponse): TrackedFace[] => {
   if (!response.faces || !Array.isArray(response.faces)) return faces;
 
   for (const apiFace of response.faces) {
-    if (apiFace.type === 'KNOWN' && apiFace.user_id) {
+    if (apiFace.type === 'MEMBER' && apiFace.user_id) {
       faces.push({
         id: apiFace.user_id,
         name: apiFace.name || 'Member',
