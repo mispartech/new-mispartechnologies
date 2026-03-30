@@ -156,13 +156,6 @@ const VisitorReview = () => {
           </Button>
         }
       />
-        actions={
-          <Button variant="outline" size="sm" onClick={() => fetchClusters(true)} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        }
-      />
 
       {clusters.length === 0 ? (
         <Card>
