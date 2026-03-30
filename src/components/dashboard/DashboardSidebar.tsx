@@ -73,7 +73,7 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
       label: 'People',
       items: [
         { label: getTerm('plural', true), icon: Users, href: '/dashboard/members', roles: ['super_admin', 'admin', 'manager'], isDynamic: true },
-        { label: `Temp ${getTerm('plural', true)}`, icon: UserPlus, href: '/dashboard/temp-members', roles: ['super_admin', 'admin'], isDynamic: true },
+        { label: 'Temp Visitors', icon: UserPlus, href: '/dashboard/temp-members', roles: ['super_admin', 'admin'] },
         { label: 'Visitor Review', icon: SearchCheck, href: '/dashboard/visitor-review', roles: ['super_admin', 'admin'] },
         { label: 'Departments', icon: Building2, href: '/dashboard/departments', roles: ['super_admin', 'admin'] },
         { label: 'Face Gallery', icon: Image, href: '/dashboard/face-gallery', roles: ['super_admin', 'admin'] },

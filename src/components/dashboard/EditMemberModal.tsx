@@ -63,7 +63,7 @@ const EditMemberModal = ({ isOpen, onClose, member, onSuccess }: EditMemberModal
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Edit Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Edit {getTerm('title')}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

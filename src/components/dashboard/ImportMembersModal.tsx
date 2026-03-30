@@ -139,7 +139,7 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Import Members from CSV/Excel</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Import {getTerm('plural', true)} from CSV/Excel</DialogTitle></DialogHeader>
         <div className="space-y-6">
           {!file ? (
             <div className="space-y-4">

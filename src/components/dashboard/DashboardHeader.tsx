@@ -77,7 +77,10 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
     return user.email || 'User';
   };
 
-  const breadcrumbLabel = ROUTE_LABELS[location.pathname] || '';
+  const breadcrumbLabel = useMemo(() => {
+    if (location.pathname === '/dashboard/members') return getTerm('plural', true);
+    return STATIC_ROUTE_LABELS[location.pathname] || '';
+  }, [location.pathname, getTerm]);
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-auto z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">

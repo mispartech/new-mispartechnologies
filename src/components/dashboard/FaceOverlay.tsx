@@ -129,7 +129,7 @@ const FaceOverlay = ({ faces, videoWidth, videoHeight, containerWidth, container
         let labelText = '';
         let showLabel = false;
         if (status === 'marked' || status === 'already_marked') {
-          labelText = face.name || 'Member';
+          labelText = face.name || personLabel || 'Member';
           showLabel = true;
         } else if (status === 'new_visitor' || status === 'returning_visitor') {
           labelText = 'Visitor';

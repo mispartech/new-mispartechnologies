@@ -161,7 +161,7 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
                 <div>
                   <p className="text-muted-foreground text-xs">Type</p>
                   <Badge variant={selectedPerson.type === 'member' ? 'default' : 'secondary'}>
-                    {selectedPerson.type === 'member' ? 'Member' : 'Visitor'}
+                    {selectedPerson.type === 'member' ? getTerm('title') : 'Visitor'}
                   </Badge>
                 </div>
                 <div>

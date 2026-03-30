@@ -136,7 +136,7 @@ const MemberDashboard = () => {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-muted-foreground">{getGreeting()},</p>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">
-              {profile?.first_name || 'Member'} {profile?.last_name || ''} 👋
+              {profile?.first_name || getTerm('title')} {profile?.last_name || ''} 👋
             </h1>
             <div className="flex flex-wrap gap-2 mt-2">
               {profile?.organization_name && (

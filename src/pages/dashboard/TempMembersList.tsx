@@ -110,7 +110,7 @@ const TempMembersList = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Temporary {getTerm('plural', true)}</h1>
+        <h1 className="text-2xl font-bold text-foreground">Temporary Visitors</h1>
         <p className="text-muted-foreground">Unregistered visitors detected by the system</p>
       </div>
 

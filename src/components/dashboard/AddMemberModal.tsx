@@ -71,7 +71,7 @@ const AddMemberModal = ({ isOpen, onClose, onSuccess }: AddMemberModalProps) => 
           <Alert className="bg-primary/5 border-primary/20">
             <Mail className="h-4 w-4" />
             <AlertDescription>
-              The member will receive an email invitation to set their password and complete face enrollment.
+              The {getTerm('singular')} will receive an email invitation to set their password and complete face enrollment.
             </AlertDescription>
           </Alert>
 
