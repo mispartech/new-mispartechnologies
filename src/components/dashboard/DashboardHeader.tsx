@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight, Search } from 'lucide-react';
+import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
 import { useTerminology } from '@/contexts/TerminologyContext';
