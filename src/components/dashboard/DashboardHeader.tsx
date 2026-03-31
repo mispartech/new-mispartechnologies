@@ -93,9 +93,11 @@ const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: Dashboard
             <Menu className="w-5 h-5" />
           </Button>
 
-          {/* Breadcrumbs */}
+          {/* Breadcrumbs — simplified on mobile */}
           {breadcrumbLabel && location.pathname !== '/dashboard' && (
-            <nav className="hidden sm:flex items-center gap-1.5 text-sm">
+            <>
+              <span className="sm:hidden text-sm font-medium text-foreground truncate max-w-[160px]">{breadcrumbLabel}</span>
+              <nav className="hidden sm:flex items-center gap-1.5 text-sm">
               <button
                 onClick={() => navigate('/dashboard')}
                 className="text-muted-foreground hover:text-foreground transition-colors"
