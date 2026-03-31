@@ -46,7 +46,7 @@ const STATIC_ROUTE_LABELS: Record<string, string> = {
   '/dashboard/temp-members': 'Temp Visitors',
 };
 
-const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) => {
+const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
