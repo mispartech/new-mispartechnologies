@@ -209,7 +209,7 @@ const MemberDashboard = () => {
       {/* ── Today's Focus Strip ── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl bg-card/80 border border-border/50 backdrop-blur-sm">
         {/* Streak */}
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-orange-500/5 border border-orange-500/10 flex-1">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-orange-500/5 border border-orange-500/10 flex-1 min-w-0">
           <Flame className={cn("w-6 h-6", currentStreak > 0 ? "text-orange-500 animate-pulse" : "text-muted-foreground")} />
           <div>
             <p className="text-lg font-bold leading-tight">{currentStreak}</p>
