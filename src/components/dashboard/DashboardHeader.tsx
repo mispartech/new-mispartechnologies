@@ -84,7 +84,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: Dashboard
   }, [location.pathname, getTerm]);
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-auto z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
+    <header className={cn("fixed top-0 right-0 z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50 left-0 transition-all duration-300", sidebarOpen ? "lg:left-64" : "lg:left-[68px]")}>
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
         {/* Left: mobile menu + breadcrumbs */}
         <div className="flex items-center gap-3">
