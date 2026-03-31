@@ -218,7 +218,7 @@ const MemberDashboard = () => {
         </div>
 
         {/* Next badge progress */}
-        <Link to="/dashboard/streaks" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-purple-500/5 border border-purple-500/10 flex-1 group hover:border-purple-500/20 transition-colors">
+        <Link to="/dashboard/streaks" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-purple-500/5 border border-purple-500/10 flex-1 min-w-0 group hover:border-purple-500/20 transition-colors">
           <Trophy className="w-6 h-6 text-purple-500" />
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Badges</p>
