@@ -110,8 +110,8 @@ const FaceGallery = () => {
               <div className="relative aspect-square mb-3">
                 {member.face_image_url ? <img src={member.face_image_url} alt={`${member.first_name} ${member.last_name}`} className="w-full h-full object-cover rounded-lg" /> : <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center"><Camera className="w-8 h-8 text-muted-foreground" /></div>}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                  <Button size="icon" variant="secondary" onClick={() => setSelectedMember(member)}><Upload className="w-4 h-4" /></Button>
-                  {member.face_image_url && <Button size="icon" variant="destructive" onClick={() => handleDeleteFace(member)}><Trash2 className="w-4 h-4" /></Button>}
+                  <Button size="icon" variant="secondary" className="h-10 w-10" onClick={() => setSelectedMember(member)}><Upload className="w-4 h-4" /></Button>
+                  {member.face_image_url && <Button size="icon" variant="destructive" className="h-10 w-10" onClick={() => handleDeleteFace(member)}><Trash2 className="w-4 h-4" /></Button>}
                 </div>
                 <Badge className={`absolute top-2 right-2 ${member.face_image_url ? 'bg-green-500' : 'bg-yellow-500'}`}>{member.face_image_url ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}</Badge>
               </div>

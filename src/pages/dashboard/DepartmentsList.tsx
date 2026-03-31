@@ -127,40 +127,73 @@ const DepartmentsList = () => {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Department</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Head</TableHead>
-                <TableHead>Members</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDepartments.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No departments found</TableCell></TableRow>
-              ) : (
-                filteredDepartments.map((dept) => (
-                  <TableRow key={dept.id}>
-                    <TableCell><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-primary/10"><Building2 className="w-4 h-4 text-primary" /></div><span className="font-medium">{dept.name}</span></div></TableCell>
-                    <TableCell className="text-muted-foreground">{dept.description || '-'}</TableCell>
-                    <TableCell>{dept.head_name || <span className="text-muted-foreground">Not assigned</span>}</TableCell>
-                    <TableCell><Badge variant="secondary" className="gap-1"><Users className="w-3 h-3" />{dept.member_count || 0}</Badge></TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(dept)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Head</TableHead>
+                  <TableHead>Members</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDepartments.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No departments found</TableCell></TableRow>
+                ) : (
+                  filteredDepartments.map((dept) => (
+                    <TableRow key={dept.id}>
+                      <TableCell><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-primary/10"><Building2 className="w-4 h-4 text-primary" /></div><span className="font-medium">{dept.name}</span></div></TableCell>
+                      <TableCell className="text-muted-foreground">{dept.description || '-'}</TableCell>
+                      <TableCell>{dept.head_name || <span className="text-muted-foreground">Not assigned</span>}</TableCell>
+                      <TableCell><Badge variant="secondary" className="gap-1"><Users className="w-3 h-3" />{dept.member_count || 0}</Badge></TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(dept)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDelete(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-border">
+            {filteredDepartments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No departments found</div>
+            ) : (
+              filteredDepartments.map((dept) => (
+                <div key={dept.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0"><Building2 className="w-4 h-4 text-primary" /></div>
+                      <span className="font-medium truncate">{dept.name}</span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(dept)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDelete(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {dept.description && <p className="text-sm text-muted-foreground">{dept.description}</p>}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>Head: {dept.head_name || 'Not assigned'}</span>
+                    <Badge variant="secondary" className="gap-1 text-xs"><Users className="w-3 h-3" />{dept.member_count || 0}</Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 

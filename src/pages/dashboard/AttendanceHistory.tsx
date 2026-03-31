@@ -202,7 +202,8 @@ const AttendanceHistory = () => {
             <div className="flex items-center justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" /></div>
           ) : (
             <>
-              <div className="rounded-md border overflow-x-auto">
+              {/* Desktop table */}
+              <div className="rounded-md border overflow-x-auto hidden md:block">
                 <Table>
                   <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Time</TableHead><TableHead>Type</TableHead><TableHead>Name / ID</TableHead><TableHead>Gender</TableHead><TableHead>Age Range</TableHead><TableHead>Confidence</TableHead><TableHead>Detections</TableHead><TableHead>Face</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -233,6 +234,46 @@ const AttendanceHistory = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile card view */}
+              <div className="md:hidden space-y-3">
+                {paginatedData.map(({ type, record }) => (
+                  <div key={record.id} className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={type === 'member' ? 'default' : 'secondary'} className="text-xs">
+                        {type === 'member' ? getTerm('title', true) : 'Visitor'}
+                      </Badge>
+                      <Badge variant="outline" className="text-green-600 text-xs">Recorded</Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {type === 'member' && (record as AttendanceRecord).face_roi ? (
+                        <button onClick={() => setFaceRoiPreview((record as AttendanceRecord).face_roi!)} className="flex-shrink-0">
+                          <img src={(record as AttendanceRecord).face_roi!} alt="Face" className="w-10 h-10 rounded-full object-cover border border-border" />
+                        </button>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{type === 'member' ? getMemberName(record as AttendanceRecord) : (record as TempAttendanceRecord).temp_face_id}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {record.date ? (() => { try { const d = new Date(record.date); return isNaN(d.getTime()) ? record.date : format(d, 'MMM d'); } catch { return record.date; } })() : '—'} · {record.time ? String(record.time).slice(0, 5) : '—'}
+                        </p>
+                      </div>
+                      {type === 'member' && (record as AttendanceRecord).confidence_score && (
+                        <Badge variant="secondary" className="text-xs flex-shrink-0">{Math.round((record as AttendanceRecord).confidence_score! * 100)}%</Badge>
+                      )}
+                    </div>
+                    {type === 'member' && ((record as AttendanceRecord).gender || (record as AttendanceRecord).age_range) && (
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {[(record as AttendanceRecord).gender, (record as AttendanceRecord).age_range].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={combinedData.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} onItemsPerPageChange={(v) => { setItemsPerPage(v); setCurrentPage(1); }} />
             </>
           )}

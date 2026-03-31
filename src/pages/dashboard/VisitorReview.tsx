@@ -226,14 +226,15 @@ const VisitorReview = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   {cluster.member_count > 1 && (
-                    <Button size="sm" variant="outline" onClick={() => handleOpenMerge(cluster)}>
+                    <Button size="sm" variant="outline" className="h-10 min-w-[48px]" onClick={() => handleOpenMerge(cluster)}>
                       <Merge className="h-4 w-4 mr-1.5" />
-                      Review & Merge
+                      <span className="hidden sm:inline">Review & Merge</span>
+                      <span className="sm:hidden">Merge</span>
                     </Button>
                   )}
-                  <Button size="sm" variant="default" onClick={() => handleClaim(cluster)}>
+                  <Button size="sm" variant="default" className="h-10 min-w-[48px]" onClick={() => handleClaim(cluster)}>
                     <UserPlus className="h-4 w-4 mr-1.5" />
                     Claim
                   </Button>
