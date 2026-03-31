@@ -168,7 +168,7 @@ const VisitorReview = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {clusters.map((cluster) => (
             <Card key={cluster.cluster_id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-5 space-y-4">
