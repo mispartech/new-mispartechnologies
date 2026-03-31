@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight, Search } from 'lucide-react';
+import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
 import { useTerminology } from '@/contexts/TerminologyContext';
@@ -18,6 +19,7 @@ interface DashboardHeaderProps {
   user: User;
   profile: any;
   onMenuToggle: () => void;
+  sidebarOpen?: boolean;
 }
 
 // Static route labels (non-dynamic ones)
@@ -45,7 +47,7 @@ const STATIC_ROUTE_LABELS: Record<string, string> = {
   '/dashboard/temp-members': 'Temp Visitors',
 };
 
-const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) => {
+const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -83,7 +85,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
   }, [location.pathname, getTerm]);
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-auto z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
+    <header className={cn("fixed top-0 right-0 z-40 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50 left-0 transition-all duration-300", sidebarOpen ? "lg:left-64" : "lg:left-[68px]")}>
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
         {/* Left: mobile menu + breadcrumbs */}
         <div className="flex items-center gap-3">
@@ -91,9 +93,11 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
             <Menu className="w-5 h-5" />
           </Button>
 
-          {/* Breadcrumbs */}
+          {/* Breadcrumbs — simplified on mobile */}
           {breadcrumbLabel && location.pathname !== '/dashboard' && (
-            <nav className="hidden sm:flex items-center gap-1.5 text-sm">
+            <>
+              <span className="sm:hidden text-sm font-medium text-foreground truncate max-w-[160px]">{breadcrumbLabel}</span>
+              <nav className="hidden sm:flex items-center gap-1.5 text-sm">
               <button
                 onClick={() => navigate('/dashboard')}
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -103,6 +107,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle }: DashboardHeaderProps) 
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
               <span className="font-medium text-foreground">{breadcrumbLabel}</span>
             </nav>
+            </>
           )}
         </div>
 

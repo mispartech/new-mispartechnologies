@@ -723,7 +723,7 @@ const AttendanceCapture = () => {
         <Card>
           <CardContent className="p-3 sm:pt-4">
             <div className="text-xl sm:text-2xl font-bold text-primary">{stats.members}</div>
-            <p className="text-xs text-muted-foreground">Members</p>
+            <p className="text-xs text-muted-foreground capitalize">{getTerm('plural')}</p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">

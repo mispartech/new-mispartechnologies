@@ -145,6 +145,7 @@ const DashboardLayoutInner = () => {
           user={mockUser as any}
           profile={profile}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          sidebarOpen={sidebarOpen}
         />
 
         <main className="p-4 lg:p-6 mt-14">

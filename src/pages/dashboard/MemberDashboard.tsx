@@ -209,7 +209,7 @@ const MemberDashboard = () => {
       {/* ── Today's Focus Strip ── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl bg-card/80 border border-border/50 backdrop-blur-sm">
         {/* Streak */}
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-orange-500/5 border border-orange-500/10 flex-1">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-orange-500/5 border border-orange-500/10 flex-1 min-w-0">
           <Flame className={cn("w-6 h-6", currentStreak > 0 ? "text-orange-500 animate-pulse" : "text-muted-foreground")} />
           <div>
             <p className="text-lg font-bold leading-tight">{currentStreak}</p>
@@ -218,7 +218,7 @@ const MemberDashboard = () => {
         </div>
 
         {/* Next badge progress */}
-        <Link to="/dashboard/streaks" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-purple-500/5 border border-purple-500/10 flex-1 group hover:border-purple-500/20 transition-colors">
+        <Link to="/dashboard/streaks" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-purple-500/5 border border-purple-500/10 flex-1 min-w-0 group hover:border-purple-500/20 transition-colors">
           <Trophy className="w-6 h-6 text-purple-500" />
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Badges</p>
@@ -233,7 +233,7 @@ const MemberDashboard = () => {
         </Link>
 
         {/* Quick schedule */}
-        <Link to="/dashboard/my-schedule" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-accent/5 border border-accent/10 flex-1 group hover:border-accent/20 transition-colors">
+        <Link to="/dashboard/my-schedule" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-accent/5 border border-accent/10 flex-1 min-w-0 group hover:border-accent/20 transition-colors">
           <CalendarClock className="w-6 h-6 text-accent" />
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Schedule</p>
