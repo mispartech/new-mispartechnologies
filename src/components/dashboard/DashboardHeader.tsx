@@ -18,6 +18,7 @@ interface DashboardHeaderProps {
   user: User;
   profile: any;
   onMenuToggle: () => void;
+  sidebarOpen?: boolean;
 }
 
 // Static route labels (non-dynamic ones)
