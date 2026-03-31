@@ -233,7 +233,7 @@ const MemberDashboard = () => {
         </Link>
 
         {/* Quick schedule */}
-        <Link to="/dashboard/my-schedule" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-accent/5 border border-accent/10 flex-1 group hover:border-accent/20 transition-colors">
+        <Link to="/dashboard/my-schedule" className="flex items-center gap-3 px-4 py-2 rounded-xl bg-accent/5 border border-accent/10 flex-1 min-w-0 group hover:border-accent/20 transition-colors">
           <CalendarClock className="w-6 h-6 text-accent" />
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Schedule</p>

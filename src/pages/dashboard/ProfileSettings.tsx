@@ -120,7 +120,7 @@ const ProfileSettings = () => {
     <div className="space-y-6">
       <div><h1 className="text-2xl font-bold text-foreground">Profile Settings</h1><p className="text-muted-foreground">Manage your account settings and preferences</p></div>
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex flex-nowrap overflow-x-auto w-full h-auto gap-1 p-1">
           <TabsTrigger value="profile" className="gap-2"><User className="w-4 h-4" />Profile</TabsTrigger>
           <TabsTrigger value="face" className="gap-2"><Camera className="w-4 h-4" />Face ID</TabsTrigger>
           <TabsTrigger value="security" className="gap-2"><Shield className="w-4 h-4" />Security</TabsTrigger>

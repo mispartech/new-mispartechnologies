@@ -266,6 +266,14 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
+        {/* Mobile close button */}
+        <button
+          onClick={onToggle}
+          className="absolute top-4 right-3 z-10 w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center hover:bg-muted transition-colors"
+          aria-label="Close sidebar"
+        >
+          <X className="w-4 h-4 text-muted-foreground" />
+        </button>
         <SidebarContent isMobile />
       </aside>
     </>

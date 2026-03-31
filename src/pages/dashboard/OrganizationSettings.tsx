@@ -100,7 +100,7 @@ const OrganizationSettings = () => {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="flex-wrap">
+        <TabsList className="flex flex-nowrap overflow-x-auto w-full h-auto gap-1 p-1">
           <TabsTrigger value="general" className="gap-2"><Building2 className="w-4 h-4" />General</TabsTrigger>
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>

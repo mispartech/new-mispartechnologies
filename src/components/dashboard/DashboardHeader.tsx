@@ -107,6 +107,7 @@ const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: Dashboard
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
               <span className="font-medium text-foreground">{breadcrumbLabel}</span>
             </nav>
+            </>
           )}
         </div>
 

@@ -92,7 +92,7 @@ const BrandingSettings = () => {
         {/* Settings panel */}
         <div className="xl:col-span-2">
           <Tabs defaultValue="colors" className="space-y-4">
-            <TabsList className="flex flex-wrap h-auto gap-1 bg-muted p-1">
+            <TabsList className="flex flex-nowrap overflow-x-auto h-auto gap-1 bg-muted p-1 w-full">
               <TabsTrigger value="colors" className="gap-1.5"><Palette className="w-4 h-4" /> Colors</TabsTrigger>
               <TabsTrigger value="identity" className="gap-1.5"><Image className="w-4 h-4" /> Identity</TabsTrigger>
               <TabsTrigger value="typography" className="gap-1.5"><Type className="w-4 h-4" /> Typography</TabsTrigger>
