@@ -42,7 +42,7 @@ const featureLabels: Record<string, { label: string; description: string }> = {
   shift_handover: { label: 'Shift Handover', description: 'Manage transitions' },
 };
 
-interface Organization { id: string; name: string; type: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; }
+interface Organization { id: string; name: string; type: string; slug?: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; allow_self_registration?: boolean; require_approval?: boolean; }
 
 const OrganizationSettings = () => {
   const { profile } = useOutletContext<{ profile: any }>();
