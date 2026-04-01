@@ -51,6 +51,7 @@ import Blog from "./pages/Blog";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
+import JoinOrganization from "./pages/JoinOrganization";
 
 const queryClient = new QueryClient();
 
