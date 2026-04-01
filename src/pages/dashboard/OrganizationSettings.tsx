@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2 } from 'lucide-react';
+import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2, Link2, Copy, QrCode, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Feature labels for display
