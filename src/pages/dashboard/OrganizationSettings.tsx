@@ -103,6 +103,7 @@ const OrganizationSettings = () => {
         <TabsList className="flex flex-nowrap overflow-x-auto w-full h-auto gap-1 p-1">
           <TabsTrigger value="general" className="gap-2"><Building2 className="w-4 h-4" />General</TabsTrigger>
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
+          <TabsTrigger value="registration" className="gap-2"><Globe className="w-4 h-4" />Registration</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>
           <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
