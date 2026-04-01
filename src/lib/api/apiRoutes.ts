@@ -51,6 +51,10 @@ export const API_ROUTES = {
 
   // ── Accept Invite ──
   ACCEPT_INVITE: (token: string) => `/api/accept-invite/${token}/`,
+
+  // ── Public Organization / Self-Registration ──
+  ORG_PUBLIC_INFO: (slug: string) => `/api/organizations/${slug}/public/`,
+  SELF_REGISTER: '/api/self-register/',
 } as const;
 
 /**

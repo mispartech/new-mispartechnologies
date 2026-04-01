@@ -601,6 +601,33 @@ class DjangoApiClient {
     return notImplemented('/api/schedules/bulk-update/');
   }
 
+  // ═══════════════════════════ PUBLIC ORG / SELF-REGISTER ═══════════════════════════
+
+  /**
+   * GET /api/organizations/:slug/public/ — unauthenticated
+   */
+  async getOrgPublicInfo(slug: string): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.ORG_PUBLIC_INFO(slug), { silent: true });
+  }
+
+  /**
+   * POST /api/self-register/ — unauthenticated self-registration
+   */
+  async selfRegister(data: {
+    org_slug: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number?: string;
+    gender?: string;
+    department_id?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.SELF_REGISTER, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // ═══════════════════════════ HEALTH CHECK ═══════════════════════════
 
   async healthCheck(): Promise<ApiResponse<any>> {
