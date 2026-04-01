@@ -150,6 +150,7 @@ const RegistrationTab = ({ organization, setOrganization }: { organization: Orga
   );
 };
 
+const OrganizationSettings = () => {
 
   const { profile } = useOutletContext<{ profile: any }>();
   const [isLoading, setIsLoading] = useState(true);
