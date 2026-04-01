@@ -144,6 +144,8 @@ const OrganizationSettings = () => {
           </Card>
         </TabsContent>
 
+        <RegistrationTab organization={organization} setOrganization={setOrganization} />
+
         <TabsContent value="attendance">
           <Card>
             <CardHeader><CardTitle>Attendance Settings</CardTitle><CardDescription>Configure how attendance tracking works</CardDescription></CardHeader>
