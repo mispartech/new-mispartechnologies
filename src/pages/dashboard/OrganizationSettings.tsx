@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { djangoApi } from '@/lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2 } from 'lucide-react';
+import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2, Link2, Copy, QrCode, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Feature labels for display
@@ -42,9 +42,116 @@ const featureLabels: Record<string, { label: string; description: string }> = {
   shift_handover: { label: 'Shift Handover', description: 'Manage transitions' },
 };
 
-interface Organization { id: string; name: string; type: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; }
+interface Organization { id: string; name: string; type: string; slug?: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; allow_self_registration?: boolean; require_approval?: boolean; }
+
+const SELF_REG_ORG_TYPES = ['church', 'nonprofit', 'other'];
+
+const RegistrationTab = ({ organization, setOrganization }: { organization: Organization; setOrganization: React.Dispatch<React.SetStateAction<Organization | null>> }) => {
+  const { toast } = useToast();
+  const selfRegDefault = SELF_REG_ORG_TYPES.includes(organization.type);
+  const allowSelfReg = organization.allow_self_registration ?? selfRegDefault;
+  const requireApproval = organization.require_approval ?? true;
+
+  const joinUrl = organization.slug
+    ? `${window.location.origin}/join/${organization.slug}`
+    : null;
+
+  const copyLink = () => {
+    if (!joinUrl) return;
+    navigator.clipboard.writeText(joinUrl);
+    toast({ title: 'Link Copied', description: 'Join link copied to clipboard.' });
+  };
+
+  return (
+    <TabsContent value="registration">
+      <Card>
+        <CardHeader>
+          <CardTitle>Public Registration</CardTitle>
+          <CardDescription>
+            Control how new users can join your organization without an invitation
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Allow Self-Registration</p>
+              <p className="text-sm text-muted-foreground">
+                Users can register via a public join link without an admin invitation
+              </p>
+            </div>
+            <Switch
+              checked={allowSelfReg}
+              onCheckedChange={(checked) =>
+                setOrganization(prev => prev ? { ...prev, allow_self_registration: checked } : prev)
+              }
+            />
+          </div>
+
+          {allowSelfReg && (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Require Admin Approval</p>
+                  <p className="text-sm text-muted-foreground">
+                    New registrations will be pending until approved by an admin
+                  </p>
+                </div>
+                <Switch
+                  checked={requireApproval}
+                  onCheckedChange={(checked) =>
+                    setOrganization(prev => prev ? { ...prev, require_approval: checked } : prev)
+                  }
+                />
+              </div>
+
+              {joinUrl ? (
+                <div className="space-y-3">
+                  <Label>Shareable Join Link</Label>
+                  <div className="flex gap-2">
+                    <Input value={joinUrl} readOnly className="font-mono text-sm" />
+                    <Button variant="outline" size="icon" onClick={copyLink} title="Copy link">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Share this link via WhatsApp, social media, or print as a QR code for easy access.
+                  </p>
+
+                  {/* Simple QR placeholder — real QR requires a library */}
+                  <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
+                    <QrCode className="w-8 h-8 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">QR Code</p>
+                      <p className="text-xs text-muted-foreground">
+                        Use any free QR code generator with the link above to create a scannable code for bulletins or posters.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg border border-dashed text-center text-muted-foreground">
+                  <Link2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Join link will be available once the backend generates your organization slug.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {!SELF_REG_ORG_TYPES.includes(organization.type) && !allowSelfReg && (
+            <div className="p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              Self-registration is typically used by churches, non-profits, and community organizations
+              with large memberships. For {organization.type} organizations, the invitation-based flow
+              is recommended for tighter access control.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  );
+};
 
 const OrganizationSettings = () => {
+
   const { profile } = useOutletContext<{ profile: any }>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +185,8 @@ const OrganizationSettings = () => {
     try {
       const result = await djangoApi.updateOrgSettings(organization.id, {
         name: organization.name, industry: organization.industry, address: organization.address, city: organization.city, country: organization.country, phone: organization.phone, email: organization.email, website: organization.website, settings,
+        allow_self_registration: organization.allow_self_registration,
+        require_approval: organization.require_approval,
       });
       if (result.error) throw new Error(result.error);
       toast({ title: 'Settings Saved', description: 'Organization settings have been updated.' });
@@ -103,6 +212,7 @@ const OrganizationSettings = () => {
         <TabsList className="flex flex-nowrap overflow-x-auto w-full h-auto gap-1 p-1">
           <TabsTrigger value="general" className="gap-2"><Building2 className="w-4 h-4" />General</TabsTrigger>
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
+          <TabsTrigger value="registration" className="gap-2"><Globe className="w-4 h-4" />Registration</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>
           <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
@@ -142,6 +252,8 @@ const OrganizationSettings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <RegistrationTab organization={organization} setOrganization={setOrganization} />
 
         <TabsContent value="attendance">
           <Card>
