@@ -185,6 +185,8 @@ const OrganizationSettings = () => {
     try {
       const result = await djangoApi.updateOrgSettings(organization.id, {
         name: organization.name, industry: organization.industry, address: organization.address, city: organization.city, country: organization.country, phone: organization.phone, email: organization.email, website: organization.website, settings,
+        allow_self_registration: organization.allow_self_registration,
+        require_approval: organization.require_approval,
       });
       if (result.error) throw new Error(result.error);
       toast({ title: 'Settings Saved', description: 'Organization settings have been updated.' });
