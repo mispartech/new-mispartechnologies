@@ -1,98 +1,107 @@
 
 
-# User Onboarding Strategy by Organization Type
+# Fix Multiple Issues: Invitations, Onboarding, Departments, Face Enrollment, Activity Logs
 
-## Current State
+## Issue Analysis
 
-The app supports 7 organization types: **Church/Religious**, **Corporate**, **School/Educational**, **Healthcare**, **Government**, **Non-Profit**, and **Other**.
+### 1. Member/Admin Invitation — 500 Error (BACKEND)
+The `POST /api/members/` returns 500. The frontend code is correct — it sends `{ email, first_name, last_name, phone_number, gender, department_id, role, job_title }`. The 500 is a backend issue — likely the endpoint doesn't handle user creation with Supabase auth provisioning, or the `role` field isn't accepted.
 
-Currently there is only ONE onboarding path:
-1. Admin signs up at `/auth` → completes `/onboarding` (creates org) → becomes `super_admin`
-2. Admin invites users via `AddMemberModal` (email invitation) → invitee clicks link → `/register?token=...` → sets password + face enrollment
+### 2. Face Enrollment — 500 "Image upload configuration error" (BACKEND)
+The frontend correctly sends a `multipart/form-data` with an `image` field as a Blob. The 500 + "Image upload configuration error" means the Django backend's storage configuration (likely Supabase Storage bucket credentials or permissions) is misconfigured.
 
-There is NO self-registration path for non-admin users.
+### 3. Onboarding Country/State/City — plain text inputs (FRONTEND)
+Currently `country` and `city` are free-text `<Input>` fields with no `state` field. Need to add West African country dropdown, dynamic state/city selectors.
 
-## Recommended Strategy Per Organization Type
+### 4. Department Delete — uses `confirm()` instead of modal (FRONTEND)
+`DepartmentsList.tsx` line 82: `if (!confirm('Are you sure...'))` — needs a proper AlertDialog. Also, `updateDepartment` and `deleteDepartment` are stubs returning 404.
 
-### Tier 1: Invitation-Only (Corporate, Healthcare, Government)
-**Why**: These orgs have strict access control — only authorized personnel should join.
+### 5. Department Description — doesn't save (BACKEND + FRONTEND)
+Frontend sends `description` in `createDepartment()` correctly. If it's not saving, the backend `POST /api/departments/` may not include `description` in its serializer fields.
 
-- **Keep current flow**: Admin invites employees/staff via email
-- **Add bulk CSV import** (already exists via `ImportMembersModal`)
-- **No changes needed** — the invitation model is correct for these
+### 6. Activity Logs — "Coming Soon" placeholder (BACKEND needed)
+No endpoint exists. Need backend `GET /api/activity-logs/` endpoint.
 
-### Tier 2: Hybrid — Invitation + Self-Registration (Church, Non-Profit, Other)
-**Why**: Churches/NGOs have large, fluid memberships. Pastors can't individually invite 500+ members. Members need a way to self-register and attach to their organization.
+---
 
-- **Add a public registration page per organization** — e.g. `/join/<org-slug>`
-- Members visit the link (shared via QR code, WhatsApp, bulletin board)
-- They fill in: name, email, phone, gender, department (optional)
-- Account is created with `pending` role → admin approves or auto-approves
-- After approval, member sets password and enrolls face
+## Frontend Changes
 
-### Tier 3: Managed Registration (School/Educational)
-**Why**: Students are enrolled by admins, but parents/guardians may need portal access.
+### File 1: `src/pages/Onboarding.tsx`
+- Add `state` field to `OnboardingData` interface
+- Replace `country` text input with a `<Select>` dropdown containing West African countries: Nigeria, Ghana, Senegal, Côte d'Ivoire, Cameroon, Togo, Benin, Mali, Burkina Faso, Niger, Guinea, Sierra Leone, Liberia, The Gambia, Guinea-Bissau, Cape Verde
+- Add `state` `<Select>` that dynamically populates based on selected country (Nigerian states, Ghanaian regions, etc.)
+- Replace `city` text input with a `<Select>` or searchable input that shows cities for the selected state
+- Include `state` in the draft save payload as `state`
 
-- **Keep invitation flow** for students (admin enrolls them)
-- Future: parent/guardian self-registration linked to student records
+### File 2: `src/pages/dashboard/DepartmentsList.tsx`
+- Replace `confirm()` in `handleDelete` with an `AlertDialog` component
+- Add state for `deletingDepartmentId` to track which department is being deleted
+- Import `AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle`
 
-## Implementation Plan
+### File 3: `src/pages/dashboard/ActivityLogs.tsx`
+- Replace "Coming Soon" with a functional activity log viewer
+- Fetch from `GET /api/activity-logs/` (will show empty state gracefully if endpoint doesn't exist yet)
+- Display table: Timestamp, User, Action, Details, IP Address
+- Add date range filter and action type filter
+- Mobile card layout
 
-### Phase 1: Organization Join Page (`/join/:slug`)
+### File 4: `src/lib/api/client.ts`
+- Add `getActivityLogs(params)` method calling `GET /api/activity-logs/`
+- Move `updateDepartment` and `deleteDepartment` from stubs to real API calls (backend needs to implement these)
 
-| File | Change |
-|---|---|
-| `src/pages/JoinOrganization.tsx` | **New** — public registration form with org branding |
-| `src/lib/api/apiRoutes.ts` | Add `ORG_PUBLIC_INFO: (slug) => /api/organizations/${slug}/public/` and `SELF_REGISTER: /api/self-register/` |
-| `src/lib/api/client.ts` | Add `getOrgPublicInfo(slug)` and `selfRegister(data)` |
-| `src/App.tsx` | Add route `/join/:slug` |
+### File 5: `src/lib/api/apiRoutes.ts`
+- Add `ACTIVITY_LOGS: '/api/activity-logs/'`
+- Move `DEPARTMENT` route from `FUTURE_ROUTES` to `API_ROUTES`
 
-**JoinOrganization page design:**
-- Fetches org public info (name, logo, type) from `GET /api/organizations/:slug/public/` (no auth required)
-- Shows branded registration form with org name/logo at top
-- Fields: First Name, Last Name, Email, Phone, Gender, Department (fetched from org)
-- On submit → `POST /api/self-register/` with `{ org_slug, email, first_name, ... }`
-- User receives email to verify + set password
-- Account created with `pending` or `member` role depending on org settings
+### File 6: `src/lib/locationData.ts` (NEW)
+- West African countries list with states/regions and major cities
+- Export helper functions: `getCountries()`, `getStates(country)`, `getCities(country, state)`
 
-### Phase 2: Organization Settings — Registration Control
+---
 
-| File | Change |
-|---|---|
-| `src/pages/dashboard/OrganizationSettings.tsx` | Add "Registration" tab |
+## Backend Prompt (for you to implement on Django)
 
-**New settings for admins:**
-- Toggle: "Allow self-registration" (on/off)
-- Toggle: "Require admin approval for new registrations"
-- Shareable join link: `https://mispartechnologies.com/join/<org-slug>`
-- QR code generator for the join link
-- Default department for self-registered users
+Here is the Django implementation prompt covering all backend fixes:
 
-### Phase 3: Pending Approvals (if approval required)
+### 1. Fix `POST /api/members/` — Member/Admin Invitation
+The endpoint returns 500 when creating members. Required fixes:
+- Accept fields: `email`, `first_name`, `last_name`, `phone_number`, `gender`, `department_id`, `role` (default: `member`), `job_title`
+- Create a Supabase auth user via `supabase.auth.admin.create_user(email=email, email_confirm=False)`
+- Create a `CustomUser` record linked to the Supabase auth user's UUID
+- Associate user with the requesting admin's organization
+- If `department_id` is provided, link user to that department
+- Set the user's `role` field (validate: admins can only assign `manager`; super_admins can assign `admin`/`manager`)
+- Send invitation email with password setup link via Supabase `supabase.auth.admin.generate_link(type='invite', email=email)`
+- Return `{ id, email, first_name, last_name, role, status: 'pending' }`
 
-| File | Change |
-|---|---|
-| `src/pages/dashboard/MembersList.tsx` | Add "Pending" tab showing self-registered users awaiting approval |
+### 2. Fix `POST /api/face/enroll/` — Face Enrollment 500
+The "Image upload configuration error" suggests storage misconfiguration:
+- Verify Supabase Storage bucket `faces` exists and has proper permissions
+- Ensure `SUPABASE_SERVICE_ROLE_KEY` is set in Django environment
+- Check that the endpoint reads `request.FILES['image']` (multipart/form-data)
+- Upload to path `faces/{org_id}/{user_id}/enrollment.jpg`
+- Update user profile `face_enrolled=True` and `face_image_url` with the public URL
+- Return `{ status: 'success', message: 'Face enrolled successfully' }`
 
-**Admin actions on pending users:** Approve (sets role to `member`), Reject (deletes), Edit department before approving.
+### 3. Fix `POST /api/departments/` — Description field not saving
+- Ensure `description` is included in the Department serializer's `fields`
+- Verify the model has a `description` field (TextField, blank=True, null=True)
 
-## Backend Requirements (Prompt for You)
+### 4. Implement `PATCH /api/departments/<id>/` and `DELETE /api/departments/<id>/`
+- `PATCH`: Accept `name`, `description` — update the department
+- `DELETE`: Remove department (handle members linked to it — set their department to null or reject if members exist)
+- Both require admin/super_admin role
 
-1. **Add `slug` field to Organization model** — auto-generated from org name, unique, URL-safe
-2. **`GET /api/organizations/:slug/public/`** — unauthenticated endpoint returning `{ name, slug, type, logo_url, departments: [{id, name}] }` (minimal public info only)
-3. **`POST /api/self-register/`** — unauthenticated; accepts `{ org_slug, email, first_name, last_name, phone, gender, department_id }`. Creates user with `pending` or `member` role based on org settings. Sends verification email.
-4. **Add org settings fields**: `allow_self_registration` (boolean, default false), `require_approval` (boolean, default true)
-5. **`GET /api/members/?status=pending`** — already planned, needed for approval queue
+### 5. Implement `GET /api/activity-logs/`
+- Create an `ActivityLog` model: `id`, `user_id`, `action` (string), `details` (JSONField), `ip_address`, `created_at`, `organization_id`
+- Log actions automatically: member creation, department CRUD, attendance marks, role changes, settings updates, face enrollment
+- Use Django middleware or signals to capture: user login, profile updates, member invitations
+- Endpoint accepts query params: `start_date`, `end_date`, `action_type`, `user_id`, `page`, `page_size`
+- Returns paginated: `{ count, results: [{ id, user_name, action, details, ip_address, created_at }] }`
+- Only accessible to admin/super_admin roles
 
-## Summary Table
-
-| Org Type | Primary Method | Self-Registration | Approval Required |
-|---|---|---|---|
-| Corporate | Invitation | Off by default | N/A |
-| Healthcare | Invitation | Off by default | N/A |
-| Government | Invitation | Off by default | N/A |
-| Church | Invitation + Join Link | On by default | Optional (default: off) |
-| Non-Profit | Invitation + Join Link | On by default | Optional (default: off) |
-| School | Invitation | Off by default | N/A |
-| Other | Invitation | Off by default | N/A |
+### 6. Add `state` field to Organization model
+- Add `state` (CharField, max_length=100, blank=True) to the Organization model
+- Include in the onboarding `PUT /api/onboarding/` accepted fields
+- Include in `GET /api/organization-settings/` and `PATCH /api/organization-settings/` responses
 
