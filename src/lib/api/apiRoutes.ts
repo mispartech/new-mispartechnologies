@@ -79,4 +79,3 @@ export const FUTURE_ROUTES = {
   SCHEDULES_BULK_UPDATE: '/api/schedules/bulk-update/',
   REPORTS_ATTENDANCE: '/api/reports/attendance/',
 } as const;
-} as const;
