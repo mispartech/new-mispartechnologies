@@ -329,11 +329,16 @@ class DjangoApiClient {
   }
 
   async updateDepartment(id: string, data: Partial<{ name: string; description: string }>): Promise<ApiResponse<any>> {
-    return notImplemented(`/api/departments/${id}/ PATCH`);
+    return this.request(API_ROUTES.DEPARTMENT(id), {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 
   async deleteDepartment(id: string): Promise<ApiResponse<void>> {
-    return notImplemented(`/api/departments/${id}/ DELETE`);
+    return this.request(API_ROUTES.DEPARTMENT(id), {
+      method: 'DELETE',
+    });
   }
 
   // ═══════════════════════════ ATTENDANCE ═══════════════════════════

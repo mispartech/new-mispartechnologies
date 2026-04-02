@@ -56,6 +56,9 @@ export const API_ROUTES = {
   // ── Public Organization / Self-Registration ──
   ORG_PUBLIC_INFO: (slug: string) => `/api/organizations/${slug}/public/`,
   SELF_REGISTER: '/api/self-register/',
+
+  // ── Activity Logs ──
+  ACTIVITY_LOGS: '/api/activity-logs/',
 } as const;
 
 /**
@@ -65,7 +68,6 @@ export const API_ROUTES = {
 export const FUTURE_ROUTES = {
   MEMBER_INVITE: '/api/members/invite/',
   MEMBER_BULK_INVITE: '/api/members/bulk-invite/',
-  DEPARTMENT: (id: string) => `/api/departments/${id}/`,
   NOTIFICATIONS: '/api/notifications/',
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read/`,
   NOTIFICATIONS_READ_ALL: '/api/notifications/read-all/',
@@ -76,4 +78,5 @@ export const FUTURE_ROUTES = {
   SCHEDULE: (id: string) => `/api/schedules/${id}/`,
   SCHEDULES_BULK_UPDATE: '/api/schedules/bulk-update/',
   REPORTS_ATTENDANCE: '/api/reports/attendance/',
+} as const;
 } as const;
