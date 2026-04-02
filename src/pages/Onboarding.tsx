@@ -63,6 +63,7 @@ interface OnboardingData {
   sizeRange: string;
   address: string;
   city: string;
+  state: string;
   country: string;
   phone: string;
   email: string;
@@ -81,6 +82,7 @@ const defaultData: OnboardingData = {
   sizeRange: '',
   address: '',
   city: '',
+  state: '',
   country: '',
   phone: '',
   email: '',
