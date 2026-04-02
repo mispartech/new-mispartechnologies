@@ -21,6 +21,7 @@ export const API_ROUTES = {
 
   // ── Departments ──
   DEPARTMENTS: '/api/departments/',
+  DEPARTMENT: (id: string) => `/api/departments/${id}/`,
 
   // ── Attendance ──
   ATTENDANCE: '/api/attendance/',
