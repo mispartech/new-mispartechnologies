@@ -329,11 +329,16 @@ class DjangoApiClient {
   }
 
   async updateDepartment(id: string, data: Partial<{ name: string; description: string }>): Promise<ApiResponse<any>> {
-    return notImplemented(`/api/departments/${id}/ PATCH`);
+    return this.request(API_ROUTES.DEPARTMENT(id), {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 
   async deleteDepartment(id: string): Promise<ApiResponse<void>> {
-    return notImplemented(`/api/departments/${id}/ DELETE`);
+    return this.request(API_ROUTES.DEPARTMENT(id), {
+      method: 'DELETE',
+    });
   }
 
   // ═══════════════════════════ ATTENDANCE ═══════════════════════════
@@ -556,6 +561,29 @@ class DjangoApiClient {
       silent: options?.silent,
       timeout: options?.timeout,
     });
+  }
+
+  // ═══════════════════════════ ACTIVITY LOGS ═══════════════════════════
+
+  async getActivityLogs(params?: {
+    start_date?: string;
+    end_date?: string;
+    action_type?: string;
+    user_id?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<ApiResponse<any[]> & { count?: number }> {
+    const query = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]),
+          ),
+        ).toString()
+      : '';
+    const result = await this.request<any>(`${API_ROUTES.ACTIVITY_LOGS}${query}`);
+    if (result.error) return result as any;
+    const { items, count } = unwrapPaginated(result.data);
+    return { data: items, status: result.status, count };
   }
 
   // ═══════════════════════════ REPORTS — STUB ═══════════════════════════

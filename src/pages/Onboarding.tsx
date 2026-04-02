@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rolesByType, type OrganizationType } from '@/lib/roleConfig';
+import { getCountries, getStates, getCities } from '@/lib/locationData';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 
 import Navbar from '@/components/Navbar';
@@ -62,6 +63,7 @@ interface OnboardingData {
   sizeRange: string;
   address: string;
   city: string;
+  state: string;
   country: string;
   phone: string;
   email: string;
@@ -80,6 +82,7 @@ const defaultData: OnboardingData = {
   sizeRange: '',
   address: '',
   city: '',
+  state: '',
   country: '',
   phone: '',
   email: '',
@@ -381,6 +384,10 @@ const Onboarding = () => {
           organization_type: data.organizationType,
           industry: data.industry,
           size_range: data.sizeRange,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
           admin_first_name: data.adminFirstName,
           admin_last_name: data.adminLastName,
           job_title: data.adminRole,
@@ -485,6 +492,10 @@ const Onboarding = () => {
           organization_type: data.organizationType,
           industry: data.industry,
           size_range: data.sizeRange,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
           admin_first_name: data.adminFirstName,
           admin_last_name: data.adminLastName,
           job_title: data.adminRole,
@@ -690,25 +701,56 @@ const Onboarding = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="city" className="text-sm font-medium">City</Label>
-                      <Input
-                        id="city"
-                        value={data.city}
-                        onChange={(e) => setData(prev => ({ ...prev, city: e.target.value }))}
-                        placeholder="e.g., Lagos"
-                        className="mt-1.5 h-9"
-                      />
+                      <Label htmlFor="country" className="text-sm font-medium">Country</Label>
+                      <Select
+                        value={data.country}
+                        onValueChange={(v) => setData(prev => ({ ...prev, country: v, state: '', city: '' }))}
+                      >
+                        <SelectTrigger className="mt-1.5 h-9">
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getCountries().map(c => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label htmlFor="country" className="text-sm font-medium">Country</Label>
-                      <Input
-                        id="country"
-                        value={data.country}
-                        onChange={(e) => setData(prev => ({ ...prev, country: e.target.value }))}
-                        placeholder="e.g., Nigeria"
-                        className="mt-1.5 h-9"
-                      />
+                      <Label htmlFor="state" className="text-sm font-medium">State / Region</Label>
+                      <Select
+                        value={data.state}
+                        onValueChange={(v) => setData(prev => ({ ...prev, state: v, city: '' }))}
+                        disabled={!data.country}
+                      >
+                        <SelectTrigger className="mt-1.5 h-9">
+                          <SelectValue placeholder={data.country ? 'Select state/region' : 'Select country first'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getStates(data.country).map(s => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="city" className="text-sm font-medium">City</Label>
+                      <Select
+                        value={data.city}
+                        onValueChange={(v) => setData(prev => ({ ...prev, city: v }))}
+                        disabled={!data.state}
+                      >
+                        <SelectTrigger className="mt-1.5 h-9">
+                          <SelectValue placeholder={data.state ? 'Select city' : 'Select state first'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getCities(data.country, data.state).map(c => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>

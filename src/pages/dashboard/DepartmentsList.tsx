@@ -1,14 +1,24 @@
 import { useState, useEffect } from 'react';
 import { djangoApi } from '@/lib/api/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Search, MoreVertical, Edit, Trash2, Plus, Building2, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,6 +39,7 @@ const DepartmentsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [deletingDepartmentId, setDeletingDepartmentId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const { toast } = useToast();
 
@@ -78,15 +89,17 @@ const DepartmentsList = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this department?')) return;
+  const handleDelete = async () => {
+    if (!deletingDepartmentId) return;
     try {
-      const result = await djangoApi.deleteDepartment(id);
+      const result = await djangoApi.deleteDepartment(deletingDepartmentId);
       if (result.error) throw new Error(result.error);
       toast({ title: 'Success', description: 'Department deleted successfully' });
       fetchDepartments();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete department', variant: 'destructive' });
+    } finally {
+      setDeletingDepartmentId(null);
     }
   };
 
@@ -110,7 +123,7 @@ const DepartmentsList = () => {
           <h1 className="text-2xl font-bold text-foreground">Departments</h1>
           <p className="text-muted-foreground">Manage organization departments</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) setFormData({ name: '', description: '' }); }}>
           <DialogTrigger asChild><Button className="gap-2"><Plus className="w-4 h-4" />Add Department</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Department</DialogTitle></DialogHeader>
@@ -154,7 +167,7 @@ const DepartmentsList = () => {
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(dept)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeletingDepartmentId(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -181,7 +194,7 @@ const DepartmentsList = () => {
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEdit(dept)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeletingDepartmentId(dept.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -197,6 +210,7 @@ const DepartmentsList = () => {
         </CardContent>
       </Card>
 
+      {/* Edit Dialog */}
       <Dialog open={!!editingDepartment} onOpenChange={(open) => !open && setEditingDepartment(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Department</DialogTitle></DialogHeader>
@@ -207,6 +221,24 @@ const DepartmentsList = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingDepartmentId} onOpenChange={(open) => !open && setDeletingDepartmentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Department</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this department? This action cannot be undone. Members assigned to this department will be unassigned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
