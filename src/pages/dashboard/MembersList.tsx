@@ -55,8 +55,15 @@ const MembersList = () => {
   const { toast } = useToast();
   const { getTerm, personPlural, personSingular } = useTerminology();
 
-  useEffect(() => { fetchMembers(); }, []);
+  useEffect(() => { fetchMembers(); fetchDepartments(); }, []);
   useEffect(() => { if (activeTab === 'pending') fetchPendingMembers(); }, [activeTab]);
+
+  const fetchDepartments = async () => {
+    try {
+      const result = await djangoApi.getDepartments();
+      if (result.data) setDepartments(result.data);
+    } catch {}
+  };
 
   const fetchMembers = async () => {
     try {
