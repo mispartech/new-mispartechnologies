@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHeader from './DashboardHeader';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { TerminologyProvider } from '@/contexts/TerminologyContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { DashboardPreloader } from './PreloaderPreview';
@@ -125,7 +126,9 @@ const DashboardLayoutInner = () => {
       <div className="min-h-screen bg-background dashboard-themed">
         <DashboardHeader user={mockUser as any} profile={profile} onMenuToggle={() => {}} />
         <main className="p-4 lg:p-6 mt-14">
-          <Outlet context={{ user: mockUser, profile, session: null }} />
+          <DashboardErrorBoundary>
+            <Outlet context={{ user: mockUser, profile, session: null }} />
+          </DashboardErrorBoundary>
         </main>
       </div>
     );
@@ -149,7 +152,9 @@ const DashboardLayoutInner = () => {
         />
 
         <main className="p-4 lg:p-6 mt-14">
-          <Outlet context={{ user: mockUser, profile, session: null }} />
+          <DashboardErrorBoundary>
+            <Outlet context={{ user: mockUser, profile, session: null }} />
+          </DashboardErrorBoundary>
         </main>
       </div>
     </div>

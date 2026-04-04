@@ -13,6 +13,7 @@ import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight } from 'lu
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
+import DarkModeToggle from './DarkModeToggle';
 import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardHeaderProps {
@@ -117,6 +118,9 @@ const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: Dashboard
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/')} title="Go to Homepage">
             <Home className="w-4 h-4" />
           </Button>
+
+          {/* Dark mode */}
+          <DarkModeToggle />
 
           {/* Notifications */}
           <NotificationBell userId={user.id} />

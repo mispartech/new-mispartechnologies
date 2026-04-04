@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -42,9 +43,11 @@ const MembersList = () => {
   const { profile } = useOutletContext<{ profile: any }>();
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [activeTab, setActiveTab] = useState('active');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -53,8 +56,15 @@ const MembersList = () => {
   const { toast } = useToast();
   const { getTerm, personPlural, personSingular } = useTerminology();
 
-  useEffect(() => { fetchMembers(); }, []);
+  useEffect(() => { fetchMembers(); fetchDepartments(); }, []);
   useEffect(() => { if (activeTab === 'pending') fetchPendingMembers(); }, [activeTab]);
+
+  const fetchDepartments = async () => {
+    try {
+      const result = await djangoApi.getDepartments();
+      if (result.data) setDepartments(result.data);
+    } catch {}
+  };
 
   const fetchMembers = async () => {
     try {
@@ -122,11 +132,15 @@ const MembersList = () => {
 
   const filteredMembers = members.filter(member => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       member.first_name?.toLowerCase().includes(searchLower) ||
       member.last_name?.toLowerCase().includes(searchLower) ||
       member.email?.toLowerCase().includes(searchLower)
     );
+    const matchesDept = departmentFilter === 'all' || 
+      member.department_id === departmentFilter ||
+      (!member.department_id && departmentFilter === 'unassigned');
+    return matchesSearch && matchesDept;
   });
 
   const filteredPending = pendingMembers.filter(member => {
@@ -278,6 +292,17 @@ const MembersList = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder={`Search ${personPlural}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
             </div>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <div className="flex gap-2">
               <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="w-4 h-4" /></Button>
               <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}><Grid className="w-4 h-4" /></Button>
