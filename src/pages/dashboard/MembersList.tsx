@@ -131,11 +131,15 @@ const MembersList = () => {
 
   const filteredMembers = members.filter(member => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       member.first_name?.toLowerCase().includes(searchLower) ||
       member.last_name?.toLowerCase().includes(searchLower) ||
       member.email?.toLowerCase().includes(searchLower)
     );
+    const matchesDept = departmentFilter === 'all' || 
+      member.department_id === departmentFilter ||
+      (!member.department_id && departmentFilter === 'unassigned');
+    return matchesSearch && matchesDept;
   });
 
   const filteredPending = pendingMembers.filter(member => {
