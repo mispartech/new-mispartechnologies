@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHeader from './DashboardHeader';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { TerminologyProvider } from '@/contexts/TerminologyContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { DashboardPreloader } from './PreloaderPreview';
