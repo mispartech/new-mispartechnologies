@@ -119,6 +119,9 @@ const DashboardHeader = ({ user, profile, onMenuToggle, sidebarOpen }: Dashboard
             <Home className="w-4 h-4" />
           </Button>
 
+          {/* Dark mode */}
+          <DarkModeToggle />
+
           {/* Notifications */}
           <NotificationBell userId={user.id} />
 
