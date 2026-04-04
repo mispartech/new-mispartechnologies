@@ -13,6 +13,7 @@ import { Menu, LogOut, User as UserIcon, Settings, Home, ChevronRight } from 'lu
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import NotificationBell from './NotificationBell';
+import DarkModeToggle from './DarkModeToggle';
 import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface DashboardHeaderProps {
