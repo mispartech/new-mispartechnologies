@@ -52,6 +52,10 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import JoinOrganization from "./pages/JoinOrganization";
+import AdminRegister from "./pages/platform/AdminRegister";
+import AdminLogin from "./pages/platform/AdminLogin";
+import PlatformAdminDashboard from "./pages/platform/PlatformAdminDashboard";
+import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 
 const queryClient = new QueryClient();
 
