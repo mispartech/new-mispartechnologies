@@ -121,6 +121,7 @@ const App = () => (
                 <Route path="schedules" element={<ScheduleManagement />} />
                 <Route path="site-management" element={<SiteManagement />} />
                 <Route path="branding" element={<BrandingSettings />} />
+                <Route path="subscription" element={<SubscriptionSettings />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
