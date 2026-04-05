@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
+import FeaturesSection from '@/components/FeaturesSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
 import SolutionsSection from '@/components/SolutionsSection';
 import RoadmapSection from '@/components/RoadmapSection';
@@ -40,6 +41,17 @@ const Index = () => {
     }
   }, [isAuthenticated, user, isLoading, navigate]);
 
+  // Handle hash scrolling when arriving from another page
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && !hash.includes('access_token')) {
+      setTimeout(() => {
+        const el = document.querySelector(hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  }, []);
+
   useEffect(() => {
     // Update document title
     document.title = 'Mispar Technologies - Facial Recognition Solutions';
@@ -59,6 +71,7 @@ const Index = () => {
       <Navbar onRequestDemo={openDemoModal} />
       <main>
         <HeroSection onRequestDemo={openDemoModal} />
+        <FeaturesSection />
         <HowItWorksSection />
         <SolutionsSection />
         <TestimonialSection />

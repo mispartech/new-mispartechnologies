@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Menu, X, LogIn, User, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import {
   DropdownMenu,
@@ -18,10 +18,21 @@ interface NavbarProps {
 
 const Navbar = ({ onRequestDemo }: NavbarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user: djangoUser, isAuthenticated, isLoading, logout } = useDjangoAuth();
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+    e.preventDefault();
+    if (location.pathname === '/') {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/' + hash);
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -92,7 +103,8 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <a 
-                      href={link.href} 
+                      href={`/${link.href}`} 
+                      onClick={(e) => handleNavClick(e, link.href)}
                       className="text-white/60 hover:text-cyan transition-colors duration-300 text-sm"
                     >
                       {link.label}
@@ -188,9 +200,9 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a 
-                  href={link.href} 
+                  href={`/${link.href}`} 
                   className="flex items-center tap-target px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors text-base"
-                  onClick={closeMenu}
+                  onClick={(e) => { handleNavClick(e, link.href); closeMenu(); }}
                 >
                   {link.label}
                 </a>

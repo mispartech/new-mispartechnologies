@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
 import { useNavigate } from 'react-router-dom';
-import { Newspaper, Download, Mail } from 'lucide-react';
+import { Newspaper, Download, Mail, Clock } from 'lucide-react';
 
 const pressItems = [
   { date: 'Feb 2026', title: 'Mispar Technologies Raises Seed Round to Scale AI-Powered Attendance Across Africa', source: 'TechCabal' },
@@ -25,11 +25,17 @@ const PressMedia = () => {
             <p className="text-white/50 max-w-2xl mx-auto text-lg">Read what the media is saying about our mission to transform identification and attendance management in Africa.</p>
           </div>
         </section>
-        <section className="section-darker py-20">
-          <div className="container-custom max-w-3xl">
+        <section className="section-darker py-20 relative">
+          <div className="absolute inset-0 z-10 flex items-start justify-center pt-20">
+            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-navy-dark/90 border border-cyan/30 shadow-lg shadow-cyan/10 backdrop-blur-sm">
+              <Clock className="w-4 h-4 text-cyan animate-pulse" />
+              <span className="text-sm font-semibold text-white">Content coming soon</span>
+            </div>
+          </div>
+          <div className="container-custom max-w-3xl blur-sm pointer-events-none select-none">
             <div className="space-y-6 mb-16">
               {pressItems.map((p, i) => (
-                <div key={i} className="glass-card p-6 hover:border-cyan/30 transition-colors">
+                <div key={i} className="glass-card p-6">
                   <span className="text-cyan text-sm">{p.date}</span>
                   <h3 className="text-white font-bold text-lg mt-2 mb-1">{p.title}</h3>
                   <p className="text-white/40 text-sm">{p.source}</p>
@@ -40,7 +46,7 @@ const PressMedia = () => {
               <Mail className="text-cyan mx-auto mb-4" size={32} />
               <h2 className="text-white text-xl font-bold mb-3">Media Inquiries</h2>
               <p className="text-white/50 mb-4">For press kits, interviews, or media partnerships, reach out to our communications team.</p>
-              <a href="mailto:press@mispartech.com" className="text-cyan hover:underline">press@mispartech.com</a>
+              <span className="text-cyan">press@mispartech.com</span>
             </div>
           </div>
         </section>

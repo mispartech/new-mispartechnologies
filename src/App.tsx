@@ -52,6 +52,10 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import JoinOrganization from "./pages/JoinOrganization";
+import AdminRegister from "./pages/platform/AdminRegister";
+import AdminLogin from "./pages/platform/AdminLogin";
+import PlatformAdminDashboard from "./pages/platform/PlatformAdminDashboard";
+import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +92,11 @@ const App = () => (
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/join/:slug" element={<JoinOrganization />} />
               
+              {/* Platform Admin Routes */}
+              <Route path="/admin-register" element={<AdminRegister />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin-dashboard" element={<PlatformAdminDashboard />} />
+              
               {/* Dashboard Routes */}
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardRouter />} />
@@ -112,6 +121,7 @@ const App = () => (
                 <Route path="schedules" element={<ScheduleManagement />} />
                 <Route path="site-management" element={<SiteManagement />} />
                 <Route path="branding" element={<BrandingSettings />} />
+                <Route path="subscription" element={<SubscriptionSettings />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

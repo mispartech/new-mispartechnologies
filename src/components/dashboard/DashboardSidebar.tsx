@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserPlus, Building2, ScanFace, FileText, Settings,
   ChevronLeft, ChevronRight, Image, ClipboardList, UserCheck, Shield, Activity,
   CalendarClock, Globe, Calendar, History, TrendingUp, Trophy, Palette, ChevronDown,
-  SearchCheck, X,
+  SearchCheck, X, CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
@@ -93,6 +93,7 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
         { label: 'Schedules', icon: CalendarClock, href: '/dashboard/schedules', roles: ['super_admin', 'admin'] },
         { label: 'Site Management', icon: Globe, href: '/dashboard/site-management', roles: ['super_admin', 'admin'] },
         { label: 'Branding', icon: Palette, href: '/dashboard/branding', roles: ['super_admin', 'admin'] },
+        { label: 'Subscription', icon: CreditCard, href: '/dashboard/subscription', roles: ['super_admin', 'admin'] },
         { label: 'Settings', icon: Settings, href: '/dashboard/settings', roles: ['super_admin', 'admin'] },
       ],
     },

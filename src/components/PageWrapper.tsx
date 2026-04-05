@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import useDocumentTitle from '@/hooks/useDocumentTitle';
 
 interface PageWrapperProps {
@@ -6,11 +7,14 @@ interface PageWrapperProps {
   title?: string;
 }
 
-/**
- * A wrapper component that sets the document title based on the current route
- */
 const PageWrapper: React.FC<PageWrapperProps> = ({ children, title }) => {
   useDocumentTitle(title);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return <>{children}</>;
 };
 
