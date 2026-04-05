@@ -1,6 +1,5 @@
 import React from 'react';
-import { Check, User, Building2, Crown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, User, Building2, Crown, Clock } from 'lucide-react';
 
 interface PricingTier {
   name: string;
@@ -18,17 +17,16 @@ const tiers: PricingTier[] = [
   {
     name: 'Starter',
     icon: <User className="w-5 h-5" />,
-    description: 'Perfect for small churches, schools, or teams',
+    description: 'Perfect for small churches, schools, or teams getting started',
     price: '$35',
     period: '/quarter',
     features: [
-      'Face recognition attendance (single camera)',
-      'Real-time attendance logging',
-      'Duplicate attendance prevention',
-      'Web-based attendance dashboard',
-      'Monthly attendance reports',
+      'Up to 50 members',
+      '1 admin user',
+      'Face recognition attendance',
+      'Basic attendance logs & reports',
+      '1 department',
       'Email support',
-      '1 admin user account',
     ],
     footnote: 'Cancel anytime',
   },
@@ -41,13 +39,12 @@ const tiers: PricingTier[] = [
     period: '/quarter',
     features: [
       'Everything in Starter',
-      'Multi-camera support (up to 5 cameras)',
-      'Real-time attendance analytics',
-      'Role-based access (Admins & Ushers)',
-      'Emotion & demographic insights (basic)',
-      'Weekly attendance reports',
+      'Up to 200 members',
+      '5 admin/manager accounts',
+      'Unlimited departments',
+      'Attendance analytics & charts',
+      'CSV/PDF export',
       'Priority support',
-      'Up to 5 admin/user accounts',
     ],
     footnote: '24/7 customer support',
     highlighted: true,
@@ -55,28 +52,20 @@ const tiers: PricingTier[] = [
   {
     name: 'Business',
     icon: <Building2 className="w-5 h-5" />,
-    description: 'Tailored for large churches & enterprises',
+    description: 'For large organisations needing full control',
     price: '$100',
     period: '/quarter',
     features: [
       'Everything in Pro',
-      'Unlimited camera integration',
-      'Unlimited admin & user accounts',
-      'Advanced attendance analytics & trends',
-      'Custom reporting & exports',
-      'Department & service-level attendance',
+      'Unlimited members & admins',
+      'Visitor tracking & review',
+      'Custom branding & theming',
+      'Activity logs & audit trail',
+      'API access',
       'Dedicated account manager',
-      'API & system integration support',
-      'On-premise or hybrid deployment option',
     ],
-    footnote: '28-days free trial',
+    footnote: '28-day free trial',
   },
-];
-
-const hardwareItems = [
-  'One-time camera setup (or use existing CCTV/IP cameras)',
-  'Custom deployment & onboarding support',
-  'Staff training & system configuration',
 ];
 
 const PricingSection = () => {
@@ -105,7 +94,7 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto mb-10">
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -166,13 +155,25 @@ const PricingSection = () => {
           ))}
         </div>
 
+        {/* Payment coming soon notice */}
+        <div className="max-w-md mx-auto mb-16">
+          <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white/5 border border-white/10">
+            <Clock className="w-4 h-4 text-cyan" />
+            <span className="text-xs text-white/50">Payment integration coming soon — contact sales to get started</span>
+          </div>
+        </div>
+
         {/* Hardware section */}
         <div className="max-w-2xl mx-auto text-center">
           <h3 className="font-bold text-base mb-3" style={{ color: 'hsl(var(--primary-foreground))' }}>
             Hardware & Setup (Optional)
           </h3>
           <ul className="space-y-1.5">
-            {hardwareItems.map((item, i) => (
+            {[
+              'One-time camera setup (or use existing CCTV/IP cameras)',
+              'Custom deployment & onboarding support',
+              'Staff training & system configuration',
+            ].map((item, i) => (
               <li key={i} className="text-sm flex items-center justify-center gap-2" style={{ color: 'hsl(210 20% 65%)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
                 {item}

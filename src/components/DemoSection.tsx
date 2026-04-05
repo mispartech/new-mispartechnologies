@@ -1,12 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Upload, Scan, CheckCircle2, Camera, Sparkles } from 'lucide-react';
+import { Upload, Scan, CheckCircle2, Camera, Sparkles, Clock } from 'lucide-react';
 import InteractiveFaceDemo from './InteractiveFaceDemo';
 import LightweightDemoForm from './LightweightDemoForm';
 
 const DemoSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -64,10 +63,22 @@ const DemoSection = () => {
           </div>
         </div>
 
-        <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <InteractiveFaceDemo onComplete={() => setShowForm(true)} />
-          <div className={`mt-8 md:mt-12 pt-6 md:pt-8 border-t border-white/10 transition-all duration-500 ${showForm ? 'opacity-100' : 'opacity-0'}`}>
-            <LightweightDemoForm isVisible={showForm} />
+        {/* Blurred interactive area with Coming Soon overlay */}
+        <div className={`relative transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Coming Soon overlay */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-navy-dark/90 border border-cyan/30 shadow-lg shadow-cyan/10 backdrop-blur-sm">
+              <Clock className="w-4 h-4 text-cyan animate-pulse" />
+              <span className="text-sm font-semibold text-white">Coming Soon</span>
+              <span className="text-xs text-white/50">— Backend integration in progress</span>
+            </div>
+          </div>
+          {/* Blurred content */}
+          <div className="blur-sm pointer-events-none select-none">
+            <InteractiveFaceDemo onComplete={() => {}} />
+            <div className="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-white/10 opacity-0">
+              <LightweightDemoForm isVisible={false} />
+            </div>
           </div>
         </div>
       </div>

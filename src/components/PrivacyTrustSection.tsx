@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Shield, Eye, EyeOff, Lock, Fingerprint, Database, UserX, CheckCircle2, XCircle, Server, Smartphone, ArrowRight, ArrowDown } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, Fingerprint, Database, Ban, CheckCircle2, XCircle, Server, Smartphone, ArrowRight, ArrowDown, ShieldOff, UserX } from 'lucide-react';
 
 const PrivacyTrustSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -23,14 +23,15 @@ const PrivacyTrustSection = () => {
 
   const whatWeCapture = [
     { icon: Eye, text: 'Facial geometry for recognition', subtext: 'Unique facial landmarks' },
-    { icon: Fingerprint, text: 'Encrypted biometric template', subtext: 'Not a photo, just data points' },
+    { icon: Fingerprint, text: 'Encrypted biometric template', subtext: 'Secure data points for matching' },
+    { icon: Database, text: 'Face images (stored securely per organization)', subtext: 'Protected & org-isolated' },
     { icon: Server, text: 'Timestamp & location', subtext: 'For accurate attendance logs' },
   ];
 
-  const whatWeNeverStore = [
-    { icon: EyeOff, text: 'Raw photos of your face' },
-    { icon: UserX, text: 'Personal identification documents' },
-    { icon: Database, text: 'Data shared with third parties' },
+  const whatWeNeverDo = [
+    { icon: Ban, text: 'Sell your data to third parties' },
+    { icon: ShieldOff, text: 'Share face images outside your organization' },
+    { icon: UserX, text: 'Access data without organizational authorization' },
   ];
 
   const securityFeatures = [
@@ -42,7 +43,7 @@ const PrivacyTrustSection = () => {
   const flowSteps = [
     { label: 'Your Device', icon: Smartphone, description: 'Face captured locally' },
     { label: 'Encrypted Template', icon: Lock, description: 'Converted to data points' },
-    { label: 'Secure Server', icon: Server, description: 'Stored in Nigeria' },
+    { label: 'Secure Server', icon: Server, description: 'Stored per organization' },
   ];
 
   return (
@@ -70,7 +71,6 @@ const PrivacyTrustSection = () => {
           <div className="glass-card p-5 md:p-8">
             <h3 className="text-xs md:text-sm font-medium text-white/40 uppercase tracking-wider mb-5 md:mb-6 text-center">How Your Data Flows</h3>
             
-            {/* Desktop: horizontal / Mobile: vertical */}
             <div className="flex flex-col md:flex-row items-center md:justify-between gap-4 md:gap-2">
               {flowSteps.map((step, i) => {
                 const StepIcon = step.icon;
@@ -108,7 +108,7 @@ const PrivacyTrustSection = () => {
           </div>
         </div>
 
-        {/* Interactive Split: What We Store vs What We Don't */}
+        {/* Interactive Split: What We Capture vs What We Never Do */}
         <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto mb-6 md:mb-8">
           {/* What we capture */}
           <div className={`glass-card p-5 md:p-6 card-lift transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}>
@@ -133,16 +133,16 @@ const PrivacyTrustSection = () => {
             </div>
           </div>
 
-          {/* What we never store */}
+          {/* What we NEVER do */}
           <div className={`glass-card p-5 md:p-6 card-lift transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
             <div className="flex items-center gap-3 mb-4 md:mb-6">
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
                 <XCircle className="w-4 h-4 md:w-5 md:h-5 text-red-400" />
               </div>
-              <h3 className="text-base md:text-lg font-semibold text-white">What we <span className="text-red-400">NEVER</span> store</h3>
+              <h3 className="text-base md:text-lg font-semibold text-white">What we <span className="text-red-400">NEVER</span> do</h3>
             </div>
             <div className="space-y-3 md:space-y-4">
-              {whatWeNeverStore.map((item, index) => (
+              {whatWeNeverDo.map((item, index) => (
                 <div key={index} className="flex items-start gap-3 group p-2 md:p-3 rounded-lg active:bg-red-500/5 transition-colors">
                   <div className="w-8 h-8 rounded-lg bg-red-500/5 flex items-center justify-center shrink-0 relative">
                     <item.icon className="w-4 h-4 text-red-400" />
@@ -157,7 +157,7 @@ const PrivacyTrustSection = () => {
               ))}
             </div>
             <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-white/5">
-              <p className="text-xs text-white/30 italic">Your actual photos never leave your device.</p>
+              <p className="text-xs text-white/30 italic">All face data is encrypted and isolated per organization. Only authorized org admins can access it.</p>
             </div>
           </div>
         </div>

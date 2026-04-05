@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Shield, Lock, Trash2, MessageCircle, User, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { Shield, Lock, Trash2, MessageCircle, User, ArrowRight, CheckCircle2, Sparkles, Mail, Building2 } from 'lucide-react';
 
 interface DemoRequestModalProps {
   isOpen: boolean;
@@ -20,7 +20,9 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     whatsapp: '',
+    organization: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -30,8 +32,11 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const isFormValid = formData.name.trim() && formData.email.trim() && formData.whatsapp.trim();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
     setIsSubmitting(true);
     
     setTimeout(() => {
@@ -39,14 +44,14 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
       setIsSubmitted(true);
       toast({
         title: "You're all set!",
-        description: "We'll send you updates and tips via WhatsApp.",
+        description: "We'll send you a confirmation email with a demo video link.",
       });
     }, 1000);
   };
 
   const handleClose = () => {
     setIsSubmitted(false);
-    setFormData({ name: '', whatsapp: '' });
+    setFormData({ name: '', email: '', whatsapp: '', organization: '' });
     onClose();
   };
 
@@ -66,8 +71,11 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
               <CheckCircle2 size={32} className="text-mint" />
             </div>
             <h3 className="text-lg font-bold mb-2">Thanks for your interest!</h3>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-sm mb-2">
               We'll reach out via WhatsApp with more information about how Mispar can work for your organization.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              A confirmation email with a demo video link has been sent to <strong>{formData.email}</strong>.
             </p>
             <Button onClick={handleClose} className="mt-4" variant="outline">
               Close
@@ -85,14 +93,32 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
               <div>
                 <Label htmlFor="modal-name" className="text-sm flex items-center gap-2">
                   <User size={14} className="text-muted-foreground" />
-                  Name <span className="text-muted-foreground text-xs">(optional)</span>
+                  Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="modal-name"
                   name="name"
-                  placeholder="Your name"
+                  placeholder="Your full name"
                   value={formData.name}
                   onChange={handleInputChange}
+                  required
+                  className="mt-1 bg-background"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="modal-email" className="text-sm flex items-center gap-2">
+                  <Mail size={14} className="text-muted-foreground" />
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="modal-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
                   className="mt-1 bg-background"
                 />
               </div>
@@ -114,10 +140,25 @@ const DemoRequestModal = ({ isOpen, onClose }: DemoRequestModalProps) => {
                 />
               </div>
 
+              <div>
+                <Label htmlFor="modal-organization" className="text-sm flex items-center gap-2">
+                  <Building2 size={14} className="text-muted-foreground" />
+                  Organization <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Input
+                  id="modal-organization"
+                  name="organization"
+                  placeholder="Your organization name"
+                  value={formData.organization}
+                  onChange={handleInputChange}
+                  className="mt-1 bg-background"
+                />
+              </div>
+
               <Button
                 type="submit"
                 className="w-full bg-purple hover:bg-purple-dark"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isFormValid}
               >
                 {isSubmitting ? 'Sending...' : 'Request Demo'}
                 {!isSubmitting && <ArrowRight size={16} className="ml-2" />}
