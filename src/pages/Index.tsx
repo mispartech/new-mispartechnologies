@@ -61,7 +61,6 @@ const Index = () => {
     if (metaDescription) {
       metaDescription.setAttribute('content', 'Unlock every barrier with Mispar Technologies facial recognition solutions. Smart attendance, security, and access control for organizations.');
     }
-    }
   }, []);
 
   const openDemoModal = () => setIsDemoModalOpen(true);
