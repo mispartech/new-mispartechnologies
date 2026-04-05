@@ -103,7 +103,8 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <a 
-                      href={link.href} 
+                      href={`/${link.href}`} 
+                      onClick={(e) => handleNavClick(e, link.href)}
                       className="text-white/60 hover:text-cyan transition-colors duration-300 text-sm"
                     >
                       {link.label}
