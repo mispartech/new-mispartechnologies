@@ -18,10 +18,21 @@ interface NavbarProps {
 
 const Navbar = ({ onRequestDemo }: NavbarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user: djangoUser, isAuthenticated, isLoading, logout } = useDjangoAuth();
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+    e.preventDefault();
+    if (location.pathname === '/') {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/' + hash);
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
