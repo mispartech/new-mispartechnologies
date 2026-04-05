@@ -60,6 +60,7 @@ const Index = () => {
       <Navbar onRequestDemo={openDemoModal} />
       <main>
         <HeroSection onRequestDemo={openDemoModal} />
+        <FeaturesSection />
         <HowItWorksSection />
         <SolutionsSection />
         <TestimonialSection />

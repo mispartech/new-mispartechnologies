@@ -200,9 +200,9 @@ const Navbar = ({ onRequestDemo }: NavbarProps) => {
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a 
-                  href={link.href} 
+                  href={`/${link.href}`} 
                   className="flex items-center tap-target px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors text-base"
-                  onClick={closeMenu}
+                  onClick={(e) => { handleNavClick(e, link.href); closeMenu(); }}
                 >
                   {link.label}
                 </a>
