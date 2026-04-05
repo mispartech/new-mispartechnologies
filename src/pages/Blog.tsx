@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowRight, Clock } from 'lucide-react';
 
 const posts = [
   { date: 'Mar 1, 2026', title: '5 Ways Face Recognition Is Transforming Church Attendance in Nigeria', excerpt: 'From Sunday services to midweek meetings, discover how churches are using AI to track, engage, and grow their congregations.', tag: 'Industry' },
@@ -26,18 +26,25 @@ const Blog = () => {
             <p className="text-white/50 max-w-2xl mx-auto text-lg">Explore articles on facial recognition, AI ethics, workforce management, and the future of identity technology.</p>
           </div>
         </section>
-        <section className="section-darker py-20">
-          <div className="container-custom max-w-4xl">
+        <section className="section-darker py-20 relative">
+          {/* Coming Soon overlay */}
+          <div className="absolute inset-0 z-10 flex items-start justify-center pt-20">
+            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-navy-dark/90 border border-cyan/30 shadow-lg shadow-cyan/10 backdrop-blur-sm sticky top-32">
+              <Clock className="w-4 h-4 text-cyan animate-pulse" />
+              <span className="text-sm font-semibold text-white">Content coming soon</span>
+            </div>
+          </div>
+          <div className="container-custom max-w-4xl blur-sm pointer-events-none select-none">
             <div className="space-y-6">
               {posts.map((p, i) => (
-                <article key={i} className="glass-card p-6 hover:border-cyan/30 transition-colors card-lift cursor-pointer">
+                <article key={i} className="glass-card p-6 cursor-pointer">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-white/30 text-sm">{p.date}</span>
                     <span className="px-2 py-0.5 rounded-full bg-cyan/10 text-cyan text-xs">{p.tag}</span>
                   </div>
                   <h3 className="text-white font-bold text-lg mb-2">{p.title}</h3>
                   <p className="text-white/50 text-sm mb-3">{p.excerpt}</p>
-                  <span className="text-cyan text-sm inline-flex items-center gap-1 hover:gap-2 transition-all">Read more <ArrowRight size={14} /></span>
+                  <span className="text-cyan text-sm inline-flex items-center gap-1">Read more <ArrowRight size={14} /></span>
                 </article>
               ))}
             </div>
