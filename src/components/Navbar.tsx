@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Menu, X, LogIn, User, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useDjangoAuth } from '@/contexts/DjangoAuthContext';
 import {
   DropdownMenu,
