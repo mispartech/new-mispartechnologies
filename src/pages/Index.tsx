@@ -41,6 +41,17 @@ const Index = () => {
     }
   }, [isAuthenticated, user, isLoading, navigate]);
 
+  // Handle hash scrolling when arriving from another page
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && !hash.includes('access_token')) {
+      setTimeout(() => {
+        const el = document.querySelector(hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  }, []);
+
   useEffect(() => {
     // Update document title
     document.title = 'Mispar Technologies - Facial Recognition Solutions';
@@ -49,6 +60,7 @@ const Index = () => {
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
       metaDescription.setAttribute('content', 'Unlock every barrier with Mispar Technologies facial recognition solutions. Smart attendance, security, and access control for organizations.');
+    }
     }
   }, []);
 
