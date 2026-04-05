@@ -1,150 +1,143 @@
 
 
-# Complete Application Audit — All Pages, Sections & Status
+# Frontend Fixes — Landing Page, Nav, Content Pages & Platform Admin
 
-## Application Overview
+## Changes Summary
 
-Mispar Technologies is a facial recognition-based attendance management platform supporting 7 organization types (Church, Corporate, School, Healthcare, Government, Non-Profit, Other). It uses a React frontend with a Django REST backend and Supabase for auth/storage.
-
----
-
-## A. Public Pages (13 pages)
-
-| Route | Page | Status | Issues |
-|---|---|---|---|
-| `/` | Landing Page | Functional | Redirects authenticated users correctly |
-| `/auth` | Login/Signup | Functional | - |
-| `/register` | Register | Functional | - |
-| `/reset-password` | Password Reset | Functional | - |
-| `/email-verified` | Email Confirmation | Functional | - |
-| `/logout` | Logout | Functional | - |
-| `/onboarding` | Organization Setup (5 steps) | Functional | Country/State/City dropdowns implemented for West Africa |
-| `/join/:slug` | Self-Registration | Frontend ready | Backend `GET /api/organizations/:slug/public/` and `POST /api/self-register/` not yet confirmed working |
-| `/smart-attendance` | Product Page | Static content | - |
-| `/security-systems` | Product Page | Static content | - |
-| `/healthcare-integration` | Product Page | Static content | - |
-| `/educational-solutions` | Product Page | Static content | - |
-| `/corporate-access` | Product Page | Static content | - |
-| `/about` | About Us | Static content | - |
-| `/team` | Our Team | Static content | - |
-| `/careers` | Careers | Static content | - |
-| `/press` | Press & Media | Static content | - |
-| `/blog` | Blog | Static content | No CMS — hardcoded posts |
-| `/privacy-policy` | Privacy Policy | Static content | - |
-| `/terms-of-service` | Terms of Service | Static content | - |
-| `/cookie-policy` | Cookie Policy | Static content | - |
+10 distinct issues to address across ~15 files. All frontend-only except the Demo form which needs a backend prompt.
 
 ---
 
-## B. Dashboard Pages — Admin/Manager View (19 pages)
+## 1. Blur "Experience the Magic" Demo Section
+**Files:** `DemoSection.tsx`, `InteractiveFaceDemo.tsx`
 
-| Route | Page | Status | Critical Issues |
-|---|---|---|---|
-| `/dashboard` | Admin Dashboard Home | Functional | Fetches attendance, members, departments. Stats cards + charts work |
-| `/dashboard/face-enrollment` | Face Enrollment | **BLOCKED** | Backend `POST /api/face/enroll/` returns 500 — storage config error |
-| `/dashboard/attendance` | Attendance Capture (Camera) | Functional | Face recognition via `/api/recognize-frame/` |
-| `/dashboard/attendance-logs` | Attendance Logs | Functional | Fetches from `/api/attendance/` |
-| `/dashboard/attendance-history` | Attendance History | Functional | Charts + table view |
-| `/dashboard/members` | Members List | **BLOCKED** | `POST /api/members/` returns 500 — backend can't provision users |
-| `/dashboard/temp-members` | Temp Visitors | Functional | Uses `/api/temp-attendance/` |
-| `/dashboard/visitor-review` | Visitor Review/Claim | Functional | Uses `/api/temp-attendance/clusters/` |
-| `/dashboard/departments` | Departments | Partially working | Create works; PATCH/DELETE depend on backend implementing `PATCH/DELETE /api/departments/:id/` |
-| `/dashboard/profile` | Profile Settings | Functional | Uses `/api/profile/` PATCH |
-| `/dashboard/face-gallery` | Face Gallery | Functional | Shows enrolled member faces |
-| `/dashboard/reports` | Reports & Export | Functional | PDF/CSV export from attendance data; no dedicated reports endpoint |
-| `/dashboard/settings` | Organization Settings | Functional | Registration tab with join link/QR code |
-| `/dashboard/admin-management` | Admin Management | **BLOCKED** | Same 500 from `POST /api/members/` — can't invite admins |
-| `/dashboard/activity-logs` | Activity Logs | Frontend ready | Backend `GET /api/activity-logs/` not yet implemented |
-| `/dashboard/schedules` | Schedule Management | **PLACEHOLDER** | "Coming Soon" — no backend endpoint |
-| `/dashboard/site-management` | Site Management | Functional | Favicon/logo upload via Supabase Storage |
-| `/dashboard/branding` | Branding Settings | Functional | Color picker, preloader, typography — saves via org settings |
+Wrap the interactive demo area in a blurred overlay with a "Coming Soon" badge. The upload/camera buttons become non-interactive. Keep the section visible but with `blur-sm` + `pointer-events-none` on the interactive content, and overlay a centered "Coming Soon — Backend integration in progress" pill.
+
+## 2. Fix Privacy Section ("Your face. Your data. Your control.")
+**File:** `PrivacyTrustSection.tsx`
+
+- Rename "What we NEVER store" to "What we NEVER do"
+- Change items to:
+  - "Sell your data to third parties"
+  - "Share face images outside your organization"
+  - "Access data without organizational authorization"
+- Remove "Raw photos of your face" (since face images ARE stored per org)
+- Update "What we capture" to include "Face images (stored securely per organization)"
+- Remove footer line "Your actual photos never leave your device" (inaccurate)
+
+## 3. Fix Pricing Section with Realistic Features
+**File:** `PricingSection.tsx`
+
+Replace feature lists with actual implemented backend features:
+
+**Starter ($35/quarter):**
+- Up to 50 members
+- 1 admin user
+- Face recognition attendance
+- Basic attendance logs & reports
+- 1 department
+- Email support
+
+**Pro ($65/quarter):**
+- Everything in Starter
+- Up to 200 members
+- 5 admin/manager accounts
+- Department management (unlimited)
+- Attendance analytics & charts
+- CSV/PDF export
+- Priority support
+
+**Business ($100/quarter):**
+- Everything in Pro
+- Unlimited members & admins
+- Visitor tracking & review
+- Custom branding & theming
+- Activity logs
+- API access
+- Dedicated account manager
+
+Remove "Multi-camera support", "Emotion & demographic insights", "On-premise deployment" — these don't exist. Add a note: "Payment integration coming soon" on the CTA buttons until Paystack is wired up.
+
+## 4. Fix Demo Request Modal
+**File:** `DemoRequestModal.tsx`
+
+- Add `email` field (required) alongside name and WhatsApp
+- Make `name` required (remove "optional" label)
+- Add `organization` field (optional)
+- Add form validation — disable submit until required fields are filled
+- Show the email field prominently since backend will send a confirmation email
+- The submit currently uses a fake `setTimeout` — keep it but add a note in the success message about the confirmation email
+
+**Backend prompt needed:** `POST /api/demo-request/` endpoint that saves the request and sends a Resend confirmation email with a demo video link.
+
+## 5. Blur /press, /blog, /team, /careers Pages
+**Files:** `PressMedia.tsx`, `Blog.tsx`, `OurTeam.tsx`, `Careers.tsx`
+
+Add a blur overlay to the content sections (not the hero headers) with a "Content coming soon" badge. Keep the page structure visible but make individual items blurred and non-interactive. The hero section text stays readable.
+
+## 6. Scroll to Top on Page Navigation
+**File:** `PageWrapper.tsx`
+
+Add a `useEffect` with `useLocation` that scrolls `window.scrollTo(0, 0)` on every route change. This ensures all page navigations start at the top. This is separate from the `ScrollToTop` button component.
+
+## 7. Fix Nav Links to Work from Any Page
+**File:** `Navbar.tsx`
+
+Change navLinks from `{ href: '#features' }` to use navigation logic:
+- If currently on `/`, smooth-scroll to the anchor
+- If on any other page, navigate to `/#features`, `/#solutions`, etc.
+
+Use `useLocation` to detect current path. For non-home pages, use `navigate('/')` then scroll after a brief delay, or simply use `<a href="/#features">` which the browser handles natively.
+
+Also fix: `#features` section is not rendered on the home page — `FeaturesSection` is not imported in `Index.tsx`. Either add it back or remove "Features" from nav links.
+
+## 8. Add FeaturesSection to Home Page
+**File:** `Index.tsx`
+
+Import and render `FeaturesSection` between `HeroSection` and `HowItWorksSection` so the `#features` nav link has a target.
+
+## 9. Platform Super Admin System (Mispar Admin, not Org Admin)
+**Files:** New pages and routes
+
+Create a separate admin system for Mispar Technologies internal staff:
+
+- `/admin-register` — Registration page for platform admins (invite-only with a secret code or restricted to specific email domains like `@mispartechnologies.com`)
+- `/admin-login` — Separate login page
+- `/admin-dashboard` — Platform admin dashboard with:
+  - Organization management (view all orgs, status, member counts)
+  - Content management (blog posts, press items, careers — future CMS)
+  - Demo request management (view submitted demo requests)
+  - Platform analytics (total orgs, total users, attendance stats)
+
+This is a significant feature. For now, create the route structure, registration page, and a placeholder dashboard. The content management system will come later.
+
+**Backend prompt needed:** Platform admin model, registration endpoint restricted to `@mispartechnologies.com` emails, and platform admin JWT scope.
+
+## 10. Pricing in Organization Dashboard
+**File:** New `src/pages/dashboard/SubscriptionSettings.tsx`
+
+Add a "Subscription" page in the org dashboard (under Configuration group in sidebar) showing the current plan and upgrade/downgrade options. For now, show the plans with "Contact Sales" or "Coming Soon" buttons until Paystack is integrated.
 
 ---
 
-## C. Dashboard Pages — Member View (5 pages)
+## Technical Details
 
-| Route | Page | Status | Issues |
-|---|---|---|---|
-| `/dashboard` | Member Dashboard | Functional | Fetches personal attendance, shows streaks, quick actions |
-| `/dashboard/my-attendance` | My Attendance History | Functional | Personal attendance records |
-| `/dashboard/attendance-summary` | Attendance Summary | Functional | Visual analytics (calendar, charts) |
-| `/dashboard/streaks` | Streaks & Badges | Functional | Gamified — calculated from attendance data client-side |
-| `/dashboard/my-schedule` | My Schedule | **PLACEHOLDER** | "No schedules available yet" — depends on schedule backend |
-| `/dashboard/profile` | Profile Settings | Functional | Shared with admin |
-
----
-
-## D. Shared Dashboard Components
-
-| Component | Status | Issues |
+| # | File(s) | Type |
 |---|---|---|
-| `DashboardSidebar` | Functional | Role-based nav filtering works; collapsible groups |
-| `DashboardHeader` | Functional | Breadcrumbs, notification bell, profile menu |
-| `NotificationBell` | **PLACEHOLDER** | Static "No notifications" — backend not implemented |
-| `DashboardLayout` | Functional | Auth guard, onboarding check, face enrollment redirect |
+| 1 | `DemoSection.tsx` | Blur overlay + "Coming Soon" |
+| 2 | `PrivacyTrustSection.tsx` | Content update |
+| 3 | `PricingSection.tsx` | Feature list rewrite |
+| 4 | `DemoRequestModal.tsx` | Add email field, validation |
+| 5 | `PressMedia.tsx`, `Blog.tsx`, `OurTeam.tsx`, `Careers.tsx` | Blur overlay |
+| 6 | `PageWrapper.tsx` | Scroll-to-top on route change |
+| 7 | `Navbar.tsx` | Fix hash nav links for cross-page |
+| 8 | `Index.tsx` | Add FeaturesSection |
+| 9 | New: `AdminRegister.tsx`, `AdminDashboard.tsx`, routes in `App.tsx` | Platform admin |
+| 10 | New: `SubscriptionSettings.tsx`, sidebar update | Pricing in dashboard |
 
----
+## Backend Prompt (provided after implementation)
 
-## E. API Integration Status
-
-| Endpoint | Status | Used By |
-|---|---|---|
-| `GET /api/profile/` | Working | DashboardLayout, ProfileSettings |
-| `PATCH /api/profile/` | Working | ProfileSettings |
-| `GET /api/members/` | Working (GET) | MembersList, AdminManagement, DashboardHome |
-| `POST /api/members/` | **500 ERROR** | AddMemberModal, InviteAdminModal |
-| `PATCH /api/members/:id/` | **Not tested** | EditMemberModal, AdminManagement |
-| `DELETE /api/members/:id/` | **Not tested** | MembersList, AdminManagement |
-| `GET /api/departments/` | Working | DepartmentsList, modals |
-| `POST /api/departments/` | Working | DepartmentsList |
-| `PATCH /api/departments/:id/` | **Untested** | DepartmentsList edit |
-| `DELETE /api/departments/:id/` | **Untested** | DepartmentsList delete |
-| `GET /api/attendance/` | Working | Multiple pages |
-| `POST /api/attendance/mark/` | Working | AttendanceCapture |
-| `GET /api/temp-attendance/` | Working | TempMembersList |
-| `POST /api/temp-attendance/claim/` | Working | ClaimVisitorModal |
-| `GET /api/temp-attendance/clusters/` | Working | VisitorReview |
-| `POST /api/face/enroll/` | **500 ERROR** | FaceEnrollment |
-| `GET /api/face-enrollment-status/` | Working | DashboardLayout guard |
-| `POST /api/recognize-frame/` | Working | AttendanceCapture |
-| `GET /api/organization-settings/` | Working | OrganizationSettings |
-| `PATCH /api/organization-settings/` | Working | OrganizationSettings |
-| `PUT /api/onboarding/` | Working | Onboarding |
-| `GET /api/organizations/:slug/public/` | **Untested** | JoinOrganization |
-| `POST /api/self-register/` | **Untested** | JoinOrganization |
-| `GET /api/activity-logs/` | **Not implemented** | ActivityLogs |
-| `GET /api/notifications/` | **Not implemented** | NotificationBell |
-| `GET /api/schedules/` | **Not implemented** | ScheduleManagement, MySchedule |
-| `GET /api/reports/attendance/` | **Not implemented** | Reports (uses raw attendance instead) |
-
----
-
-## F. Critical Blockers (Must Fix)
-
-1. **Face Enrollment 500** — Users cannot complete enrollment, blocking all new users from accessing the dashboard
-2. **Member Invitation 500** — Admins cannot add members or invite admins; Resend integration needed on backend
-3. **Notification System** — Completely non-functional; placeholder only
-4. **Schedule System** — Two placeholder pages (admin + member) with no backend
-
-## G. Functional But Missing Features
-
-1. **Bulk member import** — `ImportMembersModal` exists but `bulkInviteMembers()` is stubbed
-2. **Member search/filter** — MembersList has no search input or department filter
-3. **Attendance export per member** — No individual member attendance PDF
-4. **Dark mode toggle** — ThemeContext exists but no user-facing toggle
-5. **Password change** — No in-app password change; relies on Supabase reset flow
-6. **Email templates** — No custom branded email templates for invitations
-7. **Multi-language** — No i18n support
-8. **Audit trail for face enrollment** — No log when faces are enrolled/re-enrolled
-9. **Member profile view** — Admin can't view individual member details page
-10. **Department member count** — DepartmentsList shows count but depends on backend including it
-
-## H. Optimization Opportunities
-
-1. **API caching** — No React Query caching; every page re-fetches on mount
-2. **Pagination** — MembersList and AttendanceLogs don't use server-side pagination controls
-3. **Image optimization** — Face enrollment doesn't validate image quality before upload
-4. **Error boundaries** — No React error boundaries around dashboard pages
-5. **SEO** — Content pages lack structured data / Open Graph tags
-6. **Performance** — AttendanceCapture (857 lines) could be split into smaller components
+1. `POST /api/demo-request/` — save demo requests + send Resend confirmation email
+2. Platform admin model + registration/login endpoints
+3. Paystack integration guidance for subscription billing
 
