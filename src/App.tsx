@@ -92,6 +92,11 @@ const App = () => (
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/join/:slug" element={<JoinOrganization />} />
               
+              {/* Platform Admin Routes */}
+              <Route path="/admin-register" element={<AdminRegister />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin-dashboard" element={<PlatformAdminDashboard />} />
+              
               {/* Dashboard Routes */}
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardRouter />} />
