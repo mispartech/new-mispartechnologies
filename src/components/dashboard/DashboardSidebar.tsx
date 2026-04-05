@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserPlus, Building2, ScanFace, FileText, Settings,
   ChevronLeft, ChevronRight, Image, ClipboardList, UserCheck, Shield, Activity,
   CalendarClock, Globe, Calendar, History, TrendingUp, Trophy, Palette, ChevronDown,
-  SearchCheck, X,
+  SearchCheck, X, CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
