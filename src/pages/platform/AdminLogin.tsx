@@ -21,10 +21,6 @@ const AdminLogin = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.email.endsWith('@mispartechnologies.com')) {
-      setError('Only @mispartechnologies.com emails are allowed.');
-      return;
-    }
 
     setIsSubmitting(true);
     setTimeout(() => {
@@ -58,7 +54,7 @@ const AdminLogin = () => {
                 onChange={handleChange}
                 required
                 className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@mispartechnologies.com"
+                placeholder="you@example.com"
               />
             </div>
 

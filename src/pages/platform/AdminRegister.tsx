@@ -15,7 +15,6 @@ const AdminRegister = () => {
     lastName: '',
     password: '',
     confirmPassword: '',
-    inviteCode: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -29,8 +28,8 @@ const AdminRegister = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.email.endsWith('@mispartechnologies.com')) {
-      setError('Only @mispartechnologies.com email addresses are allowed.');
+    if (!formData.email) {
+      setError('Email address is required.');
       return;
     }
 
@@ -102,22 +101,10 @@ const AdminRegister = () => {
                 onChange={handleChange}
                 required
                 className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@mispartechnologies.com"
+                placeholder="you@example.com"
               />
-              <p className="text-white/30 text-xs mt-1">Must be a @mispartechnologies.com email</p>
             </div>
 
-            <div>
-              <Label className="text-white/70 text-sm">Invite Code</Label>
-              <Input
-                name="inviteCode"
-                value={formData.inviteCode}
-                onChange={handleChange}
-                required
-                className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="Enter your invite code"
-              />
-            </div>
 
             <div>
               <Label className="text-white/70 text-sm">Password</Label>
