@@ -101,9 +101,8 @@ const AdminRegister = () => {
                 onChange={handleChange}
                 required
                 className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@mispartechnologies.com"
+                placeholder="you@example.com"
               />
-              <p className="text-white/30 text-xs mt-1">Must be a @mispartechnologies.com email</p>
             </div>
 
             <div>
