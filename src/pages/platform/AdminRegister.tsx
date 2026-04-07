@@ -29,8 +29,8 @@ const AdminRegister = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.email.endsWith('@mispartechnologies.com')) {
-      setError('Only @mispartechnologies.com email addresses are allowed.');
+    if (!formData.email) {
+      setError('Email address is required.');
       return;
     }
 
