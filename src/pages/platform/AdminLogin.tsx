@@ -21,10 +21,6 @@ const AdminLogin = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.email.endsWith('@mispartechnologies.com')) {
-      setError('Only @mispartechnologies.com emails are allowed.');
-      return;
-    }
 
     setIsSubmitting(true);
     setTimeout(() => {
