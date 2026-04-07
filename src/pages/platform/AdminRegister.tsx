@@ -15,7 +15,6 @@ const AdminRegister = () => {
     lastName: '',
     password: '',
     confirmPassword: '',
-    inviteCode: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
