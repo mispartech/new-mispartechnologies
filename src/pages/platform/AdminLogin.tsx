@@ -54,7 +54,7 @@ const AdminLogin = () => {
                 onChange={handleChange}
                 required
                 className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@mispartechnologies.com"
+                placeholder="you@example.com"
               />
             </div>
 

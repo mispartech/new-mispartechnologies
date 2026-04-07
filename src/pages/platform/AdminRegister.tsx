@@ -105,17 +105,6 @@ const AdminRegister = () => {
               />
             </div>
 
-            <div>
-              <Label className="text-white/70 text-sm">Invite Code</Label>
-              <Input
-                name="inviteCode"
-                value={formData.inviteCode}
-                onChange={handleChange}
-                required
-                className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="Enter your invite code"
-              />
-            </div>
 
             <div>
               <Label className="text-white/70 text-sm">Password</Label>
