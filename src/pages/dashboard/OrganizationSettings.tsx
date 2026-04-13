@@ -10,8 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2, Link2, Copy, QrCode, Globe } from 'lucide-react';
+import { Building2, Users, Bell, Save, CheckCircle, Sparkles, Volume2, Link2, Copy, QrCode, Globe, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AttendanceDeliverySettings from '@/components/dashboard/AttendanceDeliverySettings';
 
 // Feature labels for display
 const featureLabels: Record<string, { label: string; description: string }> = {
@@ -42,7 +43,7 @@ const featureLabels: Record<string, { label: string; description: string }> = {
   shift_handover: { label: 'Shift Handover', description: 'Manage transitions' },
 };
 
-interface Organization { id: string; name: string; type: string; slug?: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; allow_self_registration?: boolean; require_approval?: boolean; }
+interface Organization { id: string; name: string; type: string; slug?: string; industry: string | null; size_range: string | null; address: string | null; city: string | null; country: string | null; phone: string | null; email: string | null; website: string | null; features_enabled: string[]; settings: Record<string, any>; allow_self_registration?: boolean; require_approval?: boolean; attendance_delivery_enabled?: boolean; attendance_delivery_channel?: 'email' | 'whatsapp' | 'both'; member_count?: number; plan?: 'starter' | 'pro' | 'business'; }
 
 const SELF_REG_ORG_TYPES = ['church', 'nonprofit', 'other'];
 
@@ -214,6 +215,9 @@ const OrganizationSettings = () => {
           <TabsTrigger value="features" className="gap-2"><Sparkles className="w-4 h-4" />Features</TabsTrigger>
           <TabsTrigger value="registration" className="gap-2"><Globe className="w-4 h-4" />Registration</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2"><Users className="w-4 h-4" />Attendance</TabsTrigger>
+          <TabsTrigger value="delivery" className="gap-2"><Send className="w-4 h-4" />Delivery</TabsTrigger>
+          <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
           <TabsTrigger value="sound" className="gap-2"><Volume2 className="w-4 h-4" />Sound & Alerts</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" />Notifications</TabsTrigger>
         </TabsList>
