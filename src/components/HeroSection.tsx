@@ -3,6 +3,7 @@ import { ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FaceScanVisualization from './FaceScanVisualization';
 import { useCountUp } from '@/hooks/useCountUp';
+import { fetchPlatformStats } from '@/lib/api/platformApi';
 
 interface HeroSectionProps {
   onRequestDemo?: () => void;
@@ -20,9 +21,15 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
   const [showScrollCue, setShowScrollCue] = useState(false);
   const [currentWord, setCurrentWord] = useState(0);
 
-  const { count: accuracyCount, ref: accuracyRef } = useCountUp(99, 2000);
+  const [statsData, setStatsData] = useState({ total_users: 0, accuracy_rate: 99 });
+
+  useEffect(() => {
+    fetchPlatformStats().then(setStatsData);
+  }, []);
+
+  const { count: accuracyCount, ref: accuracyRef } = useCountUp(statsData.accuracy_rate, 2000);
   const { count: speedCount, ref: speedRef } = useCountUp(1, 1500);
-  const { count: usersCount, ref: usersRef } = useCountUp(10000, 2500);
+  const { count: usersCount, ref: usersRef } = useCountUp(statsData.total_users, 2500);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);

@@ -1,6 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Check, User, Building2, Crown, Clock, CreditCard, ArrowRight } from 'lucide-react';
+import { Check, Clock, CreditCard, ArrowRight, MessageCircle, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -15,6 +14,7 @@ const plans = [
       'Face recognition attendance',
       'Basic attendance logs & reports',
       '1 department',
+      'Email attendance reports (included)',
       'Email support',
     ],
   },
@@ -31,6 +31,8 @@ const plans = [
       'Unlimited departments',
       'Attendance analytics & charts',
       'CSV/PDF export',
+      'Monthly attendance reports (Email included)',
+      'WhatsApp delivery add-on: ₦20/member/month',
       'Priority support',
     ],
   },
@@ -44,6 +46,8 @@ const plans = [
       'Visitor tracking & review',
       'Custom branding & theming',
       'Activity logs & audit trail',
+      'Email + WhatsApp reports (500 members included)',
+      'WhatsApp: ₦20/member/month beyond 500',
       'API access',
       'Dedicated account manager',
     ],
@@ -51,6 +55,10 @@ const plans = [
 ];
 
 const SubscriptionSettings = () => {
+  // TODO: fetch real member count from org settings
+  const memberCount = 0;
+  const whatsappCostEstimate = memberCount * 20;
+
   return (
     <div className="space-y-6">
       <div>
@@ -118,6 +126,36 @@ const SubscriptionSettings = () => {
             </Button>
           </div>
         ))}
+      </div>
+
+      {/* WhatsApp Add-on Section */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <MessageCircle className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">WhatsApp Delivery Add-on</h2>
+          <Badge variant="outline" className="text-xs">Pro & Business</Badge>
+        </div>
+        <p className="text-muted-foreground text-sm mb-4">
+          Send monthly attendance records to members via WhatsApp. Available on Pro and Business plans.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-4 p-4 rounded-lg bg-muted/50">
+          <div>
+            <p className="text-xs text-muted-foreground">Cost per member</p>
+            <p className="text-lg font-bold text-foreground">₦20<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Your members</p>
+            <p className="text-lg font-bold text-foreground">{memberCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Estimated cost</p>
+            <p className="text-lg font-bold text-foreground">₦{whatsappCostEstimate.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+          <Mail className="w-3 h-3" />
+          Configure delivery channel in Organization Settings → Delivery tab
+        </p>
       </div>
 
       {/* Contact */}

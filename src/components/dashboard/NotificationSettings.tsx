@@ -4,14 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Bell, BellRing, Smartphone } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Bell, BellRing, Smartphone, Mail, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface NotificationPreferences { push_enabled: boolean; attendance_alerts: boolean; email_notifications: boolean; }
+interface NotificationPreferences { push_enabled: boolean; attendance_alerts: boolean; email_notifications: boolean; preferred_delivery_channel: 'email' | 'whatsapp'; }
 interface NotificationSettingsProps { userId: string; }
 
 const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
-  const [preferences, setPreferences] = useState<NotificationPreferences>({ push_enabled: false, attendance_alerts: true, email_notifications: false });
+  const [preferences, setPreferences] = useState<NotificationPreferences>({ push_enabled: false, attendance_alerts: true, email_notifications: false, preferred_delivery_channel: 'email' });
   const [isLoading, setIsLoading] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
@@ -86,6 +87,30 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         {preferences.push_enabled && pushPermission === 'granted' && (
           <Button variant="outline" size="sm" className="w-full" onClick={() => { new Notification('Test Notification', { body: 'Your notifications are working correctly!', icon: '/favicon.svg' }); }}>Send Test Notification</Button>
         )}
+
+        {/* Attendance record delivery preference */}
+        <div className="pt-4 border-t space-y-3">
+          <div className="space-y-0.5">
+            <Label className="font-medium">Attendance Record Delivery</Label>
+            <p className="text-sm text-muted-foreground">Choose how you prefer to receive monthly attendance records (subject to your organization's settings)</p>
+          </div>
+          <RadioGroup
+            value={preferences.preferred_delivery_channel}
+            onValueChange={(val) => handleToggle('preferred_delivery_channel' as any, val as any)}
+            className="flex gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="email" id="pref-email" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="pref-email" className="cursor-pointer">Email</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="whatsapp" id="pref-whatsapp" />
+              <MessageCircle className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="pref-whatsapp" className="cursor-pointer">WhatsApp</Label>
+            </div>
+          </RadioGroup>
+        </div>
       </CardContent>
     </Card>
   );

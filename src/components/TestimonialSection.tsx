@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Quote, Building2, GraduationCap, Church, TrendingUp, Users, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Quote, Building2, GraduationCap, Church, TrendingUp, Users, Star, Clock } from 'lucide-react';
 
 interface Testimonial {
   id: number;
@@ -114,7 +114,15 @@ const TestimonialSection = () => {
   const typeBadge = getTypeBadge(current.type);
 
   return (
-    <section className="section-dark py-16 md:py-20 lg:py-28 overflow-hidden" ref={sectionRef}>
+    <section className="section-dark py-16 md:py-20 lg:py-28 overflow-hidden relative" ref={sectionRef}>
+      {/* Blur overlay for placeholder testimonials */}
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-navy-dark/50 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-navy-dark/90 border border-cyan/30 shadow-lg">
+          <Clock className="w-4 h-4 text-cyan animate-pulse" />
+          <span className="text-sm font-semibold text-white">Real testimonials coming soon</span>
+        </div>
+      </div>
+
       <div className="container-custom">
         <div className={`text-center max-w-3xl mx-auto mb-8 md:mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-cyan/10 border border-cyan/20 mb-4 md:mb-6">
@@ -130,16 +138,9 @@ const TestimonialSection = () => {
         </div>
 
         <div className="max-w-5xl mx-auto">
-          {/* Main testimonial card - swipeable */}
-          <div 
-            className="relative"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
+          <div className="relative" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
             <div className={`glass-card overflow-hidden transition-all duration-300 ${isAnimating ? (slideDirection === 'right' ? 'opacity-0 translate-x-8' : 'opacity-0 -translate-x-8') : 'opacity-100 translate-x-0'}`}>
               <div className="grid md:grid-cols-5 gap-0">
-                {/* Left: Quote & Person */}
                 <div className="md:col-span-3 p-5 md:p-8 lg:p-10">
                   <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyan/10 flex items-center justify-center">
@@ -149,17 +150,14 @@ const TestimonialSection = () => {
                       <TypeIcon size={10} className="md:w-3 md:h-3" /> {typeBadge.label}
                     </span>
                   </div>
-
                   <blockquote className="text-base md:text-xl lg:text-2xl text-white/80 leading-relaxed mb-6 md:mb-8 font-light italic">
                     "{current.quote}"
                   </blockquote>
-
                   <div className="flex gap-1 mb-3 md:mb-4">
                     {Array.from({ length: current.rating }).map((_, i) => (
                       <Star key={i} size={14} className="text-amber-400 fill-amber-400 md:w-4 md:h-4" />
                     ))}
                   </div>
-
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan/20 to-mint/10 flex items-center justify-center ring-2 ring-white/10">
                       <span className="text-sm md:text-lg font-bold text-cyan">{current.name[0]}</span>
@@ -170,20 +168,15 @@ const TestimonialSection = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Right: Impact Snapshot */}
                 <div className="md:col-span-2 bg-white/[0.02] border-t md:border-t-0 md:border-l border-white/5 p-5 md:p-8 lg:p-10 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-4 md:mb-6">
                     <TrendingUp size={14} className="text-cyan md:w-4 md:h-4" />
                     <span className="text-xs md:text-sm font-medium text-cyan">Impact Snapshot</span>
                   </div>
-
                   <div className="grid grid-cols-3 md:grid-cols-1 gap-2 md:gap-4">
                     {current.impactMetrics.map((metric, i) => (
-                      <div key={i} className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5 active:border-cyan/20 transition-all duration-300">
-                        <div className="text-lg md:text-2xl font-bold text-cyan mb-0.5 md:mb-1">
-                          {metric.value}
-                        </div>
+                      <div key={i} className="p-3 md:p-4 rounded-xl bg-white/5 border border-white/5 transition-all duration-300">
+                        <div className="text-lg md:text-2xl font-bold text-cyan mb-0.5 md:mb-1">{metric.value}</div>
                         <div className="text-[10px] md:text-xs text-white/40">{metric.label}</div>
                       </div>
                     ))}
@@ -191,17 +184,8 @@ const TestimonialSection = () => {
                 </div>
               </div>
             </div>
-
-            {/* Navigation arrows - hidden on mobile (swipe instead) */}
-            <button onClick={() => navigate('left')} className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 w-10 h-10 rounded-full bg-navy-light border border-white/10 text-white hover:bg-cyan hover:border-cyan hover:text-navy-dark transition-all duration-300 items-center justify-center" aria-label="Previous">
-              <ChevronLeft size={20} />
-            </button>
-            <button onClick={() => navigate('right')} className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 w-10 h-10 rounded-full bg-navy-light border border-white/10 text-white hover:bg-cyan hover:border-cyan hover:text-navy-dark transition-all duration-300 items-center justify-center" aria-label="Next">
-              <ChevronRight size={20} />
-            </button>
           </div>
 
-          {/* Dots */}
           <div className="flex justify-center gap-2 mt-6 md:mt-8">
             {testimonials.map((_, index) => (
               <button
@@ -218,7 +202,6 @@ const TestimonialSection = () => {
             ))}
           </div>
 
-          {/* Organization logos */}
           <div className="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-white/5">
             <p className="text-center text-[10px] md:text-xs text-white/20 mb-4 md:mb-6 uppercase tracking-wider">Trusted by organizations across Africa</p>
             <div className="scroll-pills md:flex md:justify-center md:items-center md:gap-8 lg:gap-12">
