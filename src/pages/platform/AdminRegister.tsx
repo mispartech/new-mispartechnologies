@@ -5,9 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield, ArrowRight, AlertCircle, CheckCircle2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-const DJANGO_BASE_URL =
-  import.meta.env.VITE_DJANGO_API_URL || 'https://api.mispartechnologies.com';
+import { checkPlatformAdminEmail, registerPlatformAdmin } from '@/lib/api/platformAdminAuth';
 
 interface PasswordRule {
   label: string;
@@ -55,12 +53,7 @@ const AdminRegister = () => {
     }
     setEmailStatus('checking');
     try {
-      const res = await fetch(`${DJANGO_BASE_URL}/api/platform/check-email/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
+      const data = await checkPlatformAdminEmail(email);
       setEmailStatus(data.available ? 'available' : 'taken');
     } catch {
       setEmailStatus('idle');
@@ -101,40 +94,13 @@ const AdminRegister = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${DJANGO_BASE_URL}/api/platform/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          password: formData.password,
-          password2: formData.confirmPassword,
-        }),
+      const data = await registerPlatformAdmin({
+        email: formData.email,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        password: formData.password,
+        password2: formData.confirmPassword,
       });
-
-      let data: any = {};
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        data = { detail: text || `Server error (${res.status})` };
-      }
-
-      if (!res.ok) {
-        // Handle Django REST Framework field-level errors
-        if (typeof data === 'object' && !data.detail && !data.error) {
-          const fieldErrors = Object.entries(data)
-            .map(([key, val]) => {
-              const msg = Array.isArray(val) ? val.join(', ') : String(val);
-              return `${key}: ${msg}`;
-            })
-            .join('; ');
-          throw new Error(fieldErrors || 'Registration failed');
-        }
-        throw new Error(data.detail || data.error || data.message || 'Registration failed');
-      }
 
       if (data.token) {
         localStorage.setItem('platform_admin_token', data.token);
@@ -145,8 +111,8 @@ const AdminRegister = () => {
         description: 'Your platform admin account has been created.',
       });
       navigate('/admin-login');
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -293,7 +259,7 @@ const AdminRegister = () => {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 px-3 py-2 rounded-lg">
+              <div className="flex items-center gap-2 whitespace-pre-line text-destructive text-sm bg-destructive/10 px-3 py-2 rounded-lg">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
