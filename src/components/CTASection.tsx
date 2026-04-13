@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
+import { fetchPlatformStats } from '@/lib/api/platformApi';
 
 interface CTASectionProps {
   onRequestDemo: () => void;
@@ -9,6 +10,11 @@ interface CTASectionProps {
 const CTASection = ({ onRequestDemo }: CTASectionProps) => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [orgCount, setOrgCount] = useState(0);
+
+  useEffect(() => {
+    fetchPlatformStats().then(s => setOrgCount(s.total_organizations));
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -43,7 +49,9 @@ const CTASection = ({ onRequestDemo }: CTASectionProps) => {
             </span>
           </h2>
           <p className="text-base md:text-xl text-white/40 mb-8 md:mb-10 max-w-xl mx-auto">
-            Join thousands of organizations who have made attendance effortless.
+            {orgCount > 0
+              ? `Join ${orgCount.toLocaleString()}+ organizations who have made attendance effortless.`
+              : 'Join organizations making attendance effortless.'}
           </p>
           <div className={`flex flex-col sm:flex-row gap-3 md:gap-4 justify-center transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <Button 
