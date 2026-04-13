@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
+import { Shield, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+const DJANGO_BASE_URL =
+  import.meta.env.VITE_DJANGO_API_URL || 'https://api.mispartechnologies.com';
 
 const AdminRegister = () => {
   const navigate = useNavigate();
@@ -18,18 +21,47 @@ const AdminRegister = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  const checkEmail = useCallback(async (email: string) => {
+    if (!email || !email.includes('@')) {
+      setEmailStatus('idle');
+      return;
+    }
+    setEmailStatus('checking');
+    try {
+      const res = await fetch(`${DJANGO_BASE_URL}/api/platform/check-email/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      setEmailStatus(data.available ? 'available' : 'taken');
+    } catch {
+      setEmailStatus('idle');
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleEmailBlur = () => {
+    checkEmail(formData.email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!formData.email) {
       setError('Email address is required.');
+      return;
+    }
+
+    if (emailStatus === 'taken') {
+      setError('This email is already registered.');
       return;
     }
 
@@ -44,14 +76,37 @@ const AdminRegister = () => {
     }
 
     setIsSubmitting(true);
-    // Backend integration needed
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast({
-        title: 'Registration submitted',
-        description: 'Platform admin registration requires backend integration. Contact engineering.',
+    try {
+      const res = await fetch(`${DJANGO_BASE_URL}/api/platform/register/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          password: formData.password,
+        }),
       });
-    }, 1000);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || 'Registration failed');
+      }
+
+      if (data.token) {
+        localStorage.setItem('platform_admin_token', data.token);
+      }
+
+      toast({
+        title: 'Registration successful',
+        description: 'Your platform admin account has been created.',
+      });
+      navigate('/admin-login');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -94,15 +149,28 @@ const AdminRegister = () => {
 
             <div>
               <Label className="text-white/70 text-sm">Email Address</Label>
-              <Input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@example.com"
-              />
+              <div className="relative">
+                <Input
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleEmailBlur}
+                  required
+                  className={`mt-1 bg-white/5 border-white/10 text-white pr-10 ${
+                    emailStatus === 'taken' ? 'border-red-500' : emailStatus === 'available' ? 'border-green-500' : ''
+                  }`}
+                  placeholder="you@example.com"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
+                  {emailStatus === 'checking' && <Loader2 className="w-4 h-4 text-white/50 animate-spin" />}
+                  {emailStatus === 'available' && <CheckCircle2 className="w-4 h-4 text-green-400" />}
+                  {emailStatus === 'taken' && <AlertCircle className="w-4 h-4 text-red-400" />}
+                </div>
+              </div>
+              {emailStatus === 'taken' && (
+                <p className="text-red-400 text-xs mt-1">This email is already registered.</p>
+              )}
             </div>
 
 
