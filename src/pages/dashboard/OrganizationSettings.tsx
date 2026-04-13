@@ -276,7 +276,18 @@ const OrganizationSettings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="sound">
+        <TabsContent value="delivery">
+          <AttendanceDeliverySettings
+            enabled={organization.attendance_delivery_enabled ?? false}
+            channel={organization.attendance_delivery_channel ?? 'email'}
+            memberCount={organization.member_count ?? 0}
+            currentPlan={organization.plan ?? 'starter'}
+            onToggle={(enabled) => setOrganization(prev => prev ? { ...prev, attendance_delivery_enabled: enabled } : prev)}
+            onChannelChange={(channel) => setOrganization(prev => prev ? { ...prev, attendance_delivery_channel: channel } : prev)}
+          />
+        </TabsContent>
+
+
           <Card>
             <CardHeader><CardTitle>Sound & Alert Settings</CardTitle><CardDescription>Configure audio feedback for attendance events</CardDescription></CardHeader>
             <CardContent className="space-y-6">
