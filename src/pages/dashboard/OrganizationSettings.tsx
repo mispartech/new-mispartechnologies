@@ -287,7 +287,7 @@ const OrganizationSettings = () => {
           />
         </TabsContent>
 
-
+        <TabsContent value="sound">
           <Card>
             <CardHeader><CardTitle>Sound & Alert Settings</CardTitle><CardDescription>Configure audio feedback for attendance events</CardDescription></CardHeader>
             <CardContent className="space-y-6">
