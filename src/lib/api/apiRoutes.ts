@@ -59,6 +59,11 @@ export const API_ROUTES = {
 
   // ── Activity Logs ──
   ACTIVITY_LOGS: '/api/activity-logs/',
+
+  // ── Platform Admin ──
+  PLATFORM_REGISTER: '/api/platform/register/',
+  PLATFORM_LOGIN: '/api/platform/login/',
+  PLATFORM_CHECK_EMAIL: '/api/platform/check-email/',
 } as const;
 
 /**
