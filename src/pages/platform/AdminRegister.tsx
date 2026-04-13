@@ -149,15 +149,28 @@ const AdminRegister = () => {
 
             <div>
               <Label className="text-white/70 text-sm">Email Address</Label>
-              <Input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="mt-1 bg-white/5 border-white/10 text-white"
-                placeholder="you@example.com"
-              />
+              <div className="relative">
+                <Input
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleEmailBlur}
+                  required
+                  className={`mt-1 bg-white/5 border-white/10 text-white pr-10 ${
+                    emailStatus === 'taken' ? 'border-red-500' : emailStatus === 'available' ? 'border-green-500' : ''
+                  }`}
+                  placeholder="you@example.com"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
+                  {emailStatus === 'checking' && <Loader2 className="w-4 h-4 text-white/50 animate-spin" />}
+                  {emailStatus === 'available' && <CheckCircle2 className="w-4 h-4 text-green-400" />}
+                  {emailStatus === 'taken' && <AlertCircle className="w-4 h-4 text-red-400" />}
+                </div>
+              </div>
+              {emailStatus === 'taken' && (
+                <p className="text-red-400 text-xs mt-1">This email is already registered.</p>
+              )}
             </div>
 
 
