@@ -6,47 +6,50 @@ import { Badge } from '@/components/ui/badge';
 const plans = [
   {
     name: 'Starter',
-    price: '$35',
+    price: '$50',
     period: '/quarter',
+    bestFor: 'Best for small churches, schools & teams',
     features: [
       'Up to 50 members',
       '1 admin user',
+      '1 department',
       'Face recognition attendance',
       'Basic attendance logs & reports',
-      '1 department',
-      'Email attendance reports (included)',
+      'Email attendance reports',
       'Email support',
     ],
   },
   {
     name: 'Pro',
-    price: '$65',
+    price: '$75',
     period: '/quarter',
     highlighted: true,
-    badge: 'Recommended',
+    badge: 'Top Pick',
+    bestFor: 'Best for growing organisations',
     features: [
       'Everything in Starter',
       'Up to 200 members',
-      '5 admin/manager accounts',
+      'Up to 5 admin/manager accounts',
       'Unlimited departments',
       'Attendance analytics & charts',
-      'CSV/PDF export',
-      'Monthly attendance reports (Email included)',
-      'WhatsApp delivery add-on: ₦20/member/month',
+      'CSV / PDF export',
+      'Monthly reports (Email included)',
+      'WhatsApp reporting add-on (₦20/member/month)',
       'Priority support',
     ],
   },
   {
     name: 'Business',
-    price: '$100',
+    price: '$120',
     period: '/quarter',
+    bestFor: 'Best for large, multi-site organisations',
     features: [
       'Everything in Pro',
       'Unlimited members & admins',
       'Visitor tracking & review',
       'Custom branding & theming',
       'Activity logs & audit trail',
-      'Email + WhatsApp reports (500 members included)',
+      'Email + WhatsApp reports (first 500 members included)',
       'WhatsApp: ₦20/member/month beyond 500',
       'API access',
       'Dedicated account manager',
@@ -105,9 +108,13 @@ const SubscriptionSettings = () => {
                 <Badge className="text-xs">{plan.badge}</Badge>
               )}
             </div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
+              {plan.bestFor}
+            </p>
             <div className="mb-4">
               <span className="text-3xl font-bold text-foreground">{plan.price}</span>
               <span className="text-muted-foreground text-sm">{plan.period}</span>
+              <p className="text-xs text-muted-foreground mt-1">Billed quarterly</p>
             </div>
             <ul className="space-y-2.5 mb-6 flex-1">
               {plan.features.map((feature, i) => (
