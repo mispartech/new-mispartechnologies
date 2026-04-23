@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, User, Building2, Crown, Clock } from 'lucide-react';
+import { Check, User, Building2, Crown, Clock, BarChart3, Sparkles, ArrowRight } from 'lucide-react';
 
 interface PricingTier {
   name: string;
