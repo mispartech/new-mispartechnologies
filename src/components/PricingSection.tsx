@@ -5,6 +5,7 @@ interface PricingTier {
   name: string;
   icon: React.ReactNode;
   badge?: string;
+  bestFor: string;
   description: string;
   price: string;
   period: string;
@@ -17,46 +18,49 @@ const tiers: PricingTier[] = [
   {
     name: 'Starter',
     icon: <User className="w-5 h-5" />,
-    description: 'Perfect for small churches, schools, or teams getting started',
-    price: '$35',
+    bestFor: 'Best for small churches, schools & teams',
+    description: 'Get started with contactless attendance for a single team or department.',
+    price: '$50',
     period: '/quarter',
     features: [
       'Up to 50 members',
       '1 admin user',
+      '1 department',
       'Face recognition attendance',
       'Basic attendance logs & reports',
-      '1 department',
-      'Email attendance reports (included)',
+      'Email attendance reports',
       'Email support',
     ],
-    footnote: 'Cancel anytime',
+    footnote: 'Billed quarterly · Cancel anytime',
   },
   {
     name: 'Pro',
     icon: <Crown className="w-5 h-5" />,
     badge: 'Top Pick',
-    description: 'Ideal for growing organisations ready to scale',
-    price: '$65',
+    bestFor: 'Best for growing organisations',
+    description: 'Scale across multiple departments with analytics and richer reporting.',
+    price: '$75',
     period: '/quarter',
     features: [
       'Everything in Starter',
       'Up to 200 members',
-      '5 admin/manager accounts',
+      'Up to 5 admin/manager accounts',
       'Unlimited departments',
       'Attendance analytics & charts',
-      'CSV/PDF export',
-      'Monthly attendance reports (Email included)',
-      'WhatsApp delivery add-on: ₦20/member/month',
+      'CSV / PDF export',
+      'Monthly reports (Email included)',
+      'WhatsApp reporting add-on (₦20/member/month)',
       'Priority support',
     ],
-    footnote: '24/7 customer support',
+    footnote: 'Billed quarterly · 24/7 customer support',
     highlighted: true,
   },
   {
     name: 'Business',
     icon: <Building2 className="w-5 h-5" />,
-    description: 'For large organisations needing full control',
-    price: '$100',
+    bestFor: 'Best for large, multi-site organisations',
+    description: 'Full control, branding, and unlimited scale with a dedicated account manager.',
+    price: '$120',
     period: '/quarter',
     features: [
       'Everything in Pro',
@@ -64,12 +68,12 @@ const tiers: PricingTier[] = [
       'Visitor tracking & review',
       'Custom branding & theming',
       'Activity logs & audit trail',
-      'Email + WhatsApp reports (500 members included)',
+      'Email + WhatsApp reports (first 500 members included)',
       'WhatsApp: ₦20/member/month beyond 500',
       'API access',
       'Dedicated account manager',
     ],
-    footnote: '28-day free trial',
+    footnote: 'Billed quarterly · 28-day free trial',
   },
 ];
 
