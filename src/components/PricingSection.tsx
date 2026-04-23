@@ -129,6 +129,9 @@ const PricingSection = () => {
                 )}
               </div>
 
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'hsl(var(--secondary))' }}>
+                {tier.bestFor}
+              </p>
               <p className="text-sm mb-6" style={{ color: 'hsl(210 20% 65%)' }}>
                 {tier.description}
               </p>
