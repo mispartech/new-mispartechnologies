@@ -108,9 +108,13 @@ const SubscriptionSettings = () => {
                 <Badge className="text-xs">{plan.badge}</Badge>
               )}
             </div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
+              {plan.bestFor}
+            </p>
             <div className="mb-4">
               <span className="text-3xl font-bold text-foreground">{plan.price}</span>
               <span className="text-muted-foreground text-sm">{plan.period}</span>
+              <p className="text-xs text-muted-foreground mt-1">Billed quarterly</p>
             </div>
             <ul className="space-y-2.5 mb-6 flex-1">
               {plan.features.map((feature, i) => (
