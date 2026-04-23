@@ -64,6 +64,19 @@ const HeroSection = ({ onRequestDemo }: HeroSectionProps) => {
               <span className="text-xs md:text-sm font-medium text-cyan-light">AI-Powered Recognition</span>
             </div>
 
+            {/* Brand tagline */}
+            <div
+              className={`mb-4 md:mb-5 transition-all duration-700 delay-100 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              <p className="text-[11px] md:text-xs font-semibold tracking-[0.25em] md:tracking-[0.3em] text-white/70 uppercase flex items-center justify-center lg:justify-start gap-2 md:gap-3">
+                <span>Identity</span>
+                <span className="text-cyan/60">|</span>
+                <span>Insights</span>
+                <span className="text-cyan/60">|</span>
+                <span>Automation</span>
+              </p>
+            </div>
+
             {/* Headline with rotating text */}
             <h1 
               className={`font-black mb-4 md:mb-6 text-white transition-all duration-700 delay-150 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
