@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, User, Building2, Crown, Clock } from 'lucide-react';
+import { Check, User, Building2, Crown, Clock, BarChart3, Sparkles, ArrowRight } from 'lucide-react';
 
 interface PricingTier {
   name: string;
@@ -172,6 +172,91 @@ const PricingSection = () => {
           <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white/5 border border-white/10">
             <Clock className="w-4 h-4 text-cyan" />
             <span className="text-xs text-white/50">Payment integration coming soon — contact sales to get started</span>
+          </div>
+        </div>
+
+        {/* Custom Analytics Add-On */}
+        <div className="max-w-5xl mx-auto mb-16">
+          <div
+            className="relative rounded-2xl p-6 lg:p-8 overflow-hidden ring-1 ring-secondary/30"
+            style={{
+              background:
+                'linear-gradient(135deg, hsl(210 30% 15% / 0.85) 0%, hsl(var(--secondary) / 0.08) 100%)',
+              backdropFilter: 'blur(12px)',
+            }}
+          >
+            {/* Glow accent */}
+            <div
+              className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-20 blur-3xl pointer-events-none"
+              style={{ background: 'hsl(var(--secondary))' }}
+            />
+
+            <div className="relative grid md:grid-cols-[1.5fr_1fr] gap-8 items-center">
+              {/* Left: content */}
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-secondary/15 text-secondary ring-1 ring-secondary/30 uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3" />
+                    Premium Add-On
+                  </span>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/5 text-white/60 ring-1 ring-white/10">
+                    Pro & Business
+                  </span>
+                </div>
+
+                <h3
+                  className="text-2xl md:text-3xl font-bold mb-2 flex items-center gap-2"
+                  style={{ color: 'hsl(var(--primary-foreground))' }}
+                >
+                  <BarChart3 className="w-6 h-6 text-secondary" />
+                  Advanced Data Analytics & Insights
+                </h3>
+                <p className="text-sm md:text-base mb-5" style={{ color: 'hsl(210 20% 70%)' }}>
+                  Go beyond attendance. Request custom-built analytics and reporting tailored to
+                  your operational needs — turning your attendance data into a decision-making
+                  engine.
+                </p>
+
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2.5 mb-2">
+                  {[
+                    'Attendance trend analysis',
+                    'Behavioral & engagement insights',
+                    'Department-level performance',
+                    'Custom dashboards & visualizations',
+                    'Exportable executive reports',
+                    'Time pattern intelligence',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
+                      <span className="text-sm" style={{ color: 'hsl(210 20% 80%)' }}>
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Right: pricing + CTA */}
+              <div className="flex flex-col items-start md:items-center md:text-center gap-3 md:border-l md:border-white/10 md:pl-8">
+                <p className="text-xs uppercase tracking-wider text-white/50">Pricing</p>
+                <p
+                  className="text-xl font-bold leading-tight"
+                  style={{ color: 'hsl(var(--primary-foreground))' }}
+                >
+                  Custom pricing
+                </p>
+                <p className="text-xs text-white/60 -mt-1">based on your requirements</p>
+
+                <a
+                  href="mailto:sales@mispartechnologies.com?subject=Custom%20Analytics%20Add-On%20Request"
+                  className="mt-3 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-semibold text-sm hover:opacity-90 transition-opacity w-full md:w-auto"
+                >
+                  Request Custom Analytics
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+                <span className="text-[11px] text-white/40">Typical scoping call within 48h</span>
+              </div>
+            </div>
           </div>
         </div>
 
