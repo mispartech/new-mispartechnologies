@@ -656,6 +656,28 @@ class DjangoApiClient {
     });
   }
 
+  // ═══════════════════════════ PAYMENTS (Paystack) ═══════════════════════════
+
+  async initializePaystackPayment(payload: {
+    plan: 'starter' | 'pro' | 'business';
+    email: string;
+    whatsapp_addon?: boolean;
+    member_count?: number;
+  }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.PAYMENTS_INITIALIZE, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async verifyPaystackPayment(reference: string): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.PAYMENTS_VERIFY(reference));
+  }
+
+  async getSubscriptionStatus(options?: { silent?: boolean }): Promise<ApiResponse<any>> {
+    return this.request(API_ROUTES.SUBSCRIPTION_STATUS, { silent: options?.silent });
+  }
+
   // ═══════════════════════════ HEALTH CHECK ═══════════════════════════
 
   async healthCheck(): Promise<ApiResponse<any>> {
