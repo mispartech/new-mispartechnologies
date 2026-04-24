@@ -64,6 +64,11 @@ export const API_ROUTES = {
   PLATFORM_REGISTER: '/api/platform/register/',
   PLATFORM_LOGIN: '/api/platform/login/',
   PLATFORM_CHECK_EMAIL: '/api/platform/check-email/',
+
+  // ── Payments (Paystack) ──
+  PAYMENTS_INITIALIZE: '/api/payments/paystack/initialize/',
+  PAYMENTS_VERIFY: (reference: string) => `/api/payments/paystack/verify/${reference}/`,
+  SUBSCRIPTION_STATUS: '/api/payments/subscription/',
 } as const;
 
 /**
