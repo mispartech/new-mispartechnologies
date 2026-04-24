@@ -64,12 +64,12 @@ export async function initializePayment(payload: {
   whatsapp_addon?: boolean;
   member_count?: number;
 }) {
-  return djangoApi.post<InitializeResponse>(API_ROUTES.PAYMENTS_INITIALIZE, payload);
+  return djangoApi.initializePaystackPayment(payload) as Promise<{ data?: InitializeResponse; error?: string; status: number }>;
 }
 
 /** Verify a transaction reference after callback. */
 export async function verifyPayment(reference: string) {
-  return djangoApi.get<VerifyResponse>(API_ROUTES.PAYMENTS_VERIFY(reference));
+  return djangoApi.verifyPaystackPayment(reference) as Promise<{ data?: VerifyResponse; error?: string; status: number }>;
 }
 
 /** Open Paystack Inline checkout using an access code from the backend. */
