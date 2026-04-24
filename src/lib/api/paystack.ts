@@ -15,7 +15,6 @@
  */
 
 import { djangoApi } from './client';
-import { API_ROUTES } from './apiRoutes';
 
 declare global {
   interface Window {
