@@ -1,10 +1,26 @@
-import React from 'react';
-import { Check, Clock, CreditCard, ArrowRight, MessageCircle, Mail } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Clock, CreditCard, ArrowRight, MessageCircle, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { initializePayment, verifyPayment, openPaystackCheckout, type PaystackPlan } from '@/lib/api/paystack';
 
-const plans = [
+interface Plan {
+  id: PaystackPlan;
+  name: string;
+  price: string;
+  period: string;
+  bestFor: string;
+  highlighted?: boolean;
+  badge?: string;
+  features: string[];
+}
+
+const plans: Plan[] = [
   {
+    id: 'starter',
     name: 'Starter',
     price: '$50',
     period: '/quarter',
@@ -20,6 +36,7 @@ const plans = [
     ],
   },
   {
+    id: 'pro',
     name: 'Pro',
     price: '$75',
     period: '/quarter',
@@ -39,6 +56,7 @@ const plans = [
     ],
   },
   {
+    id: 'business',
     name: 'Business',
     price: '$120',
     period: '/quarter',
@@ -58,9 +76,124 @@ const plans = [
 ];
 
 const SubscriptionSettings = () => {
-  // TODO: fetch real member count from org settings
   const memberCount = 0;
   const whatsappCostEstimate = memberCount * 20;
+  const [loadingPlan, setLoadingPlan] = useState<PaystackPlan | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Verify payment after Paystack redirect callback (?reference=... or ?trxref=...)
+  useEffect(() => {
+    const reference = searchParams.get('reference') || searchParams.get('trxref');
+    if (!reference) return;
+
+    (async () => {
+      const res = await verifyPayment(reference);
+      if (res.data?.status === 'success') {
+        toast({
+          title: 'Payment Successful',
+          description: `Your ${res.data.plan ?? ''} subscription is now active.`,
+        });
+      } else if (res.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Verification Failed',
+          description: res.error,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Payment Not Completed',
+          description: `Status: ${res.data?.status ?? 'unknown'}`,
+        });
+      }
+      // Clean URL
+      const next = new URLSearchParams(searchParams);
+      next.delete('reference');
+      next.delete('trxref');
+      setSearchParams(next, { replace: true });
+    })();
+  }, [searchParams, setSearchParams]);
+
+  const handleSubscribe = async (plan: PaystackPlan) => {
+    setLoadingPlan(plan);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const email = user?.email;
+      if (!email) {
+        toast({
+          variant: 'destructive',
+          title: 'Not signed in',
+          description: 'Please sign in to subscribe to a plan.',
+        });
+        return;
+      }
+
+      const init = await initializePayment({ plan, email });
+      if (!init.data) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not start payment',
+          description: init.error || 'Please try again.',
+        });
+        return;
+      }
+
+      const { reference, access_code, authorization_url, amount, currency } = init.data;
+
+      try {
+        openPaystackCheckout({
+          email,
+          amount,
+          currency,
+          reference,
+          accessCode: access_code,
+          metadata: { plan },
+          onSuccess: async (ref) => {
+            const v = await verifyPayment(ref);
+            if (v.data?.status === 'success') {
+              toast({
+                title: 'Payment Successful',
+                description: `Your ${plan} subscription is now active.`,
+              });
+            } else {
+              toast({
+                variant: 'destructive',
+                title: 'Verification Pending',
+                description: 'We are still confirming your payment. You will be notified shortly.',
+              });
+            }
+          },
+          onCancel: () => {
+            toast({ title: 'Payment cancelled' });
+          },
+          onError: (err) => {
+            console.error('[Paystack] error', err);
+            toast({
+              variant: 'destructive',
+              title: 'Payment error',
+              description: 'Something went wrong with the payment popup.',
+            });
+          },
+        });
+      } catch (err) {
+        // Fallback: redirect to Paystack hosted page
+        if (authorization_url) {
+          window.location.href = authorization_url;
+          return;
+        }
+        throw err;
+      }
+    } catch (err) {
+      console.error('[Subscribe]', err);
+      toast({
+        variant: 'destructive',
+        title: 'Unable to start checkout',
+        description: err instanceof Error ? err.message : 'Unexpected error',
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -83,11 +216,11 @@ const SubscriptionSettings = () => {
         </p>
       </div>
 
-      {/* Payment integration notice */}
-      <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex items-center gap-3">
-        <Clock className="w-5 h-5 text-yellow-500 shrink-0" />
-        <p className="text-sm text-yellow-600 dark:text-yellow-400">
-          Payment integration (Paystack) is coming soon. Contact sales to get started with a plan.
+      {/* Secure Payment Notice */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
+        <CreditCard className="w-5 h-5 text-primary shrink-0" />
+        <p className="text-sm text-foreground">
+          Payments are processed securely by <span className="font-semibold">Paystack</span>. Your card details never touch our servers.
         </p>
       </div>
 
@@ -95,7 +228,7 @@ const SubscriptionSettings = () => {
       <div className="grid md:grid-cols-3 gap-4">
         {plans.map((plan) => (
           <div
-            key={plan.name}
+            key={plan.id}
             className={`rounded-xl border p-6 flex flex-col ${
               plan.highlighted
                 ? 'border-primary shadow-md shadow-primary/10 bg-primary/5'
@@ -127,9 +260,17 @@ const SubscriptionSettings = () => {
             <Button
               variant={plan.highlighted ? 'default' : 'outline'}
               className="w-full"
-              disabled
+              disabled={loadingPlan !== null}
+              onClick={() => handleSubscribe(plan.id)}
             >
-              Coming Soon
+              {loadingPlan === plan.id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Starting checkout…
+                </>
+              ) : (
+                <>Subscribe to {plan.name}</>
+              )}
             </Button>
           </div>
         ))}
