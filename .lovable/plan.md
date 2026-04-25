@@ -1,103 +1,60 @@
+## Goal
 
+Produce **one** backend implementation brief — `docs/backend-paystack-and-plan-gating-prompt.md` — that the Django team (`Smart-Attendance-System-API`) can implement directly. It supersedes the earlier `paystack-backend-spec.md` by adding the missing piece: **plan-driven entitlements that the frontend reads to render different dashboards per organization and per role.**
 
-# Dynamic Stats, Attendance Delivery Settings & Pricing Updates
+No frontend code changes in this task — this is a documentation deliverable only. The frontend wiring (Subscribe buttons, Paystack inline checkout, callback verification) was already shipped in the previous turn.
 
-## Overview
+## What the document will contain
 
-Three interconnected changes: (1) replace all hardcoded stats across the site with dynamic data managed from the platform admin dashboard, (2) add attendance record delivery settings (WhatsApp/Email) to the org dashboard, and (3) update pricing to reflect the WhatsApp messaging cost add-on.
+1. **Plan catalogue (server source of truth)** — `starter`, `pro`, `business` with `limits` (max_admins, max_managers, max_members, max_departments, max_sites, max_schedules) and `features` (face_recognition, monthly_reports, csv_export, pdf_export, analytics_charts, visitor_tracking, custom_branding, activity_logs, whatsapp_addon_eligible, api_access, dedicated_account_manager, custom_analytics_addon). `None` = unlimited. Quarterly NGN pricing in kobo.
 
----
+2. **Database models**
+   - `OrgSubscription` (one per org): `plan`, `status` ∈ `trial|active|past_due|cancelled|expired`, `current_period_start/end`, Paystack codes, add-on flags. Auto-created on signup with 14-day trial.
+   - `Payment`: reference, amount_kobo, status, paid_at, payload.
+   - `WebhookEvent`: idempotency log keyed on Paystack event id.
 
-## 1. Replace Hardcoded Stats with Dynamic Data
+3. **Paystack endpoints** (under `/api/payments/...`)
+   - `POST /paystack/initialize/` — auth-only, super_admin/admin only, generates reference, calls Paystack `/transaction/initialize`, persists pending Payment, returns `{reference, access_code, authorization_url, amount, currency}`.
+   - `GET /paystack/verify/<reference>/` — verifies with Paystack, on success extends `OrgSubscription` by 90 days.
+   - `POST /paystack/webhook/` — public, HMAC-SHA512 verified using raw body, idempotent on event id, dispatches `charge.success`, `subscription.create`, `subscription.disable`, `invoice.payment_failed`, `invoice.create`. Always returns 200 within 5 s.
+   - `GET /payments/subscription/` — returns plan + limits + live usage counts + features + addons + upgrade hints. **This is the single source the frontend hydrates the dashboard from.**
 
-**Problem:** HeroSection shows "10,000+ Users", CTASection says "Join thousands", TestimonialSection has fake testimonials and org logos, PlatformAdminDashboard stats are all "—", Blog/Press/Careers have dummy content.
+4. **Profile endpoint amendment** — `GET /api/profile/` must embed the same `subscription` object so `DjangoAuthContext` gets it in one round-trip on app load.
 
-**Approach:** Create a `platform_stats` table and a `site_content` table managed from the admin dashboard. The public site fetches stats via a public API endpoint.
+5. **Server-side enforcement helpers**
+   - `enforce_limit(org, resource, current)` and `require_feature(org, feature)`.
+   - DRF exception handler maps both to **HTTP 402** with a consistent JSON envelope: `{ error, resource|feature, current, limit, required_plan, message }`.
+   - Table mapping every write endpoint to the limit/feature it must check (members, admins, managers, departments, sites, schedules, visitor tracking, branding, activity logs, exports, analytics data, API tokens).
+   - Behaviour matrix for `trial`, `past_due`, `expired`, `cancelled`.
 
-### Files to change:
+6. **Role × Plan capability matrix** — one table showing what super_admin / admin / manager / member can do per plan, so the frontend gating logic and backend permissions stay aligned.
 
-- **`HeroSection.tsx`** — Replace hardcoded `useCountUp(10000)` with a fetch from `GET /api/platform/stats/` (public endpoint returning `{ total_users, total_organizations, accuracy_rate }`). Show "0" or skeleton until loaded.
+7. **Add-ons**
+   - WhatsApp delivery: toggle endpoint, monthly job that bills `max(0, member_count - free_tier) × ₦20`. Free tier per plan.
+   - Custom Analytics: sales-lead endpoint (`POST /payments/addons/custom-analytics/request/`), no self-serve.
 
-- **`CTASection.tsx`** — Replace "Join thousands of organizations" with dynamic text using the org count, e.g., "Join {count}+ organizations..."
+8. **Paystack dashboard configuration** — exact callback + webhook URLs for live and test modes.
 
-- **`TestimonialSection.tsx`** — Add a blur overlay (reuse `ComingSoonOverlay`) over the entire testimonial section since all testimonials and org logos are fabricated. Show "Real testimonials coming soon".
+9. **Environment variables** — `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_API_BASE`, `FRONTEND_BASE_URL`, `TRIAL_DAYS=14`.
 
-- **`PlatformAdminDashboard.tsx`** — Wire stats cards to fetch from `GET /api/platform/dashboard-stats/` (authenticated). Show loading skeletons. Add management sub-pages:
-  - **Site Stats Management** — form to manually set/override public-facing stats (total users, orgs, accuracy) until auto-calculation is ready
-  - **Content Management** stubs already exist; keep as-is for now
+10. **Acceptance checklist** — 10 verifiable items the backend team can tick off (auto-trial creation, idempotent webhook, 402 on limit/feature breach, manager cannot escalate role, past_due read-only writes, etc.).
 
-### New files:
-- **`src/lib/api/platformApi.ts`** — API client functions for `GET /api/platform/stats/` (public) and `GET /api/platform/dashboard-stats/` (admin-only)
+11. **Standardized 402 error envelope** so the frontend can render one consistent "Upgrade" modal everywhere.
 
-### Backend prompt needed:
-- `GET /api/platform/stats/` — public, returns `{ total_users, total_organizations, accuracy_rate }` computed from DB
-- `GET /api/platform/dashboard-stats/` — admin-only, returns detailed counts (orgs, users, demo requests, active plans)
-- `PATCH /api/platform/stats/` — admin-only, allows manual override of public-facing stats
+## Files to be created
 
----
+| File | Purpose |
+|---|---|
+| `docs/backend-paystack-and-plan-gating-prompt.md` | The full brief described above (~9–10 KB). |
 
-## 2. Attendance Record Delivery Settings (WhatsApp/Email)
+## What this enables on the frontend (next steps, not part of this task)
 
-**Problem:** No way for org admins to configure how members receive monthly attendance records.
+After the backend ships:
 
-### Files to change:
+- `DjangoAuthContext` reads `user.subscription` and exposes `{plan, limits, usage, features}`.
+- A new hook `useEntitlements()` returns `can(feature)` and `withinLimit(resource)`.
+- `DashboardSidebar` hides/locks items based on `features` + role.
+- A shared `<UpgradePrompt requiredPlan="pro" />` component is rendered wherever the API returns 402.
+- `SubscriptionSettings` highlights the current plan and shows live usage bars (members 147/200, etc.).
 
-- **`OrganizationSettings.tsx`** — Add a new tab "Attendance Delivery" with:
-  - Toggle: "Send monthly attendance records to members"
-  - Radio/select: Delivery channel — "Email only" (free), "WhatsApp only", "Both Email & WhatsApp"
-  - Info card showing cost calculation: "WhatsApp messaging: ₦20/member/month. Your org has {member_count} members = ₦{total}/month"
-  - Note: "WhatsApp delivery is available on Pro and Business plans"
-
-- **`NotificationSettings.tsx`** (profile-level) — Add a personal preference for members: "Receive attendance records via" with Email/WhatsApp toggle (respects org-level setting as the master switch)
-
-- **`DashboardSidebar.tsx`** — No change needed, settings already accessible
-
-### New component:
-- **`src/components/dashboard/AttendanceDeliverySettings.tsx`** — Reusable card with the delivery channel config, cost preview, and plan-gating logic
-
-### Backend prompt needed:
-- Add `attendance_delivery_channel` and `attendance_delivery_enabled` fields to Organization settings
-- Add `preferred_delivery_channel` to member profile
-- Endpoint to trigger monthly attendance report generation and delivery via Resend (email) or WhatsApp Business API
-
----
-
-## 3. Update Pricing to Include WhatsApp Add-on
-
-### Files to change:
-
-- **`PricingSection.tsx`** — Update plans:
-  - **Starter ($35/quarter):** Add "Email attendance reports (included)". Remove WhatsApp option.
-  - **Pro ($65/quarter):** Add "Monthly attendance reports (Email included, WhatsApp add-on: ₦20/member/month)"
-  - **Business ($100/quarter):** Add "Monthly attendance reports (Email + WhatsApp included for up to 500 members, ₦20/member beyond)"
-
-- **`SubscriptionSettings.tsx`** — Mirror the updated pricing. Add a "WhatsApp Add-on" section below the plan cards showing:
-  - Current member count
-  - Estimated WhatsApp cost: `{members} × ₦20 = ₦{total}/month`
-  - Toggle to enable/disable WhatsApp delivery (links to org settings)
-
----
-
-## 4. Backend Prompt (provided after frontend implementation)
-
-1. `GET /api/platform/stats/` — public stats endpoint
-2. `GET /api/platform/dashboard-stats/` — admin stats with real DB counts
-3. `PATCH /api/platform/stats/` — manual stat overrides
-4. Organization settings fields for attendance delivery config
-5. WhatsApp Business API integration for attendance record delivery
-6. Monthly attendance report generation job (cron/Celery)
-
----
-
-## Technical Summary
-
-| Change | Files | Type |
-|---|---|---|
-| Dynamic hero stats | `HeroSection.tsx`, `platformApi.ts` | Fetch + render |
-| Dynamic CTA text | `CTASection.tsx` | Fetch + render |
-| Blur testimonials | `TestimonialSection.tsx` | Overlay |
-| Admin dashboard stats | `PlatformAdminDashboard.tsx` | Fetch + management UI |
-| Attendance delivery settings | `OrganizationSettings.tsx`, new component | New tab + config |
-| Member delivery preference | `NotificationSettings.tsx` | Add toggle |
-| Pricing WhatsApp add-on | `PricingSection.tsx`, `SubscriptionSettings.tsx` | Content update |
-
+These frontend changes will be a separate task once the backend endpoints are live.
