@@ -343,7 +343,36 @@ const AttendanceCapture = () => {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // ── Prune stale faces ──
+  // ── Fullscreen change tracking ──
+  useEffect(() => {
+    const handler = () => {
+      const el = document.fullscreenElement;
+      setIsFullscreen(!!el && el === cameraWrapperRef.current);
+      // Trigger container size recalc
+      setTimeout(() => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          setContainerDimensions({ width: rect.width, height: rect.height });
+        }
+      }, 100);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await cameraWrapperRef.current?.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('[Fullscreen] toggle error', err);
+    }
+  }, []);
+
+
   useEffect(() => {
     if (!isCameraOn) return;
     const interval = setInterval(pruneStalefaces, 1000);
