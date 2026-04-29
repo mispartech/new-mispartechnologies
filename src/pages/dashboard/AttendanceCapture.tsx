@@ -65,7 +65,7 @@ const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) 
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
 /** Filtered recent recognitions list with View mode */
-const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
+const RecentRecognitionsList = ({ persons, filter, search = '' }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours'; search?: string }) => {
   const [selectedPerson, setSelectedPerson] = useState<RecognizedPerson | null>(null);
   const { getTerm } = useTerminology();
 
@@ -73,8 +73,13 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
     const now = Date.now();
     const cutoffs = { '1min': 60_000, '1hour': 3_600_000, '24hours': 86_400_000 };
     const cutoff = cutoffs[filter];
-    return persons.filter(p => now - p.timestamp.getTime() < cutoff);
-  }, [persons, filter]);
+    const q = search.trim().toLowerCase();
+    return persons.filter(p => {
+      if (now - p.timestamp.getTime() >= cutoff) return false;
+      if (q && !(p.name || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [persons, filter, search]);
 
   if (filtered.length === 0) {
     return (
