@@ -23,6 +23,8 @@ import {
   Clock,
   Filter,
   Eye,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
