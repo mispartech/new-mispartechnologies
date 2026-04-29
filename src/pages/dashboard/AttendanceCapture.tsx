@@ -3,15 +3,16 @@ import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  Camera, 
-  CameraOff, 
+import {
+  Camera,
+  CameraOff,
   RefreshCw,
   Volume2,
   VolumeX,
@@ -25,6 +26,13 @@ import {
   Eye,
   Maximize2,
   Minimize2,
+  FlipHorizontal,
+  ImageDown,
+  Keyboard,
+  Search,
+  X,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -32,6 +40,9 @@ import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay
 import { djangoApi } from '@/lib/api/client';
 import { format } from 'date-fns';
 import { useTerminology } from '@/contexts/TerminologyContext';
+import { useWakeLock } from '@/hooks/useWakeLock';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useCameraDevices } from '@/hooks/useCameraDevices';
 
 interface RecognizedPerson {
   id: string;
