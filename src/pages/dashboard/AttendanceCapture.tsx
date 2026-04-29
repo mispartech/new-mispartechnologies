@@ -836,8 +836,8 @@ const AttendanceCapture = () => {
           <p className="text-sm sm:text-base text-muted-foreground">Use face recognition to mark attendance</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge 
-            variant={apiStatus === 'connected' ? 'default' : 'destructive'} 
+          <Badge
+            variant={apiStatus === 'connected' ? 'default' : 'destructive'}
             className="gap-1"
           >
             {getStatusIcon()}
@@ -848,18 +848,86 @@ const AttendanceCapture = () => {
               {apiStatus === 'connected' ? 'Online' : 'Offline'}
             </span>
           </Badge>
+
+          {apiStatus === 'disconnected' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => checkApiHealth(true)}
+              className="gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </Button>
+          )}
+
+          {isCameraOn && (
+            <Badge variant="outline" className="gap-1 font-mono text-xs">
+              <Clock className="w-3 h-3" />
+              {sessionTimeLabel}
+            </Badge>
+          )}
+
+          {cameraDevices.length > 1 && !isCameraOn && (
+            <Select value={selectedDeviceId || 'default'} onValueChange={(v) => setSelectedDeviceId(v === 'default' ? '' : v)}>
+              <SelectTrigger className="h-9 w-[180px] text-xs" aria-label="Select camera">
+                <Camera className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Default camera" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default camera</SelectItem>
+                {cameraDevices.map(d => (
+                  <SelectItem key={d.deviceId} value={d.deviceId}>{d.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              const next = !soundEnabled;
-              setSoundEnabled(next);
-              localStorage.setItem('attendance_sound_enabled', String(next));
-            }}
-            className="h-8 w-8 sm:h-9 sm:w-9"
+            onClick={() => setMirrored(v => !v)}
+            className="h-9 w-9"
+            title={mirrored ? 'Disable mirror' : 'Mirror video (selfie view)'}
+            aria-label="Toggle mirror"
+          >
+            <FlipHorizontal className={`w-4 h-4 ${mirrored ? 'text-primary' : ''}`} />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={downloadSnapshot}
+            className="h-9 w-9"
+            disabled={!isCameraOn}
+            title="Download a PNG snapshot of the current frame"
+            aria-label="Download snapshot"
+          >
+            <ImageDown className="w-4 h-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleSound}
+            className="h-9 w-9"
+            title={soundEnabled ? 'Mute attendance chime' : 'Enable attendance chime'}
+            aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowShortcutHelp(true)}
+            className="h-9 w-9 hidden sm:inline-flex"
+            title="Keyboard shortcuts (?)"
+            aria-label="Show keyboard shortcuts"
+          >
+            <Keyboard className="w-4 h-4" />
+          </Button>
+
           <Button
             onClick={isCameraOn ? stopCamera : startCamera}
             variant={isCameraOn ? 'destructive' : 'default'}
