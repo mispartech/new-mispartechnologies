@@ -23,6 +23,8 @@ import {
   Clock,
   Filter,
   Eye,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -231,7 +233,9 @@ const AttendanceCapture = () => {
   const [stats, setStats] = useState({ total: 0, members: 0, visitors: 0 });
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const cameraWrapperRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -339,7 +343,36 @@ const AttendanceCapture = () => {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // ── Prune stale faces ──
+  // ── Fullscreen change tracking ──
+  useEffect(() => {
+    const handler = () => {
+      const el = document.fullscreenElement;
+      setIsFullscreen(!!el && el === cameraWrapperRef.current);
+      // Trigger container size recalc
+      setTimeout(() => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          setContainerDimensions({ width: rect.width, height: rect.height });
+        }
+      }, 100);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await cameraWrapperRef.current?.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('[Fullscreen] toggle error', err);
+    }
+  }, []);
+
+
   useEffect(() => {
     if (!isCameraOn) return;
     const interval = setInterval(pruneStalefaces, 1000);
@@ -753,17 +786,35 @@ const AttendanceCapture = () => {
                     Loading model…
                   </Badge>
                 )}
-                {isProcessing && engineState === 'ready' && (
+              {isProcessing && engineState === 'ready' && (
                   <Badge variant="secondary" className="animate-pulse">
                     <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                     Processing…
                   </Badge>
                 )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleFullscreen}
+                  title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                >
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div ref={containerRef} className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+            <div
+              ref={cameraWrapperRef}
+              className={isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''}
+            >
+              <div
+                ref={containerRef}
+                className={`relative bg-muted rounded-lg overflow-hidden ${
+                  isFullscreen ? 'w-full h-full max-w-full max-h-full' : 'aspect-video'
+                }`}
+              >
               <video
                 ref={videoRef}
                 autoPlay
@@ -810,6 +861,7 @@ const AttendanceCapture = () => {
                   <p className="text-destructive text-center px-4">{error}</p>
                 </div>
               )}
+              </div>
             </div>
           </CardContent>
         </Card>
