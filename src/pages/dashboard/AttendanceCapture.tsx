@@ -861,6 +861,7 @@ const AttendanceCapture = () => {
                   <p className="text-destructive text-center px-4">{error}</p>
                 </div>
               )}
+              </div>
             </div>
           </CardContent>
         </Card>
