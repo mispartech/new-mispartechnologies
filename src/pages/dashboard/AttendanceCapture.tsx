@@ -627,9 +627,11 @@ const AttendanceCapture = () => {
       isFirstCallRef.current = true;
       setEngineState('idle');
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+      const videoConstraints: MediaTrackConstraints = selectedDeviceId
+        ? { deviceId: { exact: selectedDeviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+        : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } };
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
 
       if (videoRef.current) {
         streamRef.current = stream;
@@ -646,6 +648,7 @@ const AttendanceCapture = () => {
         setIsCameraOn(true);
         setIsCameraStarting(false);
         pausedUntilRef.current = 0;
+        setSessionStartedAt(Date.now());
 
         toast({ title: 'Camera Started', description: 'Face recognition is now active' });
       }
@@ -675,6 +678,7 @@ const AttendanceCapture = () => {
     setEngineState('idle');
     isFirstCallRef.current = true;
     processingRef.current = false;
+    setSessionStartedAt(null);
   }, [stopCaptureLoop, clearFaces]);
 
   useEffect(() => {
@@ -690,7 +694,70 @@ const AttendanceCapture = () => {
     setStats({ total: 0, members: 0, visitors: 0 });
     clearFaces();
     pausedUntilRef.current = 0;
+    setLastRecognition(null);
+    if (isCameraOn) setSessionStartedAt(Date.now());
   };
+
+  // Capture current frame as PNG and trigger download
+  const downloadSnapshot = useCallback(() => {
+    if (!videoRef.current || !isCameraOn) {
+      toast({ title: 'No camera feed', description: 'Start the camera first to capture a snapshot.', variant: 'destructive' });
+      return;
+    }
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    if (mirrored) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance-${format(new Date(), 'yyyyMMdd-HHmmss')}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Snapshot saved', description: a.download });
+    }, 'image/png');
+  }, [isCameraOn, mirrored, toast]);
+
+  const toggleSound = useCallback(() => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    localStorage.setItem('attendance_sound_enabled', String(next));
+  }, [soundEnabled]);
+
+  // Format session elapsed as HH:MM:SS
+  const sessionTimeLabel = useMemo(() => {
+    const totalSec = Math.floor(sessionElapsed / 1000);
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }, [sessionElapsed]);
+
+  // Keyboard shortcuts (active only when camera is on or fullscreen)
+  useKeyboardShortcuts(
+    {
+      f: () => toggleFullscreen(),
+      s: () => toggleSound(),
+      r: () => resetSession(),
+      h: () => setShowKioskPanels(v => !v),
+      m: () => setMirrored(v => !v),
+      '?': () => setShowShortcutHelp(v => !v),
+      escape: () => setShowShortcutHelp(false),
+    },
+    isCameraOn || isFullscreen,
+  );
+
 
   const getStatusIcon = () => {
     switch (apiStatus) {
