@@ -1178,7 +1178,7 @@ const AttendanceCapture = () => {
             <p className="text-xs text-muted-foreground">
               {format(new Date(), 'EEEE, MMM d, yyyy')}
             </p>
-            <div className="pt-1">
+            <div className="pt-1 space-y-2">
               <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
                 <SelectTrigger className="h-8 text-xs w-full">
                   <Filter className="w-3 h-3 mr-1.5 text-muted-foreground" />
@@ -1190,13 +1190,62 @@ const AttendanceCapture = () => {
                   <SelectItem value="24hours">Last 24 Hours</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={recentSearch}
+                  onChange={(e) => setRecentSearch(e.target.value)}
+                  placeholder="Search by name…"
+                  className="h-8 pl-7 pr-7 text-xs"
+                  aria-label="Search recent recognitions"
+                />
+                {recentSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setRecentSearch('')}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} />
+            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} search={recentSearch} />
           </CardContent>
         </Card>
       </div>
+
+      {/* Keyboard shortcuts dialog */}
+      <Dialog open={showShortcutHelp} onOpenChange={setShowShortcutHelp}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="w-5 h-5 text-primary" />
+              Keyboard Shortcuts
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            {[
+              { k: 'F', d: 'Toggle fullscreen' },
+              { k: 'S', d: 'Toggle attendance sound' },
+              { k: 'M', d: 'Mirror video' },
+              { k: 'H', d: 'Hide / show kiosk overlays' },
+              { k: 'R', d: 'Reset session' },
+              { k: '?', d: 'Show this help' },
+              { k: 'Esc', d: 'Exit fullscreen / close dialogs' },
+            ].map(s => (
+              <div key={s.k} className="flex items-center justify-between py-1 border-b last:border-0">
+                <span className="text-muted-foreground">{s.d}</span>
+                <kbd className="px-2 py-0.5 rounded border bg-muted font-mono text-xs">{s.k}</kbd>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Shortcuts are active while the camera is on or in fullscreen.</p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
