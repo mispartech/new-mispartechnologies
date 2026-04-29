@@ -551,6 +551,11 @@ const AttendanceCapture = () => {
           if (!exists) {
             setRecognizedPersons(prev => [person, ...prev.slice(0, 49)]);
 
+            // Show in kiosk banner for 2.5s
+            setLastRecognition(person);
+            if (lastRecognitionTimerRef.current) clearTimeout(lastRecognitionTimerRef.current);
+            lastRecognitionTimerRef.current = setTimeout(() => setLastRecognition(null), 2500);
+
             // Update stats
             if (face.type === 'member') {
               setStats(prev => ({
