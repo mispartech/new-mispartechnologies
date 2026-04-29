@@ -250,8 +250,20 @@ const AttendanceCapture = () => {
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showKioskPanels, setShowKioskPanels] = useState(true);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [recentSearch, setRecentSearch] = useState('');
+  const [mirrored, setMirrored] = useState(() => localStorage.getItem('attendance_mirrored') === 'true');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(() => localStorage.getItem('attendance_camera_device') || '');
+  const [lastRecognition, setLastRecognition] = useState<RecognizedPerson | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [sessionElapsed, setSessionElapsed] = useState(0);
+  const [cursorHidden, setCursorHidden] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const cameraWrapperRef = useRef<HTMLDivElement>(null);
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRecognitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cameraDevices = useCameraDevices();
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
