@@ -3,15 +3,16 @@ import { useOutletContext } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  Camera, 
-  CameraOff, 
+import {
+  Camera,
+  CameraOff,
   RefreshCw,
   Volume2,
   VolumeX,
@@ -25,6 +26,13 @@ import {
   Eye,
   Maximize2,
   Minimize2,
+  FlipHorizontal,
+  ImageDown,
+  Keyboard,
+  Search,
+  X,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFaceRecognition, TrackedFace } from '@/hooks/useFaceRecognition';
@@ -32,6 +40,9 @@ import FaceOverlay, { FaceOverlayData } from '@/components/dashboard/FaceOverlay
 import { djangoApi } from '@/lib/api/client';
 import { format } from 'date-fns';
 import { useTerminology } from '@/contexts/TerminologyContext';
+import { useWakeLock } from '@/hooks/useWakeLock';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useCameraDevices } from '@/hooks/useCameraDevices';
 
 interface RecognizedPerson {
   id: string;
@@ -54,7 +65,7 @@ const WARMUP_TIMEOUT_MS = 45000;       // 45s timeout for first (model-loading) 
 type EngineState = 'idle' | 'initializing' | 'ready' | 'error';
 
 /** Filtered recent recognitions list with View mode */
-const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours' }) => {
+const RecentRecognitionsList = ({ persons, filter, search = '' }: { persons: RecognizedPerson[]; filter: '1min' | '1hour' | '24hours'; search?: string }) => {
   const [selectedPerson, setSelectedPerson] = useState<RecognizedPerson | null>(null);
   const { getTerm } = useTerminology();
 
@@ -62,8 +73,13 @@ const RecentRecognitionsList = ({ persons, filter }: { persons: RecognizedPerson
     const now = Date.now();
     const cutoffs = { '1min': 60_000, '1hour': 3_600_000, '24hours': 86_400_000 };
     const cutoff = cutoffs[filter];
-    return persons.filter(p => now - p.timestamp.getTime() < cutoff);
-  }, [persons, filter]);
+    const q = search.trim().toLowerCase();
+    return persons.filter(p => {
+      if (now - p.timestamp.getTime() >= cutoff) return false;
+      if (q && !(p.name || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [persons, filter, search]);
 
   if (filtered.length === 0) {
     return (
@@ -234,8 +250,20 @@ const AttendanceCapture = () => {
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showKioskPanels, setShowKioskPanels] = useState(true);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [recentSearch, setRecentSearch] = useState('');
+  const [mirrored, setMirrored] = useState(() => localStorage.getItem('attendance_mirrored') === 'true');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(() => localStorage.getItem('attendance_camera_device') || '');
+  const [lastRecognition, setLastRecognition] = useState<RecognizedPerson | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [sessionElapsed, setSessionElapsed] = useState(0);
+  const [cursorHidden, setCursorHidden] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const cameraWrapperRef = useRef<HTMLDivElement>(null);
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRecognitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cameraDevices = useCameraDevices();
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -310,25 +338,30 @@ const AttendanceCapture = () => {
     }
   }, []);
 
-  // ── Health check on mount ──
-  useEffect(() => {
-    const checkApiHealth = async () => {
-      setApiStatus('checking');
-      const health = await checkHealth();
-      if (health?.success && health.django_api === 'connected') {
-        setApiStatus('connected');
-      } else {
-        setApiStatus('disconnected');
+  // ── Health check (callable for retry button) ──
+  const checkApiHealth = useCallback(async (silent = false) => {
+    setApiStatus('checking');
+    const health = await checkHealth();
+    if (health?.success && health.django_api === 'connected') {
+      setApiStatus('connected');
+      if (silent) toast({ title: 'Connected', description: 'Face recognition service is back online.' });
+    } else {
+      setApiStatus('disconnected');
+      if (!silent) {
         toast({
           title: 'API Connection Issue',
           description: health?.error || 'Unable to connect to face recognition service',
           variant: 'destructive',
         });
       }
-    };
+    }
+  }, [checkHealth, toast]);
+
+  useEffect(() => {
     checkApiHealth();
     fetchTodayAttendance();
-  }, [checkHealth, toast, fetchTodayAttendance]);
+  }, [checkApiHealth, fetchTodayAttendance]);
+
 
   // ── Container resize tracking ──
   useEffect(() => {
@@ -372,6 +405,45 @@ const AttendanceCapture = () => {
     }
   }, []);
 
+  // Keep wake lock while camera is running
+  useWakeLock(isCameraOn);
+
+  // Persist mirror + camera device prefs
+  useEffect(() => { localStorage.setItem('attendance_mirrored', String(mirrored)); }, [mirrored]);
+  useEffect(() => {
+    if (selectedDeviceId) localStorage.setItem('attendance_camera_device', selectedDeviceId);
+  }, [selectedDeviceId]);
+
+  // Session timer
+  useEffect(() => {
+    if (!sessionStartedAt) { setSessionElapsed(0); return; }
+    const tick = () => setSessionElapsed(Date.now() - sessionStartedAt);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sessionStartedAt]);
+
+  // Auto-hide cursor in fullscreen after 3s of inactivity
+  useEffect(() => {
+    if (!isFullscreen) {
+      setCursorHidden(false);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      return;
+    }
+    const reset = () => {
+      setCursorHidden(false);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      cursorTimerRef.current = setTimeout(() => setCursorHidden(true), 3000);
+    };
+    reset();
+    window.addEventListener('mousemove', reset);
+    window.addEventListener('keydown', reset);
+    return () => {
+      window.removeEventListener('mousemove', reset);
+      window.removeEventListener('keydown', reset);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (!isCameraOn) return;
@@ -484,6 +556,11 @@ const AttendanceCapture = () => {
           if (!exists) {
             setRecognizedPersons(prev => [person, ...prev.slice(0, 49)]);
 
+            // Show in kiosk banner for 2.5s
+            setLastRecognition(person);
+            if (lastRecognitionTimerRef.current) clearTimeout(lastRecognitionTimerRef.current);
+            lastRecognitionTimerRef.current = setTimeout(() => setLastRecognition(null), 2500);
+
             // Update stats
             if (face.type === 'member') {
               setStats(prev => ({
@@ -560,9 +637,11 @@ const AttendanceCapture = () => {
       isFirstCallRef.current = true;
       setEngineState('idle');
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+      const videoConstraints: MediaTrackConstraints = selectedDeviceId
+        ? { deviceId: { exact: selectedDeviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+        : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } };
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
 
       if (videoRef.current) {
         streamRef.current = stream;
@@ -579,6 +658,7 @@ const AttendanceCapture = () => {
         setIsCameraOn(true);
         setIsCameraStarting(false);
         pausedUntilRef.current = 0;
+        setSessionStartedAt(Date.now());
 
         toast({ title: 'Camera Started', description: 'Face recognition is now active' });
       }
@@ -608,6 +688,7 @@ const AttendanceCapture = () => {
     setEngineState('idle');
     isFirstCallRef.current = true;
     processingRef.current = false;
+    setSessionStartedAt(null);
   }, [stopCaptureLoop, clearFaces]);
 
   useEffect(() => {
@@ -623,7 +704,70 @@ const AttendanceCapture = () => {
     setStats({ total: 0, members: 0, visitors: 0 });
     clearFaces();
     pausedUntilRef.current = 0;
+    setLastRecognition(null);
+    if (isCameraOn) setSessionStartedAt(Date.now());
   };
+
+  // Capture current frame as PNG and trigger download
+  const downloadSnapshot = useCallback(() => {
+    if (!videoRef.current || !isCameraOn) {
+      toast({ title: 'No camera feed', description: 'Start the camera first to capture a snapshot.', variant: 'destructive' });
+      return;
+    }
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    if (mirrored) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance-${format(new Date(), 'yyyyMMdd-HHmmss')}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Snapshot saved', description: a.download });
+    }, 'image/png');
+  }, [isCameraOn, mirrored, toast]);
+
+  const toggleSound = useCallback(() => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    localStorage.setItem('attendance_sound_enabled', String(next));
+  }, [soundEnabled]);
+
+  // Format session elapsed as HH:MM:SS
+  const sessionTimeLabel = useMemo(() => {
+    const totalSec = Math.floor(sessionElapsed / 1000);
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }, [sessionElapsed]);
+
+  // Keyboard shortcuts (active only when camera is on or fullscreen)
+  useKeyboardShortcuts(
+    {
+      f: () => toggleFullscreen(),
+      s: () => toggleSound(),
+      r: () => resetSession(),
+      h: () => setShowKioskPanels(v => !v),
+      m: () => setMirrored(v => !v),
+      '?': () => setShowShortcutHelp(v => !v),
+      escape: () => setShowShortcutHelp(false),
+    },
+    isCameraOn || isFullscreen,
+  );
+
 
   const getStatusIcon = () => {
     switch (apiStatus) {
@@ -692,8 +836,8 @@ const AttendanceCapture = () => {
           <p className="text-sm sm:text-base text-muted-foreground">Use face recognition to mark attendance</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge 
-            variant={apiStatus === 'connected' ? 'default' : 'destructive'} 
+          <Badge
+            variant={apiStatus === 'connected' ? 'default' : 'destructive'}
             className="gap-1"
           >
             {getStatusIcon()}
@@ -704,18 +848,86 @@ const AttendanceCapture = () => {
               {apiStatus === 'connected' ? 'Online' : 'Offline'}
             </span>
           </Badge>
+
+          {apiStatus === 'disconnected' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => checkApiHealth(true)}
+              className="gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </Button>
+          )}
+
+          {isCameraOn && (
+            <Badge variant="outline" className="gap-1 font-mono text-xs">
+              <Clock className="w-3 h-3" />
+              {sessionTimeLabel}
+            </Badge>
+          )}
+
+          {cameraDevices.length > 1 && !isCameraOn && (
+            <Select value={selectedDeviceId || 'default'} onValueChange={(v) => setSelectedDeviceId(v === 'default' ? '' : v)}>
+              <SelectTrigger className="h-9 w-[180px] text-xs" aria-label="Select camera">
+                <Camera className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Default camera" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default camera</SelectItem>
+                {cameraDevices.map(d => (
+                  <SelectItem key={d.deviceId} value={d.deviceId}>{d.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Button
             variant="outline"
             size="icon"
-            onClick={() => {
-              const next = !soundEnabled;
-              setSoundEnabled(next);
-              localStorage.setItem('attendance_sound_enabled', String(next));
-            }}
-            className="h-8 w-8 sm:h-9 sm:w-9"
+            onClick={() => setMirrored(v => !v)}
+            className="h-9 w-9"
+            title={mirrored ? 'Disable mirror' : 'Mirror video (selfie view)'}
+            aria-label="Toggle mirror"
+          >
+            <FlipHorizontal className={`w-4 h-4 ${mirrored ? 'text-primary' : ''}`} />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={downloadSnapshot}
+            className="h-9 w-9"
+            disabled={!isCameraOn}
+            title="Download a PNG snapshot of the current frame"
+            aria-label="Download snapshot"
+          >
+            <ImageDown className="w-4 h-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleSound}
+            className="h-9 w-9"
+            title={soundEnabled ? 'Mute attendance chime' : 'Enable attendance chime'}
+            aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowShortcutHelp(true)}
+            className="h-9 w-9 hidden sm:inline-flex"
+            title="Keyboard shortcuts (?)"
+            aria-label="Show keyboard shortcuts"
+          >
+            <Keyboard className="w-4 h-4" />
+          </Button>
+
           <Button
             onClick={isCameraOn ? stopCamera : startCamera}
             variant={isCameraOn ? 'destructive' : 'default'}
@@ -792,12 +1004,25 @@ const AttendanceCapture = () => {
                     Processing…
                   </Badge>
                 )}
+                {isFullscreen && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowKioskPanels(v => !v)}
+                    title={showKioskPanels ? 'Hide overlays (H)' : 'Show overlays (H)'}
+                    aria-label="Toggle overlay panels"
+                  >
+                    {showKioskPanels ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
                   onClick={toggleFullscreen}
-                  title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  title={isFullscreen ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)'}
+                  aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
@@ -807,7 +1032,7 @@ const AttendanceCapture = () => {
           <CardContent>
             <div
               ref={cameraWrapperRef}
-              className={isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''}
+              className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''} ${cursorHidden && isFullscreen ? 'cursor-none' : ''}`}
             >
               <div
                 ref={containerRef}
@@ -820,7 +1045,7 @@ const AttendanceCapture = () => {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
+                className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'} ${mirrored ? '-scale-x-100' : ''}`}
               />
               <canvas ref={canvasRef} className="hidden" />
 
@@ -835,6 +1060,76 @@ const AttendanceCapture = () => {
                   personLabel={getTerm('title')}
                 />
               )}
+
+              {/* Kiosk: floating stats panel (top-left) */}
+              {isFullscreen && showKioskPanels && (
+                <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-none">
+                  <div className="rounded-xl bg-background/70 backdrop-blur-md border border-border/50 shadow-lg px-4 py-3 min-w-[180px]">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Today</p>
+                    <div className="flex items-baseline gap-4">
+                      <div>
+                        <div className="text-2xl font-bold">{stats.total}</div>
+                        <p className="text-[10px] text-muted-foreground">Total</p>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-primary">{stats.members}</div>
+                        <p className="text-[10px] text-muted-foreground capitalize">{getTerm('plural')}</p>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-amber-500">{stats.visitors}</div>
+                        <p className="text-[10px] text-muted-foreground">Visitors</p>
+                      </div>
+                    </div>
+                  </div>
+                  {isCameraOn && (
+                    <div className="rounded-lg bg-background/70 backdrop-blur-md border border-border/50 shadow-lg px-3 py-1.5 inline-flex items-center gap-2 self-start">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="font-mono text-xs">{sessionTimeLabel}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Kiosk: side recent panel (right) */}
+              {isFullscreen && showKioskPanels && (
+                <div className="absolute top-4 right-4 bottom-4 z-20 w-[340px] max-w-[40vw] hidden md:flex flex-col gap-2 rounded-xl bg-background/75 backdrop-blur-md border border-border/50 shadow-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent</p>
+                    <Badge variant="outline" className="text-[10px]">{recognizedPersons.length}</Badge>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <RecentRecognitionsList persons={recognizedPersons} filter="1hour" />
+                  </div>
+                </div>
+              )}
+
+              {/* Kiosk: large centered last-recognition banner */}
+              {isFullscreen && lastRecognition && (
+                <div className="absolute inset-x-0 bottom-12 z-20 flex justify-center pointer-events-none px-4">
+                  <div
+                    className={`rounded-2xl backdrop-blur-md border shadow-2xl px-8 py-5 max-w-md w-full text-center animate-in fade-in zoom-in-95 duration-200 ${
+                      lastRecognition.type === 'member'
+                        ? 'bg-primary/90 text-primary-foreground border-primary'
+                        : 'bg-amber-500/90 text-white border-amber-400'
+                    }`}
+                  >
+                    <p className="text-xs uppercase tracking-widest opacity-80 mb-1">
+                      {lastRecognition.type === 'member' ? `Welcome back` : 'Visitor recognized'}
+                    </p>
+                    <p className="text-3xl font-bold truncate">{lastRecognition.name || 'Unknown'}</p>
+                    {lastRecognition.confidence != null && (
+                      <p className="text-xs opacity-80 mt-1">
+                        {Math.round(lastRecognition.confidence * 100)}% match
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SR-only live region for accessibility announcements */}
+              <div className="sr-only" aria-live="polite" aria-atomic="true">
+                {lastRecognition ? `${lastRecognition.type === 'member' ? 'Welcome' : 'Visitor'} ${lastRecognition.name || 'unknown'}` : ''}
+              </div>
 
               {isCameraOn && renderCameraOverlay()}
 
@@ -883,7 +1178,7 @@ const AttendanceCapture = () => {
             <p className="text-xs text-muted-foreground">
               {format(new Date(), 'EEEE, MMM d, yyyy')}
             </p>
-            <div className="pt-1">
+            <div className="pt-1 space-y-2">
               <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as any)}>
                 <SelectTrigger className="h-8 text-xs w-full">
                   <Filter className="w-3 h-3 mr-1.5 text-muted-foreground" />
@@ -895,13 +1190,62 @@ const AttendanceCapture = () => {
                   <SelectItem value="24hours">Last 24 Hours</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={recentSearch}
+                  onChange={(e) => setRecentSearch(e.target.value)}
+                  placeholder="Search by name…"
+                  className="h-8 pl-7 pr-7 text-xs"
+                  aria-label="Search recent recognitions"
+                />
+                {recentSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setRecentSearch('')}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} />
+            <RecentRecognitionsList persons={recognizedPersons} filter={recentFilter} search={recentSearch} />
           </CardContent>
         </Card>
       </div>
+
+      {/* Keyboard shortcuts dialog */}
+      <Dialog open={showShortcutHelp} onOpenChange={setShowShortcutHelp}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="w-5 h-5 text-primary" />
+              Keyboard Shortcuts
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            {[
+              { k: 'F', d: 'Toggle fullscreen' },
+              { k: 'S', d: 'Toggle attendance sound' },
+              { k: 'M', d: 'Mirror video' },
+              { k: 'H', d: 'Hide / show kiosk overlays' },
+              { k: 'R', d: 'Reset session' },
+              { k: '?', d: 'Show this help' },
+              { k: 'Esc', d: 'Exit fullscreen / close dialogs' },
+            ].map(s => (
+              <div key={s.k} className="flex items-center justify-between py-1 border-b last:border-0">
+                <span className="text-muted-foreground">{s.d}</span>
+                <kbd className="px-2 py-0.5 rounded border bg-muted font-mono text-xs">{s.k}</kbd>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Shortcuts are active while the camera is on or in fullscreen.</p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
