@@ -400,6 +400,45 @@ const AttendanceCapture = () => {
     }
   }, []);
 
+  // Keep wake lock while camera is running
+  useWakeLock(isCameraOn);
+
+  // Persist mirror + camera device prefs
+  useEffect(() => { localStorage.setItem('attendance_mirrored', String(mirrored)); }, [mirrored]);
+  useEffect(() => {
+    if (selectedDeviceId) localStorage.setItem('attendance_camera_device', selectedDeviceId);
+  }, [selectedDeviceId]);
+
+  // Session timer
+  useEffect(() => {
+    if (!sessionStartedAt) { setSessionElapsed(0); return; }
+    const tick = () => setSessionElapsed(Date.now() - sessionStartedAt);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sessionStartedAt]);
+
+  // Auto-hide cursor in fullscreen after 3s of inactivity
+  useEffect(() => {
+    if (!isFullscreen) {
+      setCursorHidden(false);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      return;
+    }
+    const reset = () => {
+      setCursorHidden(false);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      cursorTimerRef.current = setTimeout(() => setCursorHidden(true), 3000);
+    };
+    reset();
+    window.addEventListener('mousemove', reset);
+    window.addEventListener('keydown', reset);
+    return () => {
+      window.removeEventListener('mousemove', reset);
+      window.removeEventListener('keydown', reset);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (!isCameraOn) return;
