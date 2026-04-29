@@ -786,17 +786,35 @@ const AttendanceCapture = () => {
                     Loading model…
                   </Badge>
                 )}
-                {isProcessing && engineState === 'ready' && (
+              {isProcessing && engineState === 'ready' && (
                   <Badge variant="secondary" className="animate-pulse">
                     <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                     Processing…
                   </Badge>
                 )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleFullscreen}
+                  title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                >
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div ref={containerRef} className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+            <div
+              ref={cameraWrapperRef}
+              className={isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''}
+            >
+              <div
+                ref={containerRef}
+                className={`relative bg-muted rounded-lg overflow-hidden ${
+                  isFullscreen ? 'w-full h-full max-w-full max-h-full' : 'aspect-video'
+                }`}
+              >
               <video
                 ref={videoRef}
                 autoPlay
