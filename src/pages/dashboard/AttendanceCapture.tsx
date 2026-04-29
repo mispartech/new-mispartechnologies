@@ -1004,12 +1004,25 @@ const AttendanceCapture = () => {
                     Processing…
                   </Badge>
                 )}
+                {isFullscreen && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowKioskPanels(v => !v)}
+                    title={showKioskPanels ? 'Hide overlays (H)' : 'Show overlays (H)'}
+                    aria-label="Toggle overlay panels"
+                  >
+                    {showKioskPanels ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
                   onClick={toggleFullscreen}
-                  title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  title={isFullscreen ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)'}
+                  aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
