@@ -338,25 +338,30 @@ const AttendanceCapture = () => {
     }
   }, []);
 
-  // ── Health check on mount ──
-  useEffect(() => {
-    const checkApiHealth = async () => {
-      setApiStatus('checking');
-      const health = await checkHealth();
-      if (health?.success && health.django_api === 'connected') {
-        setApiStatus('connected');
-      } else {
-        setApiStatus('disconnected');
+  // ── Health check (callable for retry button) ──
+  const checkApiHealth = useCallback(async (silent = false) => {
+    setApiStatus('checking');
+    const health = await checkHealth();
+    if (health?.success && health.django_api === 'connected') {
+      setApiStatus('connected');
+      if (silent) toast({ title: 'Connected', description: 'Face recognition service is back online.' });
+    } else {
+      setApiStatus('disconnected');
+      if (!silent) {
         toast({
           title: 'API Connection Issue',
           description: health?.error || 'Unable to connect to face recognition service',
           variant: 'destructive',
         });
       }
-    };
+    }
+  }, [checkHealth, toast]);
+
+  useEffect(() => {
     checkApiHealth();
     fetchTodayAttendance();
-  }, [checkHealth, toast, fetchTodayAttendance]);
+  }, [checkApiHealth, fetchTodayAttendance]);
+
 
   // ── Container resize tracking ──
   useEffect(() => {
