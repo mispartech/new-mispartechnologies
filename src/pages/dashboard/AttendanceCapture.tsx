@@ -1032,7 +1032,7 @@ const AttendanceCapture = () => {
           <CardContent>
             <div
               ref={cameraWrapperRef}
-              className={isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''}
+              className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background flex items-center justify-center p-4' : ''} ${cursorHidden && isFullscreen ? 'cursor-none' : ''}`}
             >
               <div
                 ref={containerRef}
@@ -1045,7 +1045,7 @@ const AttendanceCapture = () => {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
+                className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'} ${mirrored ? '-scale-x-100' : ''}`}
               />
               <canvas ref={canvasRef} className="hidden" />
 
@@ -1060,6 +1060,76 @@ const AttendanceCapture = () => {
                   personLabel={getTerm('title')}
                 />
               )}
+
+              {/* Kiosk: floating stats panel (top-left) */}
+              {isFullscreen && showKioskPanels && (
+                <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-none">
+                  <div className="rounded-xl bg-background/70 backdrop-blur-md border border-border/50 shadow-lg px-4 py-3 min-w-[180px]">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Today</p>
+                    <div className="flex items-baseline gap-4">
+                      <div>
+                        <div className="text-2xl font-bold">{stats.total}</div>
+                        <p className="text-[10px] text-muted-foreground">Total</p>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-primary">{stats.members}</div>
+                        <p className="text-[10px] text-muted-foreground capitalize">{getTerm('plural')}</p>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-amber-500">{stats.visitors}</div>
+                        <p className="text-[10px] text-muted-foreground">Visitors</p>
+                      </div>
+                    </div>
+                  </div>
+                  {isCameraOn && (
+                    <div className="rounded-lg bg-background/70 backdrop-blur-md border border-border/50 shadow-lg px-3 py-1.5 inline-flex items-center gap-2 self-start">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="font-mono text-xs">{sessionTimeLabel}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Kiosk: side recent panel (right) */}
+              {isFullscreen && showKioskPanels && (
+                <div className="absolute top-4 right-4 bottom-4 z-20 w-[340px] max-w-[40vw] hidden md:flex flex-col gap-2 rounded-xl bg-background/75 backdrop-blur-md border border-border/50 shadow-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent</p>
+                    <Badge variant="outline" className="text-[10px]">{recognizedPersons.length}</Badge>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <RecentRecognitionsList persons={recognizedPersons} filter="1hour" />
+                  </div>
+                </div>
+              )}
+
+              {/* Kiosk: large centered last-recognition banner */}
+              {isFullscreen && lastRecognition && (
+                <div className="absolute inset-x-0 bottom-12 z-20 flex justify-center pointer-events-none px-4">
+                  <div
+                    className={`rounded-2xl backdrop-blur-md border shadow-2xl px-8 py-5 max-w-md w-full text-center animate-in fade-in zoom-in-95 duration-200 ${
+                      lastRecognition.type === 'member'
+                        ? 'bg-primary/90 text-primary-foreground border-primary'
+                        : 'bg-amber-500/90 text-white border-amber-400'
+                    }`}
+                  >
+                    <p className="text-xs uppercase tracking-widest opacity-80 mb-1">
+                      {lastRecognition.type === 'member' ? `Welcome back` : 'Visitor recognized'}
+                    </p>
+                    <p className="text-3xl font-bold truncate">{lastRecognition.name || 'Unknown'}</p>
+                    {lastRecognition.confidence != null && (
+                      <p className="text-xs opacity-80 mt-1">
+                        {Math.round(lastRecognition.confidence * 100)}% match
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SR-only live region for accessibility announcements */}
+              <div className="sr-only" aria-live="polite" aria-atomic="true">
+                {lastRecognition ? `${lastRecognition.type === 'member' ? 'Welcome' : 'Visitor'} ${lastRecognition.name || 'unknown'}` : ''}
+              </div>
 
               {isCameraOn && renderCameraOverlay()}
 
