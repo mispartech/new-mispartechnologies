@@ -8,8 +8,17 @@ import { TerminologyProvider } from '@/contexts/TerminologyContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { DashboardPreloader } from './PreloaderPreview';
 
+const SIDEBAR_STORAGE_KEY = 'dashboard_sidebar_open';
+
 const DashboardLayoutInner = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    return saved === null ? true : saved === 'true';
+  });
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen)); } catch {}
+  }, [sidebarOpen]);
   const navigate = useNavigate();
   const location = useLocation();
 

@@ -43,6 +43,11 @@ import { useTerminology } from '@/contexts/TerminologyContext';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useCameraDevices } from '@/hooks/useCameraDevices';
+import { useAttendanceAudio } from '@/hooks/useAttendanceAudio';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface RecognizedPerson {
   id: string;
@@ -238,10 +243,11 @@ const AttendanceCapture = () => {
     const saved = localStorage.getItem('attendance_sound_enabled');
     return saved !== null ? saved === 'true' : true;
   });
-  const [soundVolume] = useState(() => {
+  const [soundVolume, setSoundVolume] = useState(() => {
     const saved = localStorage.getItem('attendance_sound_volume');
     return saved !== null ? parseFloat(saved) : 0.7;
   });
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('attendance_voice_enabled') === 'true');
   const [recentFilter, setRecentFilter] = useState<'1min' | '1hour' | '24hours'>('24hours');
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
@@ -264,6 +270,7 @@ const AttendanceCapture = () => {
   const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRecognitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraDevices = useCameraDevices();
+  const { playMember, playVisitor, speak } = useAttendanceAudio();
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -579,11 +586,15 @@ const AttendanceCapture = () => {
             // Play sound for new attendance
             if (soundEnabled && (face.attendanceStatus === 'marked' || face.attendanceStatus === 'new_visitor')) {
               try {
-                const audio = new Audio('/success.wav');
-                audio.volume = soundVolume;
-                audio.play().catch(() => {});
+                if (face.type === 'member') {
+                  playMember(soundVolume);
+                  if (voiceEnabled && person.name) speak(`Welcome, ${person.name}`);
+                } else {
+                  playVisitor(soundVolume);
+                  if (voiceEnabled) speak('Visitor recorded');
+                }
               } catch {
-                // Sound file not available
+                // ignore audio errors
               }
             }
 
@@ -622,7 +633,7 @@ const AttendanceCapture = () => {
     } finally {
       processingRef.current = false;
     }
-  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, toast, engineState, stopCaptureLoop]);
+  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, voiceEnabled, playMember, playVisitor, speak, toast, engineState, stopCaptureLoop]);
 
   // ── Start capture loop ──
   const startCaptureLoop = useCallback(() => {
@@ -906,16 +917,70 @@ const AttendanceCapture = () => {
             <ImageDown className="w-4 h-4" />
           </Button>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleSound}
-            className="h-9 w-9"
-            title={soundEnabled ? 'Mute attendance chime' : 'Enable attendance chime'}
-            aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                title="Sound settings"
+                aria-label="Sound settings"
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sound-toggle" className="text-sm">Attendance chime</Label>
+                <Switch
+                  id="sound-toggle"
+                  checked={soundEnabled}
+                  onCheckedChange={(v) => {
+                    setSoundEnabled(v);
+                    localStorage.setItem('attendance_sound_enabled', String(v));
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Volume</Label>
+                  <span className="text-xs text-muted-foreground">{Math.round(soundVolume * 100)}%</span>
+                </div>
+                <Slider
+                  value={[Math.round(soundVolume * 100)]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  disabled={!soundEnabled}
+                  onValueChange={([v]) => {
+                    const vol = v / 100;
+                    setSoundVolume(vol);
+                    localStorage.setItem('attendance_sound_volume', String(vol));
+                  }}
+                  onValueCommit={([v]) => {
+                    if (soundEnabled) playMember(v / 100);
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Members get a bright two-note chime; visitors get a single warm tone.
+                </p>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <div>
+                  <Label htmlFor="voice-toggle" className="text-sm">Voice announcement</Label>
+                  <p className="text-[11px] text-muted-foreground">Says "Welcome, [name]"</p>
+                </div>
+                <Switch
+                  id="voice-toggle"
+                  checked={voiceEnabled}
+                  onCheckedChange={(v) => {
+                    setVoiceEnabled(v);
+                    localStorage.setItem('attendance_voice_enabled', String(v));
+                  }}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Button
             variant="outline"
