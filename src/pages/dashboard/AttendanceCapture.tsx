@@ -633,7 +633,7 @@ const AttendanceCapture = () => {
     } finally {
       processingRef.current = false;
     }
-  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, toast, engineState, stopCaptureLoop]);
+  }, [recognizeFace, profile?.organization_id, recognizedPersons, soundEnabled, soundVolume, voiceEnabled, playMember, playVisitor, speak, toast, engineState, stopCaptureLoop]);
 
   // ── Start capture loop ──
   const startCaptureLoop = useCallback(() => {
