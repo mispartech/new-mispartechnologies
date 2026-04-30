@@ -586,11 +586,15 @@ const AttendanceCapture = () => {
             // Play sound for new attendance
             if (soundEnabled && (face.attendanceStatus === 'marked' || face.attendanceStatus === 'new_visitor')) {
               try {
-                const audio = new Audio('/success.wav');
-                audio.volume = soundVolume;
-                audio.play().catch(() => {});
+                if (face.type === 'member') {
+                  playMember(soundVolume);
+                  if (voiceEnabled && person.name) speak(`Welcome, ${person.name}`);
+                } else {
+                  playVisitor(soundVolume);
+                  if (voiceEnabled) speak('Visitor recorded');
+                }
               } catch {
-                // Sound file not available
+                // ignore audio errors
               }
             }
 
