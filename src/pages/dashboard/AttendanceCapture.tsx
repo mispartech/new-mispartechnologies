@@ -917,16 +917,70 @@ const AttendanceCapture = () => {
             <ImageDown className="w-4 h-4" />
           </Button>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleSound}
-            className="h-9 w-9"
-            title={soundEnabled ? 'Mute attendance chime' : 'Enable attendance chime'}
-            aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                title="Sound settings"
+                aria-label="Sound settings"
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sound-toggle" className="text-sm">Attendance chime</Label>
+                <Switch
+                  id="sound-toggle"
+                  checked={soundEnabled}
+                  onCheckedChange={(v) => {
+                    setSoundEnabled(v);
+                    localStorage.setItem('attendance_sound_enabled', String(v));
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Volume</Label>
+                  <span className="text-xs text-muted-foreground">{Math.round(soundVolume * 100)}%</span>
+                </div>
+                <Slider
+                  value={[Math.round(soundVolume * 100)]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  disabled={!soundEnabled}
+                  onValueChange={([v]) => {
+                    const vol = v / 100;
+                    setSoundVolume(vol);
+                    localStorage.setItem('attendance_sound_volume', String(vol));
+                  }}
+                  onValueCommit={([v]) => {
+                    if (soundEnabled) playMember(v / 100);
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Members get a bright two-note chime; visitors get a single warm tone.
+                </p>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <div>
+                  <Label htmlFor="voice-toggle" className="text-sm">Voice announcement</Label>
+                  <p className="text-[11px] text-muted-foreground">Says "Welcome, [name]"</p>
+                </div>
+                <Switch
+                  id="voice-toggle"
+                  checked={voiceEnabled}
+                  onCheckedChange={(v) => {
+                    setVoiceEnabled(v);
+                    localStorage.setItem('attendance_voice_enabled', String(v));
+                  }}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Button
             variant="outline"
