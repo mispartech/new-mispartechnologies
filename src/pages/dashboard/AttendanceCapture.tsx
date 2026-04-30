@@ -270,6 +270,7 @@ const AttendanceCapture = () => {
   const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRecognitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraDevices = useCameraDevices();
+  const { playMember, playVisitor, speak } = useAttendanceAudio();
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
