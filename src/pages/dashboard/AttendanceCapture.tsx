@@ -243,10 +243,11 @@ const AttendanceCapture = () => {
     const saved = localStorage.getItem('attendance_sound_enabled');
     return saved !== null ? saved === 'true' : true;
   });
-  const [soundVolume] = useState(() => {
+  const [soundVolume, setSoundVolume] = useState(() => {
     const saved = localStorage.getItem('attendance_sound_volume');
     return saved !== null ? parseFloat(saved) : 0.7;
   });
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('attendance_voice_enabled') === 'true');
   const [recentFilter, setRecentFilter] = useState<'1min' | '1hour' | '24hours'>('24hours');
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
