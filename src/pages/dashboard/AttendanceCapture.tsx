@@ -43,6 +43,11 @@ import { useTerminology } from '@/contexts/TerminologyContext';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useCameraDevices } from '@/hooks/useCameraDevices';
+import { useAttendanceAudio } from '@/hooks/useAttendanceAudio';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface RecognizedPerson {
   id: string;
