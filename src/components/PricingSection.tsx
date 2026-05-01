@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, User, Building2, Crown, Clock, BarChart3, Sparkles, ArrowRight } from 'lucide-react';
+import { Check, User, Building2, Crown, Clock, BarChart3, Sparkles, ArrowRight, GraduationCap } from 'lucide-react';
 
 interface PricingTier {
   name: string;
@@ -75,6 +75,26 @@ const tiers: PricingTier[] = [
     ],
     footnote: 'Billed quarterly · 28-day free trial',
   },
+  {
+    name: 'Education',
+    icon: <GraduationCap className="w-5 h-5" />,
+    badge: 'Schools',
+    bestFor: 'Best for schools, colleges & tertiary institutions',
+    description: 'Built for schools — matric/student ID self-registration, bulk roster import, and parent notifications.',
+    price: '$250',
+    period: '/quarter',
+    features: [
+      'Everything in Business',
+      'Up to 10,000 students & staff',
+      'Matric/Student ID + DOB self-registration',
+      'Bulk roster CSV import (5,000 rows/batch)',
+      'Faculty / Programme / Level hierarchy',
+      'Parent/guardian notifications',
+      'Class attendance & exam check-in',
+      'Dedicated education account manager',
+    ],
+    footnote: 'Billed quarterly · 28-day free trial',
+  },
 ];
 
 const PricingSection = () => {
@@ -103,7 +123,7 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6 max-w-6xl mx-auto mb-10">
           {tiers.map((tier) => (
             <div
               key={tier.name}
