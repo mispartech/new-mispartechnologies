@@ -73,6 +73,25 @@ const plans: Plan[] = [
       'Dedicated account manager',
     ],
   },
+  {
+    id: 'education',
+    name: 'Education',
+    price: '$250',
+    period: '/quarter',
+    badge: 'Schools',
+    bestFor: 'Best for schools, colleges & tertiary institutions',
+    features: [
+      'Everything in Business',
+      'Up to 10,000 students & staff',
+      'Matric/Student ID + DOB self-registration',
+      'Bulk roster CSV import (5,000 rows/batch)',
+      'Faculty / Programme / Level hierarchy',
+      'Parent/guardian notifications',
+      'Class attendance & exam check-in',
+      'Dedicated education account manager',
+      '28-day free trial',
+    ],
+  },
 ];
 
 const SubscriptionSettings = () => {
@@ -225,7 +244,7 @@ const SubscriptionSettings = () => {
       </div>
 
       {/* Plans */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {plans.map((plan) => (
           <div
             key={plan.id}

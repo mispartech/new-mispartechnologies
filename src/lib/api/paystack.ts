@@ -35,7 +35,7 @@ declare global {
   }
 }
 
-export type PaystackPlan = 'starter' | 'pro' | 'business';
+export type PaystackPlan = 'starter' | 'pro' | 'business' | 'education';
 
 export interface InitializeResponse {
   reference: string;
