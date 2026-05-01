@@ -11,7 +11,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTerminology } from '@/contexts/TerminologyContext';
 
 interface ImportMembersModalProps { isOpen: boolean; onClose: () => void; onSuccess: () => void; }
-interface ParsedMember { email: string; firstName: string; lastName: string; phoneNumber: string; gender: string; department: string; isValid: boolean; error?: string; }
+interface ParsedMember {
+  email: string; firstName: string; lastName: string; phoneNumber: string; gender: string; department: string;
+  // Student-specific (optional)
+  identifier?: string; dateOfBirth?: string; level?: string; faculty?: string; programme?: string;
+  guardianEmail?: string; guardianPhone?: string;
+  isValid: boolean; error?: string;
+}
 interface Department { id: string; name: string; }
 
 export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembersModalProps) {
@@ -51,27 +57,59 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
       const lines = text.split("\n").filter(line => line.trim());
       if (lines.length < 2) { toast({ title: "Invalid file", description: "File must contain headers and at least one data row", variant: "destructive" }); setIsLoading(false); return; }
       const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
-      const emailIndex = headers.findIndex(h => h.includes("email"));
-      const firstNameIndex = headers.findIndex(h => (h.includes("first") && h.includes("name")) || h === "firstname");
-      const lastNameIndex = headers.findIndex(h => (h.includes("last") && h.includes("name")) || h === "lastname");
-      const phoneIndex = headers.findIndex(h => h.includes("phone"));
-      const genderIndex = headers.findIndex(h => h.includes("gender") || h.includes("sex"));
-      const deptIndex = headers.findIndex(h => h.includes("department") || h.includes("dept"));
-      if (emailIndex === -1) { toast({ title: "Missing email column", description: "CSV must have an 'email' column", variant: "destructive" }); setIsLoading(false); return; }
+      const find = (...keys: string[]) => headers.findIndex(h => keys.some(k => h === k || h.includes(k)));
+      const emailIndex = find('email');
+      const firstNameIndex = find('first_name', 'firstname', 'first name');
+      const lastNameIndex = find('last_name', 'lastname', 'last name');
+      const phoneIndex = headers.findIndex(h => h.includes('phone') && !h.includes('guardian'));
+      const genderIndex = find('gender', 'sex');
+      const deptIndex = find('department', 'dept', 'class');
+      const idIndex = find('identifier', 'matric', 'student_id', 'student id', 'admission');
+      const dobIndex = find('date_of_birth', 'dob', 'birth');
+      const levelIndex = find('level', 'year');
+      const facultyIndex = find('faculty');
+      const programmeIndex = find('programme', 'program', 'course');
+      const guardianEmailIndex = headers.findIndex(h => h.includes('guardian') && h.includes('email'));
+      const guardianPhoneIndex = headers.findIndex(h => h.includes('guardian') && h.includes('phone'));
+
+      const hasIdentifier = idIndex !== -1;
+      if (emailIndex === -1 && !hasIdentifier) {
+        toast({ title: "Missing identifier column", description: "CSV must have an 'email' or 'identifier'/'matric_number' column", variant: "destructive" });
+        setIsLoading(false); return;
+      }
 
       const members: ParsedMember[] = [];
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]);
-        const email = values[emailIndex]?.trim() || "";
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const isValid = emailRegex.test(email);
+        const email = emailIndex >= 0 ? (values[emailIndex]?.trim() || "") : "";
+        const identifier = idIndex >= 0 ? (values[idIndex]?.trim() || "") : "";
+        const dob = dobIndex >= 0 ? (values[dobIndex]?.trim() || "") : "";
+        const hasValidEmail = email && emailRegex.test(email);
+        const hasValidId = !!identifier && (!dob || /^\d{4}-\d{2}-\d{2}$/.test(dob));
+        const isValid = hasValidEmail || hasValidId;
+        let error: string | undefined;
+        if (!isValid) {
+          if (email && !hasValidEmail) error = 'Invalid email format';
+          else if (!email && !identifier) error = 'Missing email or identifier';
+          else if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) error = 'DOB must be YYYY-MM-DD';
+          else error = 'Missing required fields';
+        }
         members.push({
-          email, firstName: firstNameIndex >= 0 ? values[firstNameIndex]?.trim() || "" : "",
+          email,
+          firstName: firstNameIndex >= 0 ? values[firstNameIndex]?.trim() || "" : "",
           lastName: lastNameIndex >= 0 ? values[lastNameIndex]?.trim() || "" : "",
           phoneNumber: phoneIndex >= 0 ? values[phoneIndex]?.trim() || "" : "",
           gender: genderIndex >= 0 ? values[genderIndex]?.trim() || "" : "",
           department: deptIndex >= 0 ? values[deptIndex]?.trim() || "" : "",
-          isValid, error: !isValid ? "Invalid email format" : undefined,
+          identifier: identifier || undefined,
+          dateOfBirth: dob || undefined,
+          level: levelIndex >= 0 ? values[levelIndex]?.trim() || undefined : undefined,
+          faculty: facultyIndex >= 0 ? values[facultyIndex]?.trim() || undefined : undefined,
+          programme: programmeIndex >= 0 ? values[programmeIndex]?.trim() || undefined : undefined,
+          guardianEmail: guardianEmailIndex >= 0 ? values[guardianEmailIndex]?.trim() || undefined : undefined,
+          guardianPhone: guardianPhoneIndex >= 0 ? values[guardianPhoneIndex]?.trim() || undefined : undefined,
+          isValid, error,
         });
       }
       setParsedMembers(members);
