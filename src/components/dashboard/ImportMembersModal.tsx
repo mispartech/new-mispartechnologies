@@ -147,8 +147,20 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
           departmentId = dept?.id;
         }
         return {
-          email: member.email, first_name: member.firstName || undefined, last_name: member.lastName || undefined,
-          phone_number: member.phoneNumber || undefined, gender: member.gender || undefined, department_id: departmentId,
+          email: member.email || undefined,
+          first_name: member.firstName || undefined,
+          last_name: member.lastName || undefined,
+          phone_number: member.phoneNumber || undefined,
+          gender: member.gender || undefined,
+          department_id: departmentId,
+          // Student/education fields (backend will ignore until Phase 1 ships)
+          identifier: member.identifier,
+          date_of_birth: member.dateOfBirth,
+          level: member.level,
+          faculty: member.faculty,
+          programme: member.programme,
+          guardian_email: member.guardianEmail,
+          guardian_phone: member.guardianPhone,
         };
       });
 
@@ -187,7 +199,7 @@ export function ImportMembersModal({ isOpen, onClose, onSuccess }: ImportMembers
                 <p className="text-sm text-muted-foreground">Supports CSV and Excel files</p>
               </div>
               <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} className="hidden" />
-              <Alert><FileSpreadsheet className="h-4 w-4" /><AlertDescription><strong>Expected columns:</strong> email (required), first_name, last_name, phone_number, gender, department</AlertDescription></Alert>
+              <Alert><FileSpreadsheet className="h-4 w-4" /><AlertDescription><strong>Standard columns:</strong> email, first_name, last_name, phone_number, gender, department<br/><strong>For schools:</strong> identifier (matric/student ID), date_of_birth (YYYY-MM-DD), level, faculty, programme, guardian_email, guardian_phone — students can self-claim with ID + DOB, no email needed.</AlertDescription></Alert>
             </div>
           ) : (
             <>
