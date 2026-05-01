@@ -643,12 +643,24 @@ class DjangoApiClient {
    */
   async selfRegister(data: {
     org_slug: string;
-    email: string;
+    /** 'email' (default, existing flow) or 'identifier_dob' (school students). */
+    mode?: 'email' | 'identifier_dob';
+    email?: string;
+    /** Required when mode='identifier_dob' — student/matric ID. */
+    identifier?: string;
+    /** Required when mode='identifier_dob' — ISO YYYY-MM-DD. */
+    date_of_birth?: string;
     first_name: string;
     last_name: string;
     phone_number?: string;
     gender?: string;
     department_id?: string;
+    // School-specific (optional):
+    level?: string;
+    faculty_id?: string;
+    programme_id?: string;
+    guardian_email?: string;
+    guardian_phone?: string;
   }): Promise<ApiResponse<any>> {
     return this.request(API_ROUTES.SELF_REGISTER, {
       method: 'POST',
