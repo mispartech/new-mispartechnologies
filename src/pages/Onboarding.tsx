@@ -821,11 +821,51 @@ const Onboarding = () => {
                       </button>
                     ))}
                   </div>
+
+                  {data.organizationType === 'school' && (
+                    <div className="mt-6 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                      <div className="flex items-start gap-3">
+                        <GraduationCap className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-foreground">Bulk Roster Import (Recommended)</h4>
+                          <p className="text-xs text-muted-foreground mt-1 mb-3">
+                            Upload a CSV with your students — matric/student ID, date of birth, level,
+                            and faculty. Students can then self-claim their account using their ID + DOB
+                            (no email required).
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const csv = 'identifier,first_name,last_name,date_of_birth,gender,level,faculty,programme,guardian_email,guardian_phone,department,phone_number,email\n' +
+                                  'MAT/2024/00001,Adaeze,Okafor,2007-05-14,female,200,Engineering,Computer Science,parent@example.com,+2348012345678,CS-200,,\n';
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'mispar-student-roster-template.csv';
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            >
+                              Download CSV Template
+                            </Button>
+                            <span className="text-xs text-muted-foreground self-center">
+                              You can import your roster after onboarding from <strong>Members → Import</strong>.
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-3 italic">
+                            Bulk roster activation is launching soon — your CSV will work as soon as the backend rolls out.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </>
             )}
-
-            {/* Step 4: Service Schedule */}
             {step === 4 && data.organizationType && (
               <>
                 <CardHeader className="pb-4">
