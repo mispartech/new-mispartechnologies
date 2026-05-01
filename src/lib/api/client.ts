@@ -671,7 +671,7 @@ class DjangoApiClient {
   // ═══════════════════════════ PAYMENTS (Paystack) ═══════════════════════════
 
   async initializePaystackPayment(payload: {
-    plan: 'starter' | 'pro' | 'business';
+    plan: 'starter' | 'pro' | 'business' | 'education';
     email: string;
     whatsapp_addon?: boolean;
     member_count?: number;
