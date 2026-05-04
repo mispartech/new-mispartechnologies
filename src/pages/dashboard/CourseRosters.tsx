@@ -82,8 +82,8 @@ const CourseRosters = () => {
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
         title="Course Rosters"
-        description="Assign lecturers to courses and enroll students."
-        icon={ClipboardCheck}
+        subtitle="Assign lecturers to courses and enroll students."
+       
       />
 
       <Alert>

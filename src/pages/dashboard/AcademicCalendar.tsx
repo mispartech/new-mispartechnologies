@@ -66,7 +66,7 @@ const AcademicCalendar = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <PageHeader title="Academic Calendar" description="Manage academic sessions and terms / semesters." icon={CalendarDays} />
+      <PageHeader title="Academic Calendar" subtitle="Manage academic sessions and terms / semesters." />
 
       <Alert>
         <Info className="h-4 w-4" />

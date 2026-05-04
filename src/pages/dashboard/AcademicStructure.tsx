@@ -100,8 +100,8 @@ const AcademicStructure = () => {
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
         title="Academic Structure"
-        description="Manage faculties, programmes, levels, and courses for your institution."
-        icon={GraduationCap}
+        subtitle="Manage faculties, programmes, levels, and courses for your institution."
+       
       />
 
       <Alert>
