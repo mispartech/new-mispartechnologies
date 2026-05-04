@@ -56,6 +56,9 @@ import AdminRegister from "./pages/platform/AdminRegister";
 import AdminLogin from "./pages/platform/AdminLogin";
 import PlatformAdminDashboard from "./pages/platform/PlatformAdminDashboard";
 import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
+import AcademicStructure from "./pages/dashboard/AcademicStructure";
+import AcademicCalendar from "./pages/dashboard/AcademicCalendar";
+import CourseRosters from "./pages/dashboard/CourseRosters";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +125,9 @@ const App = () => (
                 <Route path="site-management" element={<SiteManagement />} />
                 <Route path="branding" element={<BrandingSettings />} />
                 <Route path="subscription" element={<SubscriptionSettings />} />
+                <Route path="academic-structure" element={<AcademicStructure />} />
+                <Route path="academic-calendar" element={<AcademicCalendar />} />
+                <Route path="course-rosters" element={<CourseRosters />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

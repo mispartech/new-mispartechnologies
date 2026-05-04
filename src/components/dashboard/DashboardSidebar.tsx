@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserPlus, Building2, ScanFace, FileText, Settings,
   ChevronLeft, ChevronRight, Image, ClipboardList, UserCheck, Shield, Activity,
   CalendarClock, Globe, Calendar, History, TrendingUp, Trophy, Palette, ChevronDown,
-  SearchCheck, X, CreditCard,
+  SearchCheck, X, CreditCard, GraduationCap, CalendarDays, ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/contexts/TerminologyContext';
@@ -19,6 +19,8 @@ interface DashboardSidebarProps {
   currentPath: string;
   profile: any;
 }
+
+const isSchoolOrg = (profile: any) => profile?.organization_type === 'school';
 
 const normalizeRole = (role: string) => {
   const normalized = role.trim().toLowerCase().replace(/\s+/g, '_');
@@ -87,6 +89,14 @@ const DashboardSidebar = ({ isOpen, onToggle, currentPath, profile }: DashboardS
         { label: 'Activity Logs', icon: Activity, href: '/dashboard/activity-logs', roles: ['super_admin', 'admin'] },
       ],
     },
+    ...(isSchoolOrg(profile) ? [{
+      label: 'Academic',
+      items: [
+        { label: 'Academic Structure', icon: GraduationCap, href: '/dashboard/academic-structure', roles: ['super_admin', 'admin'] },
+        { label: 'Academic Calendar', icon: CalendarDays, href: '/dashboard/academic-calendar', roles: ['super_admin', 'admin'] },
+        { label: 'Course Rosters', icon: ClipboardCheck, href: '/dashboard/course-rosters', roles: ['super_admin', 'admin', 'manager', 'lecturer'] },
+      ],
+    }] : []),
     {
       label: 'Configuration',
       items: [
