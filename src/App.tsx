@@ -59,6 +59,10 @@ import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 import AcademicStructure from "./pages/dashboard/AcademicStructure";
 import AcademicCalendar from "./pages/dashboard/AcademicCalendar";
 import CourseRosters from "./pages/dashboard/CourseRosters";
+import MsseLanding from "./pages/msse/MsseLanding";
+import MsseLayout from "./pages/msse/MsseLayout";
+import MsseDashboard from "./pages/msse/MsseDashboard";
+import MsseModulePlaceholder from "./pages/msse/MsseModulePlaceholder";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +98,13 @@ const App = () => (
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/join/:slug" element={<JoinOrganization />} />
+
+              {/* MSSE — Mispar Smart School Ecosystem (school.mispartechnologies.com) */}
+              <Route path="/msse" element={<MsseLanding />} />
+              <Route path="/msse/dashboard" element={<MsseLayout />}>
+                <Route index element={<MsseDashboard />} />
+                <Route path=":module" element={<MsseModulePlaceholder />} />
+              </Route>
               
               {/* Platform Admin Routes */}
               <Route path="/admin-register" element={<AdminRegister />} />
