@@ -15,7 +15,9 @@
  *   POST   /api/msse/identities/duplicates/:id/resolve/  merge | dismiss
  *   POST   /api/msse/identities/:id/credentials/  issue RFID/NFC/QR backup
  */
-import { apiClient } from '@/lib/api/client';
+// Backend pending — these stubs always reject so the UI falls back to mock data.
+const notImplemented = <T>(_endpoint: string): Promise<T> =>
+  Promise.reject(new Error('MSSE identity endpoints not yet implemented on backend'));
 
 export type IdentityRole = 'student' | 'teacher' | 'staff' | 'admin' | 'visitor';
 export type EnrollmentStatus = 'pending' | 'enrolled' | 'expired' | 'rejected';
@@ -56,34 +58,29 @@ export interface IdentityListResponse {
 const BASE = '/api/msse/identities';
 
 export const msseIdentityApi = {
-  list: (params?: {
-    q?: string; role?: IdentityRole; status?: EnrollmentStatus; page?: number;
-  }) => apiClient.get<IdentityListResponse>(`${BASE}/`, { params, silent: true }),
+  list: (_params?: { q?: string; role?: IdentityRole; status?: EnrollmentStatus; page?: number }) =>
+    notImplemented<IdentityListResponse>(`GET ${BASE}/`),
 
   detail: (id: string) =>
-    apiClient.get<IdentityProfile>(`${BASE}/${id}/`, { silent: true }),
+    notImplemented<IdentityProfile>(`GET ${BASE}/${id}/`),
 
-  create: (payload: Partial<IdentityProfile>) =>
-    apiClient.post<IdentityProfile>(`${BASE}/`, payload),
+  create: (_payload: Partial<IdentityProfile>) =>
+    notImplemented<IdentityProfile>(`POST ${BASE}/`),
 
-  enroll: (id: string, image_base64: string) =>
-    apiClient.post<{ success: boolean; quality_score: number; message?: string }>(
-      `${BASE}/${id}/enroll/`, { image_base64 },
-    ),
+  enroll: (id: string, _image_base64: string) =>
+    notImplemented<{ success: boolean; quality_score: number; message?: string }>(`POST ${BASE}/${id}/enroll/`),
 
-  reEnroll: (id: string, image_base64: string) =>
-    apiClient.post<{ success: boolean; quality_score: number }>(
-      `${BASE}/${id}/re-enroll/`, { image_base64 },
-    ),
+  reEnroll: (id: string, _image_base64: string) =>
+    notImplemented<{ success: boolean; quality_score: number }>(`POST ${BASE}/${id}/re-enroll/`),
 
   duplicates: () =>
-    apiClient.get<{ results: DuplicateSuspect[] }>(`${BASE}/duplicates/`, { silent: true }),
+    notImplemented<{ results: DuplicateSuspect[] }>(`GET ${BASE}/duplicates/`),
 
-  resolveDuplicate: (id: string, action: 'merge' | 'dismiss') =>
-    apiClient.post(`${BASE}/duplicates/${id}/resolve/`, { action }),
+  resolveDuplicate: (id: string, _action: 'merge' | 'dismiss') =>
+    notImplemented<unknown>(`POST ${BASE}/duplicates/${id}/resolve/`),
 
-  issueCredential: (id: string, type: CredentialType, value?: string) =>
-    apiClient.post(`${BASE}/${id}/credentials/`, { type, value }),
+  issueCredential: (id: string, _type: CredentialType, _value?: string) =>
+    notImplemented<unknown>(`POST ${BASE}/${id}/credentials/`),
 };
 
 /* -------------------------------------------------------------------------- */

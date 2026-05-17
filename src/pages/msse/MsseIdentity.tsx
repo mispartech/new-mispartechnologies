@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { GlassCard } from '@/components/msse/GlassCard';
-import { LiveStatBadge } from '@/components/msse/LiveStatBadge';
 import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,7 +104,7 @@ const MsseIdentity = () => {
         <GlassCard className="!p-4">
           <div className="text-[10px] uppercase tracking-widest text-slate-400">Total Identities</div>
           <div className="mt-1 text-2xl font-bold text-white">{stats.total.toLocaleString()}</div>
-          <LiveStatBadge label="indexed" />
+          <div className="text-[11px] text-slate-500 mt-1">indexed in vector DB</div>
         </GlassCard>
         <GlassCard className="!p-4">
           <div className="text-[10px] uppercase tracking-widest text-slate-400">Enrolled</div>
@@ -124,10 +123,12 @@ const MsseIdentity = () => {
         </GlassCard>
       </div>
 
-      <AiInsightCallout className="mb-6">
+      <AiInsightCallout title="Biometric integrity check">
         AI cross-checked {stats.total} embeddings — {stats.duplicates} potential duplicate
         {stats.duplicates === 1 ? '' : 's'} flagged at &gt;90% similarity. Review in the Duplicates tab.
       </AiInsightCallout>
+
+      <div className="h-6" />
 
       {/* Tabs */}
       <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mb-5">
