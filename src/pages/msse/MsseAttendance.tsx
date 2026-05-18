@@ -79,7 +79,7 @@ export default function MsseAttendance() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <LiveStatBadge label={connected ? 'Live channel' : 'Realtime pending'} value={connected ? 'ON' : 'IDLE'} tone={connected ? 'success' : 'muted'} />
+          <LiveStatBadge label={connected ? 'Live channel' : 'Realtime pending'} value={connected ? 'ON' : 'IDLE'} tone={connected ? 'emerald' : 'cyan'} />
           <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-0">
             <Zap className="w-4 h-4 mr-2" /> Start Capture Session
           </Button>
@@ -110,10 +110,9 @@ export default function MsseAttendance() {
         </GlassCard>
       </div>
 
-      <AiInsightCallout
-        title="MSSE AI · Daily Insight"
-        body="Lateness is concentrated on Mondays between 7:30–8:15 AM, primarily from students in the western catchment area. Consider a staggered first-period schedule or a transport advisory."
-      />
+      <AiInsightCallout title="MSSE AI · Daily Insight">
+        Lateness is concentrated on Mondays between 7:30–8:15 AM, primarily from students in the western catchment area. Consider a staggered first-period schedule or a transport advisory.
+      </AiInsightCallout>
 
       <Tabs defaultValue="live" className="w-full">
         <TabsList className="bg-white/5 border border-white/10">
