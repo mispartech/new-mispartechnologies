@@ -70,7 +70,7 @@ export default function MsseSecurity() {
           <h1 className="mt-1 text-2xl font-bold text-white">Security Operations Center</h1>
           <p className="text-sm text-slate-400">Live CCTV, AI watchlist, smart gates and incident response — campus-wide.</p>
         </div>
-        <LiveStatBadge label="AI Vision" tone="ok" />
+        <LiveStatBadge label="AI Vision" value="Live" trend="All campus zones" tone="emerald" />
       </div>
 
       {/* KPI strip */}
