@@ -65,6 +65,7 @@ import MsseDashboard from "./pages/msse/MsseDashboard";
 import MsseModulePlaceholder from "./pages/msse/MsseModulePlaceholder";
 import MsseIdentity from "./pages/msse/MsseIdentity";
 import MsseAttendance from "./pages/msse/MsseAttendance";
+import MsseSecurity from "./pages/msse/MsseSecurity";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
                 <Route index element={<MsseDashboard />} />
                 <Route path="identity" element={<MsseIdentity />} />
                 <Route path="attendance" element={<MsseAttendance />} />
+                <Route path="security" element={<MsseSecurity />} />
                 <Route path=":module" element={<MsseModulePlaceholder />} />
               </Route>
               

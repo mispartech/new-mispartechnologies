@@ -17,7 +17,7 @@ export const MSSE_MODULES: MsseModule[] = [
   { slug: '',                    label: 'Dashboard',           icon: LayoutDashboard, group: 'Overview',                status: 'live', step: 0 },
   { slug: 'identity',            label: 'Identity Management', icon: ScanFace,        group: 'Identity & Attendance',   status: 'live', step: 2 },
   { slug: 'attendance',          label: 'Smart Attendance',    icon: ClipboardList,   group: 'Identity & Attendance',   status: 'live', step: 3 },
-  { slug: 'security',            label: 'Security Center',     icon: ShieldAlert,     group: 'Identity & Attendance',   status: 'soon', step: 4 },
+  { slug: 'security',            label: 'Security Center',     icon: ShieldAlert,     group: 'Identity & Attendance',   status: 'live', step: 4 },
   { slug: 'students',            label: 'Students',            icon: GraduationCap,   group: 'Academic',                status: 'soon', step: 5 },
   { slug: 'staff',               label: 'Staff',               icon: Users,           group: 'Academic',                status: 'soon', step: 6 },
   { slug: 'departments',         label: 'Departments',         icon: Building2,       group: 'Academic',                status: 'soon', step: 5 },
