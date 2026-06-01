@@ -1,100 +1,115 @@
 
-# Mispar Smart School Ecosystem (MSSE) — Implementation Plan
+# MSSE Step 5 + 6 — Students, Staff & Attendance Admin (MVP)
 
-Same codebase, new `/msse` route tree (later mapped to `school.mispartechnologies.com` via custom domain). Each step ships **frontend scaffolding + a `docs/msse-<step>-backend-prompt.md` spec** for the Django team, following the same pattern as Phase 1/2.
+Scope is tightened per your direction: MVP = **staff and student attendance**. We will scaffold Students and Staff modules but spend the implementation depth on the **attendance surfaces** inside them, plus a new **Attendance Admin Console** that unifies oversight across both populations.
 
-We will execute one step per turn, in the order below. After each step you review, then say "next" to proceed.
-
----
-
-## Step 0 — Foundation (one-shot)
-
-- New route group `/msse/*` for the marketing site, `/dashboard/msse/*` for school-only modules (gated by `organization_type === 'school'`).
-- `MsseThemeProvider`: dark/light, glassmorphism tokens, deep-blue + electric-cyan palette (reuses existing brand memory).
-- `MsseLayout` + `MsseSidebar` with the 15-module sidebar order from the brief (collapsed by default to "Coming soon" until each step lands).
-- Shared primitives: `GlassCard`, `LiveStatBadge`, `AiInsightCallout`, `RealtimeFeed` skeleton.
-- `docs/msse-overview-backend-prompt.md`: tenancy model (institution → campus → faculty → department → class), realtime channel naming, RBAC matrix for the 14 MSSE roles.
-
-## Step 1 — Landing page (`school.mispartechnologies.com`)
-
-Hero, AI-powered education infra, smart attendance, smart security, parent portal, analytics, AI intelligence, case studies, use cases, ecosystem, pricing, FAQ, demo booking. Reuses existing `DemoRequestModal`.
-
-## Step 2 — Biometric Identity System
-
-Enrollment wizard (multi-angle, lighting/quality validation, anti-spoof prompt), identity profile shell (student / staff / visitor / parent), duplicate detection UI, RFID/NFC + QR backup fields, re-enrollment flow. Backend spec covers face embeddings, anti-spoof, liveness endpoints, biometric ID schema.
-
-## Step 3 — Smart Attendance System
-
-Capture modes (classroom, hall, exam, hostel, lab, event, kiosk, CCTV, offline-sync). Late-arrival, absenteeism, risk-student dashboards. Heatmaps, exports, daily/weekly/monthly trends, dropout-risk callouts.
-
-## Step 4 — Smart Campus Security
-
-Live CCTV grid, watchlist matches, intruder alerts, restricted-area monitor, smart-gate console (biometric / QR / RFID / visitor pass), incident log, campus heatmap.
-
-## Step 5 — Student Management
-
-Profiles, academic records, class/department mgmt, course registration, timetable, fees, hostel link, discipline, medical, documents. Integrates with Phase 2 academic structure.
-
-## Step 6 — Staff Management
-
-Onboarding, biometric link, attendance, payroll-attendance integration, leave, role mgmt, teaching allocation, staff analytics.
-
-## Step 7 — Parent / Guardian Portal
-
-Separate authenticated experience under `/parent/*`. Ward attendance, real-time alerts, fees, academics, security alerts, pickup authorization, school messaging.
-
-## Step 8 — Visitor Management
-
-Pre-registration, temporary biometric onboarding, badges, host approval, security screening, visit history.
-
-## Step 9 — Smart Examination System
-
-Exam-hall biometric verification, seating, anti-impersonation, AI fraud feed.
-
-## Step 10 — AI Analytics & Intelligence Center
-
-Realtime analytics dashboards, attendance/behavior/academic-risk modules, predictive charts, AI summaries, NL "Ask MSSE" assistant pane (wired to Lovable AI Gateway in a later turn).
-
-## Step 11 — Communication System
-
-Email / SMS / push / parent / internal / announcements / emergency broadcast console.
-
-## Step 12 — Financial & Payment Integration
-
-Tuition, payment tracking, receipts, outstanding analytics, scholarships. Architecture hooks for biometric-payment + campus wallet.
-
-## Step 13 — Hostel Management
-
-Biometric access, room allocation, occupancy, curfew, hostel attendance, visitors.
-
-## Step 14 — Library Management
-
-Biometric access, borrowing, digital catalog, occupancy, reading analytics.
-
-## Step 15 — Transportation Management
-
-Bus tracking map, boarding verification, parent pickup verification, route analytics, driver attendance.
-
-## Step 16 — Multi-Institution & RBAC hardening
-
-District/state tenancy switcher, granular RBAC editor for all 14 roles, audit logs UI, MFA settings page.
+Everything else (grades, payroll, leave approvals, teaching allocation analytics, discipline, etc.) is built as **secondary tabs / "Phase 2" placeholders** so the IA is complete but engineering time stays on attendance.
 
 ---
 
-## Technical notes
+## 1. Routes & navigation
 
-- **Routing**: `/msse` (public marketing), `/msse/dashboard/*` mounted inside existing `DashboardLayout` and gated by `organization_type === 'school'`. Subdomain split is purely DNS — same SPA serves both.
-- **Roles**: extend `roleConfig.ts` with `institution_owner`, `principal`, `dean`, `faculty_admin`, `security_officer`, `hostel_admin`, `librarian`, `bursar`. Keep existing `lecturer`, `student`, `parent_guardian`.
-- **Realtime**: scaffold a `useMsseRealtime(channel)` hook now (no-op until backend wires Django Channels / WebSocket).
-- **Data**: every module ships with a typed API client in `src/lib/api/msse/<module>.ts` that calls `/api/msse/<module>/` and returns "backend pending" UI on 404 (existing `silent` flag pattern).
-- **Backend specs**: one markdown file per step under `docs/msse/` with models, endpoints, permissions, realtime channels, and acceptance criteria.
-- **Branding**: when on `school.mispartechnologies.com` or `/msse/*`, swap brand to "Mispar Smart School Ecosystem" via `MsseThemeProvider`.
+Add to `src/App.tsx` under `/msse/dashboard`:
 
-## What you'll get per step
+- `students` → `MsseStudents.tsx`
+- `students/:id` → `MsseStudentProfile.tsx`
+- `staff` → `MsseStaff.tsx`
+- `staff/:id` → `MsseStaffProfile.tsx`
+- `attendance/admin` → `MsseAttendanceAdmin.tsx` (new unified console)
 
-1. New routes + pages + components
-2. Sidebar entries flipped from "Coming soon" → live
-3. `docs/msse/<step>-backend-prompt.md` spec
-4. Short summary + next-step prompt
+Promote `students` and `staff` from `soon` → `live` in `msseModules.ts`. Add an "Attendance Admin" entry under the **Identity & Attendance** group.
 
-Reply **"start step 0"** (or jump to any step) and I'll implement it.
+---
+
+## 2. MVP feature matrix
+
+| Surface | MVP (build now) | Phase 2 (placeholder tab) |
+|---|---|---|
+| Students list | Directory, filters (class/level/status/enrollment), bulk import CSV stub, biometric status ring, quick "View attendance" action | Academic records, discipline, fees |
+| Student profile | Bio header, **Attendance tab (default)**: 30/90-day trend, lateness count, risk badge, parent-notify button, raw events table | Grades, timetable, health, library |
+| Staff list | Directory, filters (department/role/employment type), biometric status, quick "View attendance" | Payroll, leave balances, teaching load |
+| Staff profile | Bio header, **Attendance tab (default)**: clock-in/out log, punctuality %, absence days, monthly summary, export CSV | Payroll-attendance link, leave, allocation |
+| Attendance Admin Console | Cross-cutting dashboard (see §3) | — |
+
+Phase 2 tabs render an `MsseModulePlaceholder`-style "Phase 2" card so users see the roadmap.
+
+---
+
+## 3. Attendance Admin Console (`/msse/dashboard/attendance/admin`)
+
+The centerpiece for school admins. Single page, 4 segmented sections:
+
+1. **Overview KPIs** — today's present/late/absent split for **students** and **staff** side-by-side, week-over-week delta, biometric capture health (sessions online).
+2. **Live roster grid** — switch tab Students | Staff. Virtualized table: name, class/dept, today's state, first-seen time, last-seen, mode (gate/classroom/kiosk), confidence. Inline actions: mark excused, notify parent (students), notify line manager (staff).
+3. **Risk & exceptions** —
+   - Students: absenteeism risk list from Step 3 `risk/` endpoint.
+   - Staff: punctuality offenders (>3 lates in 30d), consecutive absences.
+   - Each row → drawer with AI note + one-click notification.
+4. **Reports & export** — date range picker, scope (all / class / dept / individual), export CSV/PDF (frontend triggers `GET /api/msse/attendance/reports/?...` — backend stub).
+
+All data flows through the existing `src/lib/api/msse/attendance.ts` client; we extend it with `getStudentAttendance`, `getStaffAttendance`, `getAdminRoster`, `exportReport` (mocked with "backend pending" fallback like prior steps).
+
+---
+
+## 4. New / edited files
+
+**New pages**
+- `src/pages/msse/MsseStudents.tsx`
+- `src/pages/msse/MsseStudentProfile.tsx`
+- `src/pages/msse/MsseStaff.tsx`
+- `src/pages/msse/MsseStaffProfile.tsx`
+- `src/pages/msse/MsseAttendanceAdmin.tsx`
+
+**New shared components** (under `src/components/msse/`)
+- `AttendanceTrendChart.tsx` — sparkline + 30/90d bar (recharts)
+- `PunctualityBadge.tsx`
+- `PersonAttendanceTab.tsx` — reused by student & staff profile
+- `RosterTable.tsx` — virtualized table used by admin console
+- `Phase2Tab.tsx` — generic "coming in Phase 2" panel
+
+**New API clients**
+- `src/lib/api/msse/students.ts` — `listStudents`, `getStudent`, `getStudentAttendance`, `notifyParent`
+- `src/lib/api/msse/staff.ts` — `listStaff`, `getStaff`, `getStaffAttendance`, `notifyManager`
+
+**Edits**
+- `src/App.tsx` — register 5 new routes
+- `src/pages/msse/msseModules.ts` — mark `students`, `staff` live; add `attendance-admin` entry
+- `src/pages/msse/MsseSidebar.tsx` — no logic change (driven by modules)
+
+**Backend specs (docs only, no runtime change)**
+- `docs/msse/step5-students-backend-prompt.md` — Student model, enrollment, parent link, attendance endpoints scoped from Step 3
+- `docs/msse/step6-staff-backend-prompt.md` — Staff model, employment record, attendance/punctuality endpoints, payroll-attendance hook (spec only)
+- `docs/msse/step5-6-attendance-admin-backend-prompt.md` — Unified `GET /api/msse/attendance/admin/roster/` + report export endpoint
+
+---
+
+## 5. Design system
+
+Reuse existing MSSE tokens (`MsseThemeContext`, `GlassCard`, `LiveStatBadge`, `AiInsightCallout`). No new colors. Charts use semantic tokens via tailwind config — no hard-coded hex.
+
+Responsive: tables collapse to card list under `lg` per project convention (`responsive-tables` memory).
+
+---
+
+## 6. Out of scope (explicit, to keep MVP tight)
+
+- Grades / examinations / report cards
+- Discipline records
+- Payroll computation, leave approval workflows
+- Teaching allocation editor
+- Hostel/transport/library linkage
+- Parent portal UI (only the "notify parent" trigger is wired)
+
+These remain `soon` in the sidebar and render Phase 2 placeholders if a user lands on the tab.
+
+---
+
+## 7. Acceptance checks
+
+- `/msse/dashboard/students` lists mock students, filters work, click → profile with Attendance tab populated.
+- `/msse/dashboard/staff` same flow for staff.
+- `/msse/dashboard/attendance/admin` shows KPIs, switchable Students/Staff roster, risk list, and a working CSV export (client-side from mock data until backend lands).
+- All three new backend prompt docs exist and reference the existing Step 2/3 models for continuity.
+- No console errors; sidebar shows three modules as `live`.
+
+Say **"approve"** (or "implement") and I'll build Step 5 + 6 in one pass.
