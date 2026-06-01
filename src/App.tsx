@@ -65,7 +65,12 @@ import MsseDashboard from "./pages/msse/MsseDashboard";
 import MsseModulePlaceholder from "./pages/msse/MsseModulePlaceholder";
 import MsseIdentity from "./pages/msse/MsseIdentity";
 import MsseAttendance from "./pages/msse/MsseAttendance";
+import MsseAttendanceAdmin from "./pages/msse/MsseAttendanceAdmin";
 import MsseSecurity from "./pages/msse/MsseSecurity";
+import MsseStudents from "./pages/msse/MsseStudents";
+import MsseStudentProfile from "./pages/msse/MsseStudentProfile";
+import MsseStaff from "./pages/msse/MsseStaff";
+import MsseStaffProfile from "./pages/msse/MsseStaffProfile";
 
 const queryClient = new QueryClient();
 
@@ -108,7 +113,12 @@ const App = () => (
                 <Route index element={<MsseDashboard />} />
                 <Route path="identity" element={<MsseIdentity />} />
                 <Route path="attendance" element={<MsseAttendance />} />
+                <Route path="attendance/admin" element={<MsseAttendanceAdmin />} />
                 <Route path="security" element={<MsseSecurity />} />
+                <Route path="students" element={<MsseStudents />} />
+                <Route path="students/:id" element={<MsseStudentProfile />} />
+                <Route path="staff" element={<MsseStaff />} />
+                <Route path="staff/:id" element={<MsseStaffProfile />} />
                 <Route path=":module" element={<MsseModulePlaceholder />} />
               </Route>
               
