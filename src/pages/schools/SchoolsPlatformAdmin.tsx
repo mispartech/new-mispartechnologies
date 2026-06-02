@@ -57,7 +57,7 @@ export default function SchoolsPlatformAdmin() {
                 <p className="text-sm text-slate-400">Mispar Technologies · Schools vertical oversight</p>
               </div>
             </div>
-            <LiveStatBadge label={loading ? 'Loading' : 'Live'} active={!loading} />
+            <LiveStatBadge label={loading ? 'Loading' : 'Live'} value={tenants.length} tone="cyan" />
           </div>
 
           <div className="mb-6 grid gap-3 sm:grid-cols-4">
