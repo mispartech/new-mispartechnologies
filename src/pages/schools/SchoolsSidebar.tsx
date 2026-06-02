@@ -1,9 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { ScanFace } from 'lucide-react';
-import { MSSE_MODULES, MSSE_GROUP_ORDER } from './msseModules';
+import { Schools_MODULES, Schools_GROUP_ORDER } from './schoolsModules';
 import { cn } from '@/lib/utils';
 
-export const MsseSidebar = () => {
+export const SchoolsSidebar = () => {
   const { pathname } = useLocation();
 
   return (
@@ -13,14 +13,14 @@ export const MsseSidebar = () => {
           <ScanFace className="h-5 w-5 text-white" />
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-bold text-white">MSSE</div>
+          <div className="text-sm font-bold text-white">Schools</div>
           <div className="text-[10px] uppercase tracking-widest text-cyan-300/70">Smart School OS</div>
         </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {MSSE_GROUP_ORDER.map((group) => {
-          const items = MSSE_MODULES.filter((m) => m.group === group);
+        {Schools_GROUP_ORDER.map((group) => {
+          const items = Schools_MODULES.filter((m) => m.group === group);
           if (items.length === 0) return null;
           return (
             <div key={group}>
@@ -30,7 +30,7 @@ export const MsseSidebar = () => {
               <ul className="space-y-0.5">
                 {items.map((m) => {
                   const Icon = m.icon;
-                  const to = m.slug ? `/msse/dashboard/${m.slug}` : '/msse/dashboard';
+                  const to = m.slug ? `/schools/dashboard/${m.slug}` : '/schools/dashboard';
                   const active = pathname === to;
                   return (
                     <li key={m.slug || 'home'}>

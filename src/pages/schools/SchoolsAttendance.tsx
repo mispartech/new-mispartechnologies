@@ -3,14 +3,14 @@ import {
   Activity, AlertTriangle, BellRing, CheckCircle2, Clock, DoorOpen, Filter, GraduationCap,
   MapPin, MonitorSmartphone, ScanFace, ShieldAlert, Smartphone, Sparkles, Tv2, Users, Zap,
 } from 'lucide-react';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { LiveStatBadge } from '@/components/msse/LiveStatBadge';
-import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
-import { useMsseRealtime } from '@/hooks/useMsseRealtime';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
+import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
+import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
 import {
   attendanceApi, AttendanceEvent, AttendanceKPIs, AttendanceState, CaptureMode,
   HeatmapCell, LiveCaptureSession, RiskLevel, RiskStudent,
-} from '@/lib/api/msse/attendance';
+} from '@/lib/api/schools/attendance';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -38,8 +38,8 @@ const riskStyle: Record<RiskLevel, string> = {
   critical: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
 };
 
-export default function MsseAttendance() {
-  const { connected } = useMsseRealtime('attendance');
+export default function SchoolsAttendance() {
+  const { connected } = useSchoolsRealtime('attendance');
   const [kpis, setKpis] = useState<AttendanceKPIs | null>(null);
   const [sessions, setSessions] = useState<LiveCaptureSession[]>([]);
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
@@ -110,7 +110,7 @@ export default function MsseAttendance() {
         </GlassCard>
       </div>
 
-      <AiInsightCallout title="MSSE AI · Daily Insight">
+      <AiInsightCallout title="Schools AI · Daily Insight">
         Lateness is concentrated on Mondays between 7:30–8:15 AM, primarily from students in the western catchment area. Consider a staggered first-period schedule or a transport advisory.
       </AiInsightCallout>
 

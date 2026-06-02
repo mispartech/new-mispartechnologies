@@ -1,6 +1,6 @@
 /**
- * MSSE Smart Attendance API client (Step 3).
- * Backend pending — endpoints are documented in docs/msse/step3-attendance-backend-prompt.md.
+ * Schools Smart Attendance API client (Step 3).
+ * Backend pending — endpoints are documented in docs/schools/step3-attendance-backend-prompt.md.
  * All calls fall back to MOCK_* fixtures so the UI is fully demonstrable.
  */
 
