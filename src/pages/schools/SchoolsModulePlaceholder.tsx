@@ -1,11 +1,11 @@
 import { useParams, Link } from 'react-router-dom';
 import { GlassCard } from '@/components/schools/GlassCard';
-import { Schools_MODULES } from './schoolsModules';
+import { SCHOOLS_MODULES } from './schoolsModules';
 import { ArrowLeft, Construction } from 'lucide-react';
 
 const SchoolsModulePlaceholder = () => {
   const { module } = useParams<{ module: string }>();
-  const meta = Schools_MODULES.find((m) => m.slug === module);
+  const meta = SCHOOLS_MODULES.find((m) => m.slug === module);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">

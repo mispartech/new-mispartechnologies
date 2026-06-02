@@ -3,7 +3,7 @@ import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
 import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
 import { RealtimeFeed } from '@/components/schools/RealtimeFeed';
 import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
-import { Schools_MODULES } from './schoolsModules';
+import { SCHOOLS_MODULES } from './schoolsModules';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -42,7 +42,7 @@ const SchoolsDashboard = () => {
               The full 15-module roadmap. Modules ship one step at a time; each carries its own backend spec under <code className="text-cyan-300">docs/schools/</code>.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {Schools_MODULES.filter((m) => m.slug).map((m) => {
+              {SCHOOLS_MODULES.filter((m) => m.slug).map((m) => {
                 const Icon = m.icon;
                 return (
                   <Link
