@@ -1,6 +1,6 @@
 /**
- * MSSE Smart Campus Security API client (Step 4).
- * Backend pending — endpoints documented in docs/msse/step4-security-backend-prompt.md.
+ * Schools Smart Campus Security API client (Step 4).
+ * Backend pending — endpoints documented in docs/schools/step4-security-backend-prompt.md.
  */
 
 export type CameraStatus = 'online' | 'offline' | 'degraded';

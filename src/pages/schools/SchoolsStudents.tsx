@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, UserPlus, Upload, GraduationCap, ScanFace } from 'lucide-react';
-import { GlassCard } from '@/components/msse/GlassCard';
+import { GlassCard } from '@/components/schools/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { studentsApi } from '@/lib/api/msse/students';
+import { studentsApi } from '@/lib/api/schools/students';
 import { toast } from '@/hooks/use-toast';
 
 const riskTone = {
@@ -17,8 +17,8 @@ const riskTone = {
   critical: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
 } as const;
 
-export default function MsseStudents() {
-  const { data: students = [] } = useQuery({ queryKey: ['msse-students'], queryFn: () => studentsApi.list() });
+export default function SchoolsStudents() {
+  const { data: students = [] } = useQuery({ queryKey: ['schools-students'], queryFn: () => studentsApi.list() });
   const [q, setQ] = useState('');
   const [level, setLevel] = useState('all');
   const [status, setStatus] = useState('all');
@@ -132,7 +132,7 @@ export default function MsseStudents() {
                   <td className="px-5 py-3 text-white font-semibold">{s.attendance_pct_30d}%</td>
                   <td className="px-5 py-3"><Badge className={`${riskTone[s.risk]} border capitalize`}>{s.risk}</Badge></td>
                   <td className="px-5 py-3 text-right">
-                    <Link to={`/msse/dashboard/students/${s.id}`}>
+                    <Link to={`/schools/dashboard/students/${s.id}`}>
                       <Button size="sm" variant="outline" className="border-white/15 text-white/80 hover:bg-white/10">View attendance</Button>
                     </Link>
                   </td>
@@ -145,7 +145,7 @@ export default function MsseStudents() {
         {/* Mobile cards */}
         <div className="lg:hidden divide-y divide-white/5">
           {filtered.map(s => (
-            <Link to={`/msse/dashboard/students/${s.id}`} key={s.id} className="block p-4 hover:bg-white/[0.03]">
+            <Link to={`/schools/dashboard/students/${s.id}`} key={s.id} className="block p-4 hover:bg-white/[0.03]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-sm font-semibold ${s.enrollment === 'enrolled' ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>

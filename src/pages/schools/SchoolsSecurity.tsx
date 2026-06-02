@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ShieldAlert, Camera, DoorOpen, Activity, Users, Timer, AlertTriangle, CheckCircle2, Radio, MapPin, Search } from 'lucide-react';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { LiveStatBadge } from '@/components/msse/LiveStatBadge';
-import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
-import { useMsseRealtime } from '@/hooks/useMsseRealtime';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
+import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
+import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
 import {
   securityApi,
   type SecurityKPIs,
@@ -13,7 +13,7 @@ import {
   type GateEvent,
   type RestrictedZoneAlert,
   type IncidentSeverity,
-} from '@/lib/api/msse/security';
+} from '@/lib/api/schools/security';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,8 +31,8 @@ const fmtTime = (iso: string) => {
   catch { return '—'; }
 };
 
-export default function MsseSecurity() {
-  useMsseRealtime('security/feed');
+export default function SchoolsSecurity() {
+  useSchoolsRealtime('security/feed');
   const [kpis, setKpis] = useState<SecurityKPIs | null>(null);
   const [cameras, setCameras] = useState<CameraFeed[]>([]);
   const [matches, setMatches] = useState<WatchlistMatch[]>([]);

@@ -1,14 +1,14 @@
-import { GlassCard } from '@/components/msse/GlassCard';
-import { LiveStatBadge } from '@/components/msse/LiveStatBadge';
-import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
-import { RealtimeFeed } from '@/components/msse/RealtimeFeed';
-import { useMsseRealtime } from '@/hooks/useMsseRealtime';
-import { MSSE_MODULES } from './msseModules';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
+import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
+import { RealtimeFeed } from '@/components/schools/RealtimeFeed';
+import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
+import { SCHOOLS_MODULES } from './schoolsModules';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const MsseDashboard = () => {
-  const { connected } = useMsseRealtime('dashboard');
+const SchoolsDashboard = () => {
+  const { connected } = useSchoolsRealtime('dashboard');
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
@@ -39,15 +39,15 @@ const MsseDashboard = () => {
           <GlassCard>
             <h2 className="text-sm font-semibold text-white">Modules</h2>
             <p className="mt-1 text-xs text-slate-400">
-              The full 15-module roadmap. Modules ship one step at a time; each carries its own backend spec under <code className="text-cyan-300">docs/msse/</code>.
+              The full 15-module roadmap. Modules ship one step at a time; each carries its own backend spec under <code className="text-cyan-300">docs/schools/</code>.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {MSSE_MODULES.filter((m) => m.slug).map((m) => {
+              {SCHOOLS_MODULES.filter((m) => m.slug).map((m) => {
                 const Icon = m.icon;
                 return (
                   <Link
                     key={m.slug}
-                    to={`/msse/dashboard/${m.slug}`}
+                    to={`/schools/dashboard/${m.slug}`}
                     className="group flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 hover:border-cyan-400/30 hover:bg-cyan-400/5 transition"
                   >
                     <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-200">
@@ -65,7 +65,7 @@ const MsseDashboard = () => {
           </GlassCard>
 
           <AiInsightCallout title="Your ecosystem is in scaffolding mode">
-            The MSSE shell is live. As each module is implemented, this dashboard will surface realtime KPIs,
+            The Schools shell is live. As each module is implemented, this dashboard will surface realtime KPIs,
             attendance heatmaps, and dropout-risk forecasts powered by your institution's data.
           </AiInsightCallout>
         </div>
@@ -73,7 +73,7 @@ const MsseDashboard = () => {
         <div className="space-y-6">
           <RealtimeFeed
             events={[]}
-            emptyLabel="No realtime channel connected yet. Backend WebSocket (/ws/msse/dashboard/) pending."
+            emptyLabel="No realtime channel connected yet. Backend WebSocket (/ws/schools/dashboard/) pending."
           />
           <GlassCard>
             <h3 className="text-sm font-semibold text-white">Deployment</h3>
@@ -90,4 +90,4 @@ const MsseDashboard = () => {
   );
 };
 
-export default MsseDashboard;
+export default SchoolsDashboard;

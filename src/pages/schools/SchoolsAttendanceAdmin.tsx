@@ -5,18 +5,18 @@ import {
   Activity, AlertTriangle, BellRing, Download, GraduationCap, ScanFace, ShieldCheck,
   Sparkles, Users, Zap,
 } from 'lucide-react';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { LiveStatBadge } from '@/components/msse/LiveStatBadge';
-import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
+import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMsseRealtime } from '@/hooks/useMsseRealtime';
-import { attendanceApi } from '@/lib/api/msse/attendance';
-import { studentsApi, type Student } from '@/lib/api/msse/students';
-import { staffApi, type Staff } from '@/lib/api/msse/staff';
+import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
+import { attendanceApi } from '@/lib/api/schools/attendance';
+import { studentsApi, type Student } from '@/lib/api/schools/students';
+import { staffApi, type Staff } from '@/lib/api/schools/staff';
 import { toast } from '@/hooks/use-toast';
 
 type Scope = 'students' | 'staff';
@@ -33,11 +33,11 @@ const stateStyle = {
   absent: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
 } as const;
 
-export default function MsseAttendanceAdmin() {
-  const { connected } = useMsseRealtime('attendance');
-  const { data: kpis } = useQuery({ queryKey: ['msse-att-kpis'], queryFn: () => attendanceApi.kpis() });
-  const { data: students = [] } = useQuery({ queryKey: ['msse-students'], queryFn: () => studentsApi.list() });
-  const { data: staff = [] } = useQuery({ queryKey: ['msse-staff'], queryFn: () => staffApi.list() });
+export default function SchoolsAttendanceAdmin() {
+  const { connected } = useSchoolsRealtime('attendance');
+  const { data: kpis } = useQuery({ queryKey: ['schools-att-kpis'], queryFn: () => attendanceApi.kpis() });
+  const { data: students = [] } = useQuery({ queryKey: ['schools-students'], queryFn: () => studentsApi.list() });
+  const { data: staff = [] } = useQuery({ queryKey: ['schools-staff'], queryFn: () => staffApi.list() });
 
   const [scope, setScope] = useState<Scope>('students');
   const [search, setSearch] = useState('');
@@ -91,7 +91,7 @@ export default function MsseAttendanceAdmin() {
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `msse_attendance_${scope}_${range}.csv`;
+    a.download = `schools_attendance_${scope}_${range}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
     toast({ title: 'CSV exported', description: `${filtered.length} rows downloaded.` });
@@ -237,7 +237,7 @@ export default function MsseAttendanceAdmin() {
                           }}>
                           <BellRing className="w-3.5 h-3.5 mr-1.5" /> Notify
                         </Button>
-                        <Link to={`/msse/dashboard/${scope}/${r.id}`}>
+                        <Link to={`/schools/dashboard/${scope}/${r.id}`}>
                           <Button size="sm" variant="ghost" className="text-cyan-300 hover:bg-white/10">Open</Button>
                         </Link>
                       </td>
@@ -264,7 +264,7 @@ export default function MsseAttendanceAdmin() {
                     <Badge className={`${stateStyle[r.state]} border capitalize`}>{r.state.replace('_', ' ')}</Badge>
                   </div>
                   <div className="mt-2 flex gap-2">
-                    <Link to={`/msse/dashboard/${scope}/${r.id}`} className="flex-1">
+                    <Link to={`/schools/dashboard/${scope}/${r.id}`} className="flex-1">
                       <Button size="sm" variant="outline" className="w-full border-white/15 text-white/80">Open profile</Button>
                     </Link>
                     <Button size="sm" variant="outline" className="border-white/15 text-white/80"
@@ -296,7 +296,7 @@ export default function MsseAttendanceAdmin() {
                   <ExceptionRow key={s.id} name={s.full_name} sub={s.class} metric={`${s.attendance_pct_30d}%`}
                     badge={s.risk} tone={s.risk === 'critical' ? 'rose' : 'amber'}
                     note={`${s.late_count_30d} lates · ${s.absent_days_30d} absent days (30d)`}
-                    href={`/msse/dashboard/students/${s.id}`}
+                    href={`/schools/dashboard/students/${s.id}`}
                     onNotify={async () => { await studentsApi.notifyParent(s.id); toast({ title: 'Parent notified', description: s.full_name }); }}
                     notifyLabel="Notify parent" />
                 ))}
@@ -311,7 +311,7 @@ export default function MsseAttendanceAdmin() {
                   <ExceptionRow key={s.id} name={s.full_name} sub={`${s.role} · ${s.department}`} metric={`${s.punctuality_pct_30d}%`}
                     badge={s.punctuality_pct_30d < 70 ? 'critical' : 'high'} tone="amber"
                     note={`${s.late_count_30d} lates · ${s.absent_days_30d} absent days (30d)`}
-                    href={`/msse/dashboard/staff/${s.id}`}
+                    href={`/schools/dashboard/staff/${s.id}`}
                     onNotify={async () => { await staffApi.notifyManager(s.id); toast({ title: 'Manager notified', description: s.full_name }); }}
                     notifyLabel="Notify manager" />
                 ))}

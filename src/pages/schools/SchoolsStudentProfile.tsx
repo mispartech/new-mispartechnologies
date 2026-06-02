@@ -1,16 +1,16 @@
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ScanFace } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { PersonAttendanceTab } from '@/components/msse/PersonAttendanceTab';
-import { Phase2Tab } from '@/components/msse/Phase2Tab';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { PersonAttendanceTab } from '@/components/schools/PersonAttendanceTab';
+import { Phase2Tab } from '@/components/schools/Phase2Tab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { studentsApi } from '@/lib/api/msse/students';
+import { studentsApi } from '@/lib/api/schools/students';
 
-export default function MsseStudentProfile() {
+export default function SchoolsStudentProfile() {
   const { id = '' } = useParams<{ id: string }>();
-  const { data: student } = useQuery({ queryKey: ['msse-student', id], queryFn: () => studentsApi.get(id), enabled: !!id });
+  const { data: student } = useQuery({ queryKey: ['schools-student', id], queryFn: () => studentsApi.get(id), enabled: !!id });
 
   if (!student) {
     return <div className="p-10 text-white/60">Loading student…</div>;
@@ -18,7 +18,7 @@ export default function MsseStudentProfile() {
 
   return (
     <div className="p-6 space-y-5">
-      <Link to="/msse/dashboard/students" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
+      <Link to="/schools/dashboard/students" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
         <ArrowLeft className="h-3 w-3" /> Back to students
       </Link>
 

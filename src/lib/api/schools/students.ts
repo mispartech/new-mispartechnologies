@@ -1,6 +1,6 @@
 /**
- * MSSE Students API client (Step 5).
- * Backend pending — spec: docs/msse/step5-students-backend-prompt.md.
+ * Schools Students API client (Step 5).
+ * Backend pending — spec: docs/schools/step5-students-backend-prompt.md.
  */
 
 export type EnrollmentStatus = 'enrolled' | 'pending' | 'not_enrolled';

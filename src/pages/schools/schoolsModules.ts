@@ -4,7 +4,7 @@ import {
   BarChart3, MessageSquare, UserPlus, FileText, Settings,
 } from 'lucide-react';
 
-export interface MsseModule {
+export interface SchoolsModule {
   slug: string;
   label: string;
   icon: any;
@@ -13,7 +13,7 @@ export interface MsseModule {
   step: number;
 }
 
-export const MSSE_MODULES: MsseModule[] = [
+export const SCHOOLS_MODULES: SchoolsModule[] = [
   { slug: '',                    label: 'Dashboard',           icon: LayoutDashboard, group: 'Overview',                status: 'live', step: 0 },
   { slug: 'identity',            label: 'Identity Management', icon: ScanFace,        group: 'Identity & Attendance',   status: 'live', step: 2 },
   { slug: 'attendance',          label: 'Smart Attendance',    icon: ClipboardList,   group: 'Identity & Attendance',   status: 'live', step: 3 },
@@ -36,6 +36,6 @@ export const MSSE_MODULES: MsseModule[] = [
   { slug: 'settings',            label: 'Settings',            icon: Settings,        group: 'System',                  status: 'soon', step: 16 },
 ];
 
-export const MSSE_GROUP_ORDER: MsseModule['group'][] = [
+export const SCHOOLS_GROUP_ORDER: SchoolsModule['group'][] = [
   'Overview', 'Identity & Attendance', 'Academic', 'Operations', 'Insights', 'System',
 ];

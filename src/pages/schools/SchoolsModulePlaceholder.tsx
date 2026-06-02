@@ -1,15 +1,15 @@
 import { useParams, Link } from 'react-router-dom';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { MSSE_MODULES } from './msseModules';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { SCHOOLS_MODULES } from './schoolsModules';
 import { ArrowLeft, Construction } from 'lucide-react';
 
-const MsseModulePlaceholder = () => {
+const SchoolsModulePlaceholder = () => {
   const { module } = useParams<{ module: string }>();
-  const meta = MSSE_MODULES.find((m) => m.slug === module);
+  const meta = SCHOOLS_MODULES.find((m) => m.slug === module);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <Link to="/msse/dashboard" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
+      <Link to="/schools/dashboard" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
         <ArrowLeft className="h-3 w-3" /> Back to dashboard
       </Link>
 
@@ -22,9 +22,9 @@ const MsseModulePlaceholder = () => {
             <div className="text-[10px] uppercase tracking-widest text-amber-300">Step {meta?.step ?? '?'} · Coming soon</div>
             <h1 className="mt-1 text-2xl font-bold text-white">{meta?.label ?? 'Module'}</h1>
             <p className="mt-2 text-sm text-slate-400">
-              This module is part of the MSSE roadmap and will be implemented in step {meta?.step ?? '?'} of the
+              This module is part of the Schools roadmap and will be implemented in step {meta?.step ?? '?'} of the
               rollout. The dedicated backend specification will live at{' '}
-              <code className="text-cyan-300">docs/msse/step-{meta?.step ?? 'X'}-backend-prompt.md</code>.
+              <code className="text-cyan-300">docs/schools/step-{meta?.step ?? 'X'}-backend-prompt.md</code>.
             </p>
           </div>
         </div>
@@ -33,4 +33,4 @@ const MsseModulePlaceholder = () => {
   );
 };
 
-export default MsseModulePlaceholder;
+export default SchoolsModulePlaceholder;

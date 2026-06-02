@@ -5,15 +5,15 @@ import {
   CreditCard, QrCode, Radio, ArrowLeft, RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { AiInsightCallout } from '@/components/msse/AiInsightCallout';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
-  msseIdentityApi, MOCK_IDENTITIES, MOCK_DUPLICATES,
+  schoolsIdentityApi, MOCK_IDENTITIES, MOCK_DUPLICATES,
   type IdentityProfile, type DuplicateSuspect, type EnrollmentStatus, type IdentityRole,
-} from '@/lib/api/msse/identity';
+} from '@/lib/api/schools/identity';
 
 type Tab = 'directory' | 'enroll' | 'duplicates';
 
@@ -37,7 +37,7 @@ const credIcon = (c: string) => {
   }
 };
 
-const MsseIdentity = () => {
+const SchoolsIdentity = () => {
   const [tab, setTab] = useState<Tab>('directory');
   const [identities, setIdentities] = useState<IdentityProfile[]>(MOCK_IDENTITIES);
   const [duplicates, setDuplicates] = useState<DuplicateSuspect[]>(MOCK_DUPLICATES);
@@ -48,10 +48,10 @@ const MsseIdentity = () => {
 
   // Fetch with graceful fallback to mock data
   useEffect(() => {
-    msseIdentityApi.list()
+    schoolsIdentityApi.list()
       .then((r) => { if (r?.results?.length) setIdentities(r.results); })
       .catch(() => { /* backend pending */ });
-    msseIdentityApi.duplicates()
+    schoolsIdentityApi.duplicates()
       .then((r) => { if (r?.results?.length) setDuplicates(r.results); })
       .catch(() => { /* backend pending */ });
   }, []);
@@ -76,7 +76,7 @@ const MsseIdentity = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <Link to="/msse/dashboard" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 mb-2">
+          <Link to="/schools/dashboard" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 mb-2">
             <ArrowLeft className="h-3 w-3" /> Back to dashboard
           </Link>
           <h1 className="text-2xl lg:text-3xl font-bold text-white flex items-center gap-3">
@@ -750,4 +750,4 @@ const Row = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-export default MsseIdentity;
+export default SchoolsIdentity;

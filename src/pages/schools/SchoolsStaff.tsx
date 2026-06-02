@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, UserPlus, Users } from 'lucide-react';
-import { GlassCard } from '@/components/msse/GlassCard';
+import { GlassCard } from '@/components/schools/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { staffApi } from '@/lib/api/msse/staff';
-import { PunctualityBadge } from '@/components/msse/PunctualityBadge';
+import { staffApi } from '@/lib/api/schools/staff';
+import { PunctualityBadge } from '@/components/schools/PunctualityBadge';
 import { toast } from '@/hooks/use-toast';
 
-export default function MsseStaff() {
-  const { data: staff = [] } = useQuery({ queryKey: ['msse-staff'], queryFn: () => staffApi.list() });
+export default function SchoolsStaff() {
+  const { data: staff = [] } = useQuery({ queryKey: ['schools-staff'], queryFn: () => staffApi.list() });
   const [q, setQ] = useState('');
   const [dept, setDept] = useState('all');
   const [emp, setEmp] = useState('all');
@@ -108,7 +108,7 @@ export default function MsseStaff() {
                     <Badge className={`${s.status === 'active' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'} border capitalize`}>{s.status.replace('_', ' ')}</Badge>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <Link to={`/msse/dashboard/staff/${s.id}`}>
+                    <Link to={`/schools/dashboard/staff/${s.id}`}>
                       <Button size="sm" variant="outline" className="border-white/15 text-white/80 hover:bg-white/10">View attendance</Button>
                     </Link>
                   </td>
@@ -120,7 +120,7 @@ export default function MsseStaff() {
 
         <div className="lg:hidden divide-y divide-white/5">
           {filtered.map(s => (
-            <Link to={`/msse/dashboard/staff/${s.id}`} key={s.id} className="block p-4 hover:bg-white/[0.03]">
+            <Link to={`/schools/dashboard/staff/${s.id}`} key={s.id} className="block p-4 hover:bg-white/[0.03]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-sm font-semibold ${s.enrollment === 'enrolled' ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>

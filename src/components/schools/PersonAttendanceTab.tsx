@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BellRing, CalendarDays, CheckCircle2, Clock, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import type { PersonAttendanceSummary, PersonAttendanceDay } from '@/lib/api/msse/students';
+import type { PersonAttendanceSummary, PersonAttendanceDay } from '@/lib/api/schools/students';
 
 interface Props {
   personId: string;

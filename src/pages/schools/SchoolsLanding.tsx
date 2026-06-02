@@ -5,7 +5,7 @@ import {
   Library, CreditCard, MessageSquare, Camera, GraduationCap, Brain, Globe2,
   CheckCircle2, Building2, Lock, Radio, Cpu, ChevronDown, Phone, Mail, MapPin,
 } from 'lucide-react';
-import { MsseThemeProvider } from '@/contexts/MsseThemeContext';
+import { SchoolsThemeProvider } from '@/contexts/SchoolsThemeContext';
 import DemoRequestModal from '@/components/DemoRequestModal';
 
 const NAV = [
@@ -22,7 +22,7 @@ const PILLARS = [
   { icon: Camera, t: 'Smart Attendance', d: 'Classroom, exam hall, hostel, kiosk, CCTV and offline-sync capture modes.' },
   { icon: ShieldCheck, t: 'Smart Security', d: 'Live CCTV grid, watchlists, intruder alerts, smart-gate console.' },
   { icon: Users, t: 'Parent Portal', d: 'Real-time alerts, pickup authorization, fees, academics, messaging.' },
-  { icon: Brain, t: 'AI Intelligence', d: 'Dropout-risk prediction, behaviour analytics, "Ask MSSE" assistant.' },
+  { icon: Brain, t: 'AI Intelligence', d: 'Dropout-risk prediction, behaviour analytics, "Ask Schools" assistant.' },
   { icon: Globe2, t: 'Multi-Institution', d: 'District / state tenancy. Built for groups, ministries and chains.' },
 ];
 
@@ -55,18 +55,18 @@ const PRICING = [
 ];
 
 const FAQ = [
-  { q: 'Does MSSE work offline?', a: 'Yes. Attendance kiosks queue locally and sync when connectivity returns. Most write paths are offline-tolerant.' },
+  { q: 'Does Schools work offline?', a: 'Yes. Attendance kiosks queue locally and sync when connectivity returns. Most write paths are offline-tolerant.' },
   { q: 'Where is biometric data stored?', a: 'Encrypted, organization-scoped storage. Templates never leave the institution\'s namespace and are never sold or shared.' },
   { q: 'Can parents see their wards?', a: 'Yes — a dedicated parent portal shows attendance, alerts, fees, academics, pickup authorizations and messages.' },
   { q: 'Do you support multiple campuses?', a: 'Yes. The platform is multi-tenant by institution → campus → faculty → department → class.' },
-  { q: 'What about CCTV integration?', a: 'MSSE ingests RTSP feeds, overlays watchlist matches, and routes incidents to your Security Center.' },
+  { q: 'What about CCTV integration?', a: 'Schools ingests RTSP feeds, overlays watchlist matches, and routes incidents to your Security Center.' },
 ];
 
-const MsseLanding = () => {
+const SchoolsLanding = () => {
   const [demoOpen, setDemoOpen] = useState(false);
 
   return (
-    <MsseThemeProvider>
+    <SchoolsThemeProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 text-slate-100">
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-cyan-500/15 blur-3xl" />
@@ -76,12 +76,12 @@ const MsseLanding = () => {
 
         {/* NAV */}
         <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link to="/msse" className="flex items-center gap-2.5">
+          <Link to="/schools" className="flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-[0_0_24px_-4px_rgba(34,211,238,0.6)]">
               <ScanFace className="h-5 w-5 text-white" />
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-bold">MSSE</div>
+              <div className="text-sm font-bold">Schools</div>
               <div className="text-[10px] uppercase tracking-widest text-cyan-300/80">Smart School OS</div>
             </div>
           </Link>
@@ -92,7 +92,7 @@ const MsseLanding = () => {
           </nav>
           <div className="flex items-center gap-2">
             <button onClick={() => setDemoOpen(true)} className="hidden rounded-full border border-white/15 px-4 py-2 text-sm hover:bg-white/5 md:inline-flex">Book a demo</button>
-            <Link to="/msse/dashboard" className="rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2 text-sm font-semibold text-slate-950">Open dashboard</Link>
+            <Link to="/schools/dashboard" className="rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2 text-sm font-semibold text-slate-950">Open dashboard</Link>
           </div>
         </header>
 
@@ -116,7 +116,7 @@ const MsseLanding = () => {
               <button onClick={() => setDemoOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_8px_32px_-8px_rgba(34,211,238,0.6)]">
                 Book a live demo <ArrowRight className="h-4 w-4" />
               </button>
-              <Link to="/msse/dashboard" className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5">
+              <Link to="/schools/dashboard" className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5">
                 Explore the dashboard
               </Link>
             </div>
@@ -182,10 +182,10 @@ const MsseLanding = () => {
                 <h2 className="mt-4 text-3xl font-bold md:text-4xl">Ask your campus anything.</h2>
                 <p className="mt-3 text-sm text-slate-400 md:text-base">
                   "Show me JSS2 students at dropout risk." "List dorms over 90% occupancy."
-                  MSSE turns realtime signals into decisions, forecasts and natural-language answers.
+                  Schools turns realtime signals into decisions, forecasts and natural-language answers.
                 </p>
                 <ul className="mt-6 space-y-2 text-sm text-slate-300">
-                  {['Dropout & academic-risk forecasts', 'Behaviour & attendance anomaly detection', 'Predictive hostel/transport demand', 'Natural-language "Ask MSSE" assistant'].map((x) => (
+                  {['Dropout & academic-risk forecasts', 'Behaviour & attendance anomaly detection', 'Predictive hostel/transport demand', 'Natural-language "Ask Schools" assistant'].map((x) => (
                     <li key={x} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> {x}</li>
                   ))}
                 </ul>
@@ -320,13 +320,13 @@ const MsseLanding = () => {
           <section className="mt-10 rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/70 to-slate-950/70 p-10 text-center">
             <h2 className="text-3xl font-bold md:text-4xl">Ready to upgrade your institution?</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400 md:text-base">
-              See MSSE running on a real campus dataset. We'll tailor the demo to your structure, scale and security posture.
+              See Schools running on a real campus dataset. We'll tailor the demo to your structure, scale and security posture.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button onClick={() => setDemoOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-3 text-sm font-semibold text-slate-950">
                 Book a demo <ArrowRight className="h-4 w-4" />
               </button>
-              <Link to="/msse/dashboard" className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5">
+              <Link to="/schools/dashboard" className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5">
                 Open dashboard
               </Link>
             </div>
@@ -339,7 +339,7 @@ const MsseLanding = () => {
                 <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
                   <ScanFace className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-sm font-bold">MSSE</span>
+                <span className="text-sm font-bold">Schools</span>
               </div>
               <p className="mt-3 text-xs">Mispar Smart School Ecosystem — a Mispar Technologies product.</p>
             </div>
@@ -375,8 +375,8 @@ const MsseLanding = () => {
 
         <DemoRequestModal isOpen={demoOpen} onClose={() => setDemoOpen(false)} />
       </div>
-    </MsseThemeProvider>
+    </SchoolsThemeProvider>
   );
 };
 
-export default MsseLanding;
+export default SchoolsLanding;

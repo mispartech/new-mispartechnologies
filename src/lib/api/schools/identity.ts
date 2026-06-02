@@ -1,23 +1,23 @@
 /**
- * MSSE — Biometric Identity API client
- * Backend spec: docs/msse/step2-identity-backend-prompt.md
+ * Schools — Biometric Identity API client
+ * Backend spec: docs/schools/step2-identity-backend-prompt.md
  *
  * All endpoints are tenant-scoped by JWT (campus_id, faculty_id resolved
  * server-side). The frontend NEVER sends organization/user IDs in URLs.
  *
  * Endpoints expected:
- *   GET    /api/msse/identities/                  list + filters
- *   GET    /api/msse/identities/:id/              detail
- *   POST   /api/msse/identities/                  create profile (no biometric yet)
- *   POST   /api/msse/identities/:id/enroll/       upload biometric (base64 image)
- *   POST   /api/msse/identities/:id/re-enroll/    invalidate + re-enroll
- *   GET    /api/msse/identities/duplicates/       duplicate suspects feed
- *   POST   /api/msse/identities/duplicates/:id/resolve/  merge | dismiss
- *   POST   /api/msse/identities/:id/credentials/  issue RFID/NFC/QR backup
+ *   GET    /api/schools/identities/                  list + filters
+ *   GET    /api/schools/identities/:id/              detail
+ *   POST   /api/schools/identities/                  create profile (no biometric yet)
+ *   POST   /api/schools/identities/:id/enroll/       upload biometric (base64 image)
+ *   POST   /api/schools/identities/:id/re-enroll/    invalidate + re-enroll
+ *   GET    /api/schools/identities/duplicates/       duplicate suspects feed
+ *   POST   /api/schools/identities/duplicates/:id/resolve/  merge | dismiss
+ *   POST   /api/schools/identities/:id/credentials/  issue RFID/NFC/QR backup
  */
 // Backend pending — these stubs always reject so the UI falls back to mock data.
 const notImplemented = <T>(_endpoint: string): Promise<T> =>
-  Promise.reject(new Error('MSSE identity endpoints not yet implemented on backend'));
+  Promise.reject(new Error('Schools identity endpoints not yet implemented on backend'));
 
 export type IdentityRole = 'student' | 'teacher' | 'staff' | 'admin' | 'visitor';
 export type EnrollmentStatus = 'pending' | 'enrolled' | 'expired' | 'rejected';
@@ -55,9 +55,9 @@ export interface IdentityListResponse {
   previous: string | null;
 }
 
-const BASE = '/api/msse/identities';
+const BASE = '/api/schools/identities';
 
-export const msseIdentityApi = {
+export const schoolsIdentityApi = {
   list: (_params?: { q?: string; role?: IdentityRole; status?: EnrollmentStatus; page?: number }) =>
     notImplemented<IdentityListResponse>(`GET ${BASE}/`),
 

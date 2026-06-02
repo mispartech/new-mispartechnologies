@@ -1,23 +1,23 @@
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ScanFace, Mail, Phone } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { GlassCard } from '@/components/msse/GlassCard';
-import { PersonAttendanceTab } from '@/components/msse/PersonAttendanceTab';
-import { Phase2Tab } from '@/components/msse/Phase2Tab';
-import { PunctualityBadge } from '@/components/msse/PunctualityBadge';
+import { GlassCard } from '@/components/schools/GlassCard';
+import { PersonAttendanceTab } from '@/components/schools/PersonAttendanceTab';
+import { Phase2Tab } from '@/components/schools/Phase2Tab';
+import { PunctualityBadge } from '@/components/schools/PunctualityBadge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { staffApi } from '@/lib/api/msse/staff';
+import { staffApi } from '@/lib/api/schools/staff';
 
-export default function MsseStaffProfile() {
+export default function SchoolsStaffProfile() {
   const { id = '' } = useParams<{ id: string }>();
-  const { data: s } = useQuery({ queryKey: ['msse-staff', id], queryFn: () => staffApi.get(id), enabled: !!id });
+  const { data: s } = useQuery({ queryKey: ['schools-staff', id], queryFn: () => staffApi.get(id), enabled: !!id });
 
   if (!s) return <div className="p-10 text-white/60">Loading staff…</div>;
 
   return (
     <div className="p-6 space-y-5">
-      <Link to="/msse/dashboard/staff" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
+      <Link to="/schools/dashboard/staff" className="inline-flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200">
         <ArrowLeft className="h-3 w-3" /> Back to staff
       </Link>
 
