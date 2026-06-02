@@ -13,7 +13,7 @@ export interface SchoolsModule {
   step: number;
 }
 
-export const Schools_MODULES: SchoolsModule[] = [
+export const SCHOOLS_MODULES: SchoolsModule[] = [
   { slug: '',                    label: 'Dashboard',           icon: LayoutDashboard, group: 'Overview',                status: 'live', step: 0 },
   { slug: 'identity',            label: 'Identity Management', icon: ScanFace,        group: 'Identity & Attendance',   status: 'live', step: 2 },
   { slug: 'attendance',          label: 'Smart Attendance',    icon: ClipboardList,   group: 'Identity & Attendance',   status: 'live', step: 3 },
@@ -36,6 +36,6 @@ export const Schools_MODULES: SchoolsModule[] = [
   { slug: 'settings',            label: 'Settings',            icon: Settings,        group: 'System',                  status: 'soon', step: 16 },
 ];
 
-export const Schools_GROUP_ORDER: SchoolsModule['group'][] = [
+export const SCHOOLS_GROUP_ORDER: SchoolsModule['group'][] = [
   'Overview', 'Identity & Attendance', 'Academic', 'Operations', 'Insights', 'System',
 ];

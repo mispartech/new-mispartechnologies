@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { ScanFace } from 'lucide-react';
-import { Schools_MODULES, Schools_GROUP_ORDER } from './schoolsModules';
+import { SCHOOLS_MODULES, SCHOOLS_GROUP_ORDER } from './schoolsModules';
 import { cn } from '@/lib/utils';
 
 export const SchoolsSidebar = () => {
@@ -19,8 +19,8 @@ export const SchoolsSidebar = () => {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {Schools_GROUP_ORDER.map((group) => {
-          const items = Schools_MODULES.filter((m) => m.group === group);
+        {SCHOOLS_GROUP_ORDER.map((group) => {
+          const items = SCHOOLS_MODULES.filter((m) => m.group === group);
           if (items.length === 0) return null;
           return (
             <div key={group}>
