@@ -59,18 +59,21 @@ import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 import AcademicStructure from "./pages/dashboard/AcademicStructure";
 import AcademicCalendar from "./pages/dashboard/AcademicCalendar";
 import CourseRosters from "./pages/dashboard/CourseRosters";
-import MsseLanding from "./pages/msse/MsseLanding";
-import MsseLayout from "./pages/msse/MsseLayout";
-import MsseDashboard from "./pages/msse/MsseDashboard";
-import MsseModulePlaceholder from "./pages/msse/MsseModulePlaceholder";
-import MsseIdentity from "./pages/msse/MsseIdentity";
-import MsseAttendance from "./pages/msse/MsseAttendance";
-import MsseAttendanceAdmin from "./pages/msse/MsseAttendanceAdmin";
-import MsseSecurity from "./pages/msse/MsseSecurity";
-import MsseStudents from "./pages/msse/MsseStudents";
-import MsseStudentProfile from "./pages/msse/MsseStudentProfile";
-import MsseStaff from "./pages/msse/MsseStaff";
-import MsseStaffProfile from "./pages/msse/MsseStaffProfile";
+import SchoolsLanding from "./pages/schools/SchoolsLanding";
+import SchoolsLayout from "./pages/schools/SchoolsLayout";
+import SchoolsDashboard from "./pages/schools/SchoolsDashboard";
+import SchoolsModulePlaceholder from "./pages/schools/SchoolsModulePlaceholder";
+import SchoolsIdentity from "./pages/schools/SchoolsIdentity";
+import SchoolsAttendance from "./pages/schools/SchoolsAttendance";
+import SchoolsAttendanceAdmin from "./pages/schools/SchoolsAttendanceAdmin";
+import SchoolsSecurity from "./pages/schools/SchoolsSecurity";
+import SchoolsStudents from "./pages/schools/SchoolsStudents";
+import SchoolsStudentProfile from "./pages/schools/SchoolsStudentProfile";
+import SchoolsStaff from "./pages/schools/SchoolsStaff";
+import SchoolsStaffProfile from "./pages/schools/SchoolsStaffProfile";
+import SchoolsOnboarding from "./pages/schools/SchoolsOnboarding";
+import SchoolsPlatformAdmin from "./pages/schools/SchoolsPlatformAdmin";
+import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
@@ -107,20 +110,27 @@ const App = () => (
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/join/:slug" element={<JoinOrganization />} />
 
-              {/* MSSE — Mispar Smart School Ecosystem (school.mispartechnologies.com) */}
-              <Route path="/msse" element={<MsseLanding />} />
-              <Route path="/msse/dashboard" element={<MsseLayout />}>
-                <Route index element={<MsseDashboard />} />
-                <Route path="identity" element={<MsseIdentity />} />
-                <Route path="attendance" element={<MsseAttendance />} />
-                <Route path="attendance/admin" element={<MsseAttendanceAdmin />} />
-                <Route path="security" element={<MsseSecurity />} />
-                <Route path="students" element={<MsseStudents />} />
-                <Route path="students/:id" element={<MsseStudentProfile />} />
-                <Route path="staff" element={<MsseStaff />} />
-                <Route path="staff/:id" element={<MsseStaffProfile />} />
-                <Route path=":module" element={<MsseModulePlaceholder />} />
+              {/* Schools — schools.mispartechnologies.com (mirrored at /schools/*) */}
+              <Route path="/schools" element={<SchoolsLanding />} />
+              <Route path="/schools/onboarding" element={<SchoolsOnboarding />} />
+              <Route path="/schools/admin" element={<SchoolsPlatformAdmin />} />
+              <Route path="/schools/dashboard" element={<SchoolsLayout />}>
+                <Route index element={<SchoolsDashboard />} />
+                <Route path="identity" element={<SchoolsIdentity />} />
+                <Route path="attendance" element={<SchoolsAttendance />} />
+                <Route path="attendance/admin" element={<SchoolsAttendanceAdmin />} />
+                <Route path="admin" element={<SchoolsAttendanceAdmin />} />
+                <Route path="security" element={<SchoolsSecurity />} />
+                <Route path="students" element={<SchoolsStudents />} />
+                <Route path="students/:id" element={<SchoolsStudentProfile />} />
+                <Route path="staff" element={<SchoolsStaff />} />
+                <Route path="staff/:id" element={<SchoolsStaffProfile />} />
+                <Route path=":module" element={<SchoolsModulePlaceholder />} />
               </Route>
+
+              {/* Legacy /msse/* redirects → /schools/* */}
+              <Route path="/msse" element={<Navigate to="/schools" replace />} />
+              <Route path="/msse/*" element={<Navigate to="/schools" replace />} />
               
               {/* Platform Admin Routes */}
               <Route path="/admin-register" element={<AdminRegister />} />
