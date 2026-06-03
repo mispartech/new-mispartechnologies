@@ -1,173 +1,129 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, UserPlus, Upload, GraduationCap, ScanFace } from 'lucide-react';
-import { GlassCard } from '@/components/schools/GlassCard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useQuery } from '@tanstack/react-query';
-import { studentsApi } from '@/lib/api/schools/students';
-import { toast } from '@/hooks/use-toast';
+import { Search, Filter, Plus, GraduationCap, AlertTriangle, ScanFace, UserCheck } from 'lucide-react';
+import {
+  SchoolsCard, StatCard, Badge, SchoolsButton, Avatar, EmptyState, TabBar,
+} from '@/components/schools/ui/SchoolsUI';
+import { studentsApi, type Student } from '@/lib/api/schools/students';
 
-const riskTone = {
-  low: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  medium: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  high: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
-  critical: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-} as const;
+type LevelFilter = 'all' | 'JSS1' | 'JSS2' | 'JSS3' | 'SS1' | 'SS2' | 'SS3';
 
-export default function SchoolsStudents() {
-  const { data: students = [] } = useQuery({ queryKey: ['schools-students'], queryFn: () => studentsApi.list() });
-  const [q, setQ] = useState('');
-  const [level, setLevel] = useState('all');
-  const [status, setStatus] = useState('all');
-  const [enr, setEnr] = useState('all');
+const SchoolsStudents = () => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [search, setSearch] = useState('');
+  const [level, setLevel] = useState<LevelFilter>('all');
 
-  const filtered = useMemo(() => students.filter(s =>
-    (level === 'all' || s.level === level) &&
-    (status === 'all' || s.status === status) &&
-    (enr === 'all' || s.enrollment === enr) &&
-    (!q || s.full_name.toLowerCase().includes(q.toLowerCase()) || s.admission_no.toLowerCase().includes(q.toLowerCase()))
-  ), [students, q, level, status, enr]);
+  useEffect(() => {
+    studentsApi.list().then(setStudents);
+  }, []);
 
-  const levels = Array.from(new Set(students.map(s => s.level)));
+  const filtered = useMemo(() => {
+    return students.filter(s => {
+      if (level !== 'all' && s.level !== level) return false;
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return s.full_name.toLowerCase().includes(q) || s.admission_no.toLowerCase().includes(q) || s.class.toLowerCase().includes(q);
+    });
+  }, [students, search, level]);
+
+  const stats = useMemo(() => {
+    const total = students.length;
+    const enrolled = students.filter(s => s.enrollment === 'enrolled').length;
+    const atRisk = students.filter(s => s.risk === 'high' || s.risk === 'critical').length;
+    const avgAtt = total ? Math.round(students.reduce((a, s) => a + s.attendance_pct_30d, 0) / total) : 0;
+    return { total, enrolled, atRisk, avgAtt };
+  }, [students]);
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div className="mx-auto max-w-7xl px-4 lg:px-6 py-6 lg:py-8 space-y-6 s-fade-up">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <GraduationCap className="w-8 h-8 text-cyan-400" /> Students
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-[hsl(var(--s-accent))]">People</div>
+          <h1 className="mt-1 font-display text-2xl lg:text-3xl font-bold text-[hsl(var(--s-primary-ink))]">
+            Students
           </h1>
-          <p className="text-white/60 mt-1">Directory of enrolled students. MVP focus: attendance oversight.</p>
+          <p className="mt-1 text-sm text-[hsl(var(--s-text-muted))]">
+            Directory of every learner, with biometric and attendance status.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="border-white/15 text-white/80 hover:bg-white/10"
-            onClick={() => toast({ title: 'Bulk import', description: 'CSV import — backend endpoint pending.' })}>
-            <Upload className="w-4 h-4 mr-2" /> Import CSV
-          </Button>
-          <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-0"
-            onClick={() => toast({ title: 'Add student', description: 'Enrollment wizard ships with backend Step 5.' })}>
-            <UserPlus className="w-4 h-4 mr-2" /> Add student
-          </Button>
-        </div>
+        <SchoolsButton variant="primary"><Plus className="h-4 w-4" /> Enroll student</SchoolsButton>
       </div>
 
-      <GlassCard>
-        <div className="flex flex-col md:flex-row gap-2 md:items-center">
-          <div className="flex items-center gap-2 text-white/70 text-sm"><Filter className="w-4 h-4" /> Filters</div>
-          <div className="relative md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
-            <Input placeholder="Name or admission no…" value={q} onChange={e => setQ(e.target.value)} className="pl-9 bg-white/5 border-white/10 text-white" />
+      <section className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total students" value={stats.total} icon={GraduationCap} tone="primary" />
+        <StatCard label="Biometric enrolled" value={`${stats.enrolled}/${stats.total}`} icon={ScanFace} tone="accent" />
+        <StatCard label="Avg attendance (30d)" value={`${stats.avgAtt}%`} icon={UserCheck} tone="accent" />
+        <StatCard label="At-risk learners" value={stats.atRisk} icon={AlertTriangle} tone="danger" />
+      </section>
+
+      <SchoolsCard padded={false} className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-[hsl(var(--s-border))]">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--s-text-subtle))]" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name, admission no, class…"
+              className="h-10 w-full rounded-lg border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] pl-9 pr-3 text-sm text-[hsl(var(--s-text))] placeholder:text-[hsl(var(--s-text-subtle))] focus:outline-none focus:border-[hsl(var(--s-primary))]"
+            />
           </div>
-          <Select value={level} onValueChange={setLevel}>
-            <SelectTrigger className="md:w-40 bg-white/5 border-white/10 text-white"><SelectValue placeholder="Level" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All levels</SelectItem>
-              {levels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="md:w-40 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="graduated">Graduated</SelectItem>
-              <SelectItem value="withdrawn">Withdrawn</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={enr} onValueChange={setEnr}>
-            <SelectTrigger className="md:w-44 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any enrollment</SelectItem>
-              <SelectItem value="enrolled">Biometric enrolled</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="not_enrolled">Not enrolled</SelectItem>
-            </SelectContent>
-          </Select>
+          <TabBar<LevelFilter>
+            value={level}
+            onChange={setLevel}
+            tabs={[
+              { value: 'all', label: 'All' },
+              { value: 'JSS1', label: 'JSS1' },
+              { value: 'JSS2', label: 'JSS2' },
+              { value: 'JSS3', label: 'JSS3' },
+              { value: 'SS1', label: 'SS1' },
+              { value: 'SS2', label: 'SS2' },
+              { value: 'SS3', label: 'SS3' },
+            ]}
+          />
+          <SchoolsButton variant="outline" size="md"><Filter className="h-4 w-4" /> Filter</SchoolsButton>
         </div>
-      </GlassCard>
 
-      <GlassCard className="p-0 overflow-hidden">
-        {/* Desktop table */}
-        <div className="hidden lg:block">
-          <table className="w-full text-sm">
-            <thead className="text-left text-white/50 text-xs uppercase tracking-wide">
-              <tr className="border-b border-white/10">
-                <th className="px-5 py-3">Student</th>
-                <th className="px-5 py-3">Class</th>
-                <th className="px-5 py-3">Guardian</th>
-                <th className="px-5 py-3">Enrollment</th>
-                <th className="px-5 py-3">Attendance (30d)</th>
-                <th className="px-5 py-3">Risk</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {filtered.map(s => (
-                <tr key={s.id} className="hover:bg-white/[0.03]">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-sm font-semibold ${s.enrollment === 'enrolled' ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>
-                        {s.full_name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{s.full_name}</div>
-                        <div className="text-xs text-white/50">{s.admission_no}</div>
-                      </div>
+        {filtered.length === 0 ? (
+          <EmptyState icon={GraduationCap} title="No students match" description="Try a different filter or search term." />
+        ) : (
+          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map(s => (
+              <Link
+                key={s.id}
+                to={`/schools/dashboard/students/${s.id}`}
+                className="group rounded-xl border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface))] p-4 hover:border-[hsl(var(--s-primary))] hover:shadow-[var(--s-shadow-md)] transition"
+              >
+                <div className="flex items-start gap-3">
+                  <Avatar name={s.full_name} attendancePct={s.attendance_pct_30d} size={48} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-[hsl(var(--s-text))] truncate group-hover:text-[hsl(var(--s-primary))]">
+                      {s.full_name}
                     </div>
-                  </td>
-                  <td className="px-5 py-3 text-white/80">{s.class}</td>
-                  <td className="px-5 py-3 text-white/70">
-                    <div>{s.guardian_name}</div>
-                    <div className="text-xs text-white/40">{s.guardian_phone}</div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge variant="outline" className="border-white/15 text-white/70 capitalize">
-                      <ScanFace className="w-3 h-3 mr-1" />{s.enrollment.replace('_', ' ')}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3 text-white font-semibold">{s.attendance_pct_30d}%</td>
-                  <td className="px-5 py-3"><Badge className={`${riskTone[s.risk]} border capitalize`}>{s.risk}</Badge></td>
-                  <td className="px-5 py-3 text-right">
-                    <Link to={`/schools/dashboard/students/${s.id}`}>
-                      <Button size="sm" variant="outline" className="border-white/15 text-white/80 hover:bg-white/10">View attendance</Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile cards */}
-        <div className="lg:hidden divide-y divide-white/5">
-          {filtered.map(s => (
-            <Link to={`/schools/dashboard/students/${s.id}`} key={s.id} className="block p-4 hover:bg-white/[0.03]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-sm font-semibold ${s.enrollment === 'enrolled' ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>
-                    {s.full_name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="text-white font-medium">{s.full_name}</div>
-                    <div className="text-xs text-white/50">{s.class} · {s.admission_no}</div>
+                    <div className="text-[11px] text-[hsl(var(--s-text-subtle))]">{s.admission_no}</div>
+                    <Badge tone="subtle" className="mt-1.5">{s.class}</Badge>
                   </div>
                 </div>
-                <Badge className={`${riskTone[s.risk]} border capitalize`}>{s.risk}</Badge>
-              </div>
-              <div className="mt-2 text-xs text-white/60 flex justify-between">
-                <span>{s.attendance_pct_30d}% (30d)</span>
-                <span>{s.late_count_30d} late · {s.absent_days_30d} absent</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {filtered.length === 0 && <div className="p-10 text-center text-white/50 text-sm">No matching students.</div>}
-      </GlassCard>
+                <div className="mt-3 flex items-center justify-between text-xs">
+                  <span className="text-[hsl(var(--s-text-muted))]">Attendance</span>
+                  <span className="font-display font-semibold tabular-nums text-[hsl(var(--s-primary-ink))]">{s.attendance_pct_30d}%</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <Badge tone={s.enrollment === 'enrolled' ? 'accent' : s.enrollment === 'pending' ? 'warning' : 'subtle'}>
+                    {s.enrollment === 'enrolled' ? 'Enrolled' : s.enrollment === 'pending' ? 'Pending' : 'Not enrolled'}
+                  </Badge>
+                  {(s.risk === 'high' || s.risk === 'critical') && (
+                    <Badge tone={s.risk === 'critical' ? 'danger' : 'warning'}>
+                      <AlertTriangle className="h-3 w-3" /> {s.risk}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </SchoolsCard>
     </div>
   );
-}
+};
+
+export default SchoolsStudents;

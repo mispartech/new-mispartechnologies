@@ -1,300 +1,209 @@
 import { useEffect, useState } from 'react';
-import { ShieldAlert, Camera, DoorOpen, Activity, Users, Timer, AlertTriangle, CheckCircle2, Radio, MapPin, Search } from 'lucide-react';
-import { GlassCard } from '@/components/schools/GlassCard';
-import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
-import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
-import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
 import {
-  securityApi,
-  type SecurityKPIs,
-  type CameraFeed,
-  type WatchlistMatch,
-  type IncidentLog,
-  type GateEvent,
-  type RestrictedZoneAlert,
-  type IncidentSeverity,
+  ShieldCheck, AlertTriangle, Camera, Users, DoorOpen, Activity, Radio,
+  Eye, EyeOff, CheckCircle2, MapPin,
+} from 'lucide-react';
+import {
+  SchoolsCard, StatCard, SectionHeader, Badge, EmptyState, SchoolsButton, TabBar,
+} from '@/components/schools/ui/SchoolsUI';
+import {
+  securityApi, type SecurityKPIs, type CameraFeed, type IncidentLog, type GateEvent, type WatchlistMatch,
 } from '@/lib/api/schools/security';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
 
-const severityClass: Record<IncidentSeverity, string> = {
-  info: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
-  warning: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
-  critical: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
-};
+type IncidentFilter = 'all' | 'open' | 'investigating' | 'resolved';
 
-const fmtTime = (iso: string) => {
-  try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  catch { return '—'; }
-};
-
-export default function SchoolsSecurity() {
-  useSchoolsRealtime('security/feed');
+const SchoolsSecurity = () => {
   const [kpis, setKpis] = useState<SecurityKPIs | null>(null);
   const [cameras, setCameras] = useState<CameraFeed[]>([]);
-  const [matches, setMatches] = useState<WatchlistMatch[]>([]);
   const [incidents, setIncidents] = useState<IncidentLog[]>([]);
-  const [gateEvents, setGateEvents] = useState<GateEvent[]>([]);
-  const [zoneAlerts, setZoneAlerts] = useState<RestrictedZoneAlert[]>([]);
-  const [q, setQ] = useState('');
+  const [gates, setGates] = useState<GateEvent[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistMatch[]>([]);
+  const [incidentFilter, setIncidentFilter] = useState<IncidentFilter>('all');
 
   useEffect(() => {
-    Promise.all([
-      securityApi.kpis(),
-      securityApi.cameras(),
-      securityApi.watchlistMatches(),
-      securityApi.incidents(),
-      securityApi.gateEvents(),
-      securityApi.restrictedAlerts(),
-    ]).then(([k, c, m, i, g, z]) => {
-      setKpis(k); setCameras(c); setMatches(m); setIncidents(i); setGateEvents(g); setZoneAlerts(z);
-    });
+    securityApi.kpis().then(setKpis);
+    securityApi.cameras().then(setCameras);
+    securityApi.incidents().then(setIncidents);
+    securityApi.gateEvents().then(setGates);
+    securityApi.watchlistMatches().then(setWatchlist);
   }, []);
 
-  const filteredGate = gateEvents.filter(e =>
-    !q || `${e.person_name} ${e.gate} ${e.method}`.toLowerCase().includes(q.toLowerCase())
-  );
+  const status = (kpis?.open_incidents ?? 0) >= 3 ? 'Elevated' : (kpis?.open_incidents ?? 0) > 0 ? 'Monitoring' : 'Calm';
+  const statusTone = status === 'Calm' ? 'accent' : status === 'Monitoring' ? 'info' : 'warning';
+
+  const filteredIncidents = incidents.filter(i => incidentFilter === 'all' || i.status === incidentFilter);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl px-4 lg:px-6 py-6 lg:py-8 space-y-6 s-fade-up">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-300/80">
-            <ShieldAlert className="h-3.5 w-3.5" />
-            Step 4 · Smart Campus Security
-          </div>
-          <h1 className="mt-1 text-2xl font-bold text-white">Security Operations Center</h1>
-          <p className="text-sm text-slate-400">Live CCTV, AI watchlist, smart gates and incident response — campus-wide.</p>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-[hsl(var(--s-accent))]">Campus Operations</div>
+          <h1 className="mt-1 font-display text-2xl lg:text-3xl font-bold text-[hsl(var(--s-primary-ink))]">
+            Security Center
+          </h1>
+          <p className="mt-1 text-sm text-[hsl(var(--s-text-muted))]">
+            Live camera grid, gate activity, visitor verification and incident response.
+          </p>
         </div>
-        <LiveStatBadge label="AI Vision" value="Live" trend="All campus zones" tone="emerald" />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                style={{ background: `hsl(var(--s-${statusTone})/0.12)`, color: `hsl(var(--s-${statusTone}))` }}>
+            <Radio className="h-3 w-3 s-pulse-dot" /> Campus status: {status}
+          </span>
+        </div>
       </div>
 
-      {/* KPI strip */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={<Camera className="h-4 w-4" />} label="Active cameras" value={kpis ? `${kpis.active_cameras}/${kpis.total_cameras}` : '—'} />
-        <Kpi icon={<AlertTriangle className="h-4 w-4" />} label="Open incidents" value={kpis?.open_incidents ?? '—'} tone={kpis && kpis.open_incidents > 0 ? 'warn' : 'ok'} />
-        <Kpi icon={<Activity className="h-4 w-4" />} label="Watchlist hits (24h)" value={kpis?.watchlist_hits_24h ?? '—'} tone={kpis && kpis.watchlist_hits_24h > 0 ? 'alert' : 'ok'} />
-        <Kpi icon={<DoorOpen className="h-4 w-4" />} label="Unauthorized (24h)" value={kpis?.unauthorized_attempts_24h ?? '—'} />
-        <Kpi icon={<Timer className="h-4 w-4" />} label="Avg response (min)" value={kpis?.avg_response_minutes ?? '—'} />
-        <Kpi icon={<Users className="h-4 w-4" />} label="Visitors on premises" value={kpis?.visitors_on_premises ?? '—'} />
-        <Kpi icon={<DoorOpen className="h-4 w-4" />} label="Gates online" value={kpis?.gates_online ?? '—'} tone="ok" />
-        <Kpi icon={<Radio className="h-4 w-4" />} label="Realtime channel" value="connected" tone="ok" />
-      </div>
+      {/* KPIs */}
+      <section className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Cameras online" value={`${kpis?.active_cameras ?? '—'}/${kpis?.total_cameras ?? '—'}`} icon={Camera} tone="accent" />
+        <StatCard label="Open incidents" value={kpis?.open_incidents ?? '—'} icon={AlertTriangle} tone="warning" />
+        <StatCard label="Visitors on site" value={kpis?.visitors_on_premises ?? '—'} icon={Users} tone="info" />
+        <StatCard label="Avg response" value={`${kpis?.avg_response_minutes ?? '—'}m`} icon={Activity} tone="primary" />
+      </section>
 
-      {/* AI insight */}
-      {matches.length > 0 && (
-        <AiInsightCallout title={`${matches.length} watchlist match${matches.length === 1 ? '' : 'es'} in last hour`}>
-          Highest priority: <span className="text-white">{matches[0].name}</span> seen at <span className="text-white">{matches[0].camera}</span> ({Math.round(matches[0].confidence * 100)}% confidence). Officer Bello dispatched.
-        </AiInsightCallout>
-      )}
-
-      <Tabs defaultValue="cctv" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger value="cctv">Live CCTV</TabsTrigger>
-          <TabsTrigger value="incidents">Incidents</TabsTrigger>
-          <TabsTrigger value="gates">Smart Gates</TabsTrigger>
-          <TabsTrigger value="zones">Restricted Zones</TabsTrigger>
-          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-        </TabsList>
-
-        {/* CCTV grid */}
-        <TabsContent value="cctv" className="mt-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {cameras.map(cam => (
-              <GlassCard key={cam.id} className="overflow-hidden p-0">
-                <div className="relative aspect-video bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Camera className={`h-10 w-10 ${cam.status === 'online' ? 'text-cyan-300/60' : 'text-slate-600'}`} />
-                  </div>
-                  {cam.motion && cam.status === 'online' && (
-                    <div className="absolute inset-2 rounded-lg border-2 border-cyan-400/40 animate-pulse" />
-                  )}
-                  {cam.watchlist_match && (
-                    <div className="absolute left-2 top-2 rounded-md bg-rose-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                      Watchlist
+      {/* Live monitoring */}
+      <SchoolsCard>
+        <SectionHeader
+          eyebrow="Live monitoring"
+          title="Capture points"
+          action={<span className="inline-flex items-center gap-1.5 text-[11px] text-[hsl(var(--s-accent))]"><Radio className="h-3 w-3 s-pulse-dot" /> Live feeds</span>}
+        />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {cameras.map(c => {
+            const StatusIcon = c.status === 'online' ? Eye : EyeOff;
+            const tone = c.status === 'online' ? 'accent' : c.status === 'degraded' ? 'warning' : 'danger';
+            return (
+              <div key={c.id} className="rounded-xl border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] overflow-hidden">
+                <div className="aspect-video relative bg-gradient-to-br from-[hsl(var(--s-navy))] to-[hsl(var(--s-academic))] grid place-items-center">
+                  <Camera className="h-8 w-8 text-white/30" />
+                  {c.watchlist_match && (
+                    <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--s-danger))] px-2 py-0.5 text-[10px] font-semibold text-white">
+                      <AlertTriangle className="h-3 w-3" /> MATCH
                     </div>
                   )}
-                  <div className="absolute right-2 top-2">
-                    <span className={`inline-flex h-2 w-2 rounded-full ${cam.status === 'online' ? 'bg-emerald-400' : cam.status === 'degraded' ? 'bg-amber-400' : 'bg-rose-500'}`} />
+                  {c.motion && c.status === 'online' && (
+                    <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[hsl(var(--s-accent))] s-pulse-dot" />
+                  )}
+                </div>
+                <div className="p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[hsl(var(--s-text))] truncate">{c.name}</span>
+                    <Badge tone={tone as any}><StatusIcon className="h-3 w-3" /> {c.status}</Badge>
                   </div>
-                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
-                    <span className="rounded bg-black/60 px-1.5 py-0.5 text-white">{cam.name}</span>
-                    <span className="rounded bg-black/60 px-1.5 py-0.5 text-slate-300">{fmtTime(cam.last_frame_at)}</span>
+                  <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[hsl(var(--s-text-subtle))]">
+                    <MapPin className="h-3 w-3" /> {c.zone}
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 text-xs">
-                  <span className="text-slate-400">{cam.zone}</span>
-                  <span className={`capitalize ${cam.status === 'online' ? 'text-emerald-300' : cam.status === 'degraded' ? 'text-amber-300' : 'text-rose-300'}`}>{cam.status}</span>
-                </div>
-              </GlassCard>
-            ))}
-          </div>
-        </TabsContent>
+              </div>
+            );
+          })}
+        </div>
+      </SchoolsCard>
 
-        {/* Incidents */}
-        <TabsContent value="incidents" className="mt-4">
-          <GlassCard className="p-0">
-            <div className="border-b border-white/5 p-4 text-sm font-semibold text-white">Incident timeline</div>
-            <ul className="divide-y divide-white/5">
-              {incidents.map(inc => (
-                <li key={inc.id} className="p-4">
+      {/* Watchlist + Gates */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <SchoolsCard>
+          <SectionHeader eyebrow="AI vision" title="Watchlist matches" description="Recent face matches against the school watchlist." />
+          {watchlist.length === 0 ? (
+            <EmptyState icon={ShieldCheck} title="No watchlist matches" description="The campus is clear." />
+          ) : (
+            <ul className="space-y-2">
+              {watchlist.map(w => (
+                <li key={w.id} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--s-danger)/0.3)] bg-[hsl(var(--s-danger)/0.06)] p-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-[hsl(var(--s-danger)/0.12)] text-[hsl(var(--s-danger))]">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-[hsl(var(--s-text))] truncate">{w.name}</div>
+                    <div className="text-[11px] text-[hsl(var(--s-text-muted))]">{w.camera} · {w.zone} · {Math.round(w.confidence * 100)}%</div>
+                  </div>
+                  <Badge tone="danger">{w.reason}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SchoolsCard>
+
+        <SchoolsCard>
+          <SectionHeader eyebrow="Access" title="Recent gate activity" />
+          <ul className="space-y-2">
+            {gates.slice(0, 6).map(g => (
+              <li key={g.id} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] p-3">
+                <div className={`grid h-10 w-10 place-items-center rounded-lg ${g.authorized ? 'bg-[hsl(var(--s-accent)/0.12)] text-[hsl(var(--s-accent))]' : 'bg-[hsl(var(--s-danger)/0.12)] text-[hsl(var(--s-danger))]'}`}>
+                  {g.authorized ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-[hsl(var(--s-text))]">{g.person_name}</div>
+                  <div className="text-[11px] text-[hsl(var(--s-text-subtle))]">
+                    <DoorOpen className="inline h-3 w-3 mr-0.5" />{g.gate} · {g.method} · {g.direction}
+                    {g.reason && <span className="ml-1 text-[hsl(var(--s-danger))]">· {g.reason}</span>}
+                  </div>
+                </div>
+                <Badge tone="subtle">{g.person_role}</Badge>
+              </li>
+            ))}
+          </ul>
+        </SchoolsCard>
+      </section>
+
+      {/* Incidents */}
+      <SchoolsCard>
+        <SectionHeader
+          eyebrow="Incident response"
+          title="Incident reports"
+          action={
+            <TabBar<IncidentFilter>
+              value={incidentFilter}
+              onChange={setIncidentFilter}
+              tabs={[
+                { value: 'all', label: 'All', count: incidents.length },
+                { value: 'open', label: 'Open', count: incidents.filter(i => i.status === 'open').length },
+                { value: 'investigating', label: 'Active', count: incidents.filter(i => i.status === 'investigating').length },
+                { value: 'resolved', label: 'Resolved', count: incidents.filter(i => i.status === 'resolved').length },
+              ]}
+            />
+          }
+        />
+        {filteredIncidents.length === 0 ? (
+          <EmptyState icon={ShieldCheck} title="No incidents" description="Nothing to action right now." />
+        ) : (
+          <ul className="space-y-2">
+            {filteredIncidents.map(i => {
+              const tone = i.severity === 'critical' ? 'danger' : i.severity === 'warning' ? 'warning' : 'info';
+              return (
+                <li key={i.id} className="rounded-xl border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={severityClass[inc.severity]}>{inc.severity}</Badge>
-                        <Badge variant="outline" className="border-white/10 text-slate-300 capitalize">{inc.status}</Badge>
-                        <span className="text-xs text-slate-500">{fmtTime(inc.ts)} · {inc.zone}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-[hsl(var(--s-text))]">{i.title}</span>
+                        <Badge tone={tone as any}>{i.severity}</Badge>
+                        <Badge tone={i.status === 'resolved' ? 'accent' : i.status === 'investigating' ? 'info' : 'warning'}>
+                          {i.status}
+                        </Badge>
                       </div>
-                      <div className="mt-1.5 text-sm font-medium text-white">{inc.title}</div>
-                      <div className="text-xs text-slate-400">Reported by {inc.reported_by}{inc.assigned_to ? ` · Assigned to ${inc.assigned_to}` : ''}</div>
-                      {inc.ai_summary && (
-                        <div className="mt-2 rounded-md border border-cyan-400/20 bg-cyan-950/20 p-2 text-xs text-cyan-100/90">
-                          <span className="font-semibold text-cyan-300">AI summary · </span>{inc.ai_summary}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {inc.status !== 'resolved' && (
-                        <>
-                          <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-                            onClick={() => { securityApi.acknowledgeIncident(inc.id); toast({ title: 'Acknowledged' }); }}>
-                            Acknowledge
-                          </Button>
-                          <Button size="sm" className="bg-cyan-500 text-slate-950 hover:bg-cyan-400"
-                            onClick={() => { securityApi.dispatchOfficer(inc.id, 'Officer Bello'); toast({ title: 'Officer dispatched' }); }}>
-                            Dispatch
-                          </Button>
-                        </>
-                      )}
-                      {inc.status === 'resolved' && (
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-300"><CheckCircle2 className="h-3.5 w-3.5" /> Resolved</span>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </GlassCard>
-        </TabsContent>
-
-        {/* Gates */}
-        <TabsContent value="gates" className="mt-4 space-y-4">
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search name, gate or method…" className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-slate-500" />
-          </div>
-          <GlassCard className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-white/5 text-left text-xs uppercase tracking-wider text-slate-400">
-                  <tr>
-                    <th className="px-4 py-3">Time</th>
-                    <th className="px-4 py-3">Gate</th>
-                    <th className="px-4 py-3">Person</th>
-                    <th className="px-4 py-3">Method</th>
-                    <th className="px-4 py-3">Direction</th>
-                    <th className="px-4 py-3">Result</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-slate-200">
-                  {filteredGate.map(e => (
-                    <tr key={e.id}>
-                      <td className="px-4 py-3 text-slate-400">{fmtTime(e.ts)}</td>
-                      <td className="px-4 py-3">{e.gate}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-white">{e.person_name}</div>
-                        <div className="text-xs text-slate-500 capitalize">{e.person_role}</div>
-                      </td>
-                      <td className="px-4 py-3 uppercase text-xs">{e.method.replace('_', ' ')}</td>
-                      <td className="px-4 py-3 capitalize">{e.direction}</td>
-                      <td className="px-4 py-3">
-                        {e.authorized ? (
-                          <Badge variant="outline" className="border-emerald-400/30 bg-emerald-500/10 text-emerald-300">Authorized</Badge>
-                        ) : (
-                          <div>
-                            <Badge variant="outline" className="border-rose-400/30 bg-rose-500/10 text-rose-300">Denied</Badge>
-                            {e.reason && <div className="mt-1 text-xs text-slate-500">{e.reason}</div>}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-        </TabsContent>
-
-        {/* Zones */}
-        <TabsContent value="zones" className="mt-4">
-          <GlassCard className="p-0">
-            <div className="border-b border-white/5 p-4 text-sm font-semibold text-white flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-cyan-300" /> Restricted zone activity
-            </div>
-            <ul className="divide-y divide-white/5">
-              {zoneAlerts.map(a => (
-                <li key={a.id} className="flex items-start justify-between gap-3 p-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={severityClass[a.severity]}>{a.severity}</Badge>
-                      <span className="text-sm font-medium text-white">{a.zone}</span>
-                      {a.person_name && <span className="text-xs text-slate-400">· {a.person_name}</span>}
-                    </div>
-                    <div className="mt-1 text-sm text-slate-300">{a.description}</div>
-                  </div>
-                  <span className="text-xs text-slate-500">{fmtTime(a.ts)}</span>
-                </li>
-              ))}
-            </ul>
-          </GlassCard>
-        </TabsContent>
-
-        {/* Watchlist */}
-        <TabsContent value="watchlist" className="mt-4">
-          <GlassCard className="p-0">
-            <div className="border-b border-white/5 p-4 text-sm font-semibold text-white">AI watchlist matches</div>
-            <ul className="divide-y divide-white/5">
-              {matches.map(m => (
-                <li key={m.id} className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="border-rose-400/30 bg-rose-500/10 text-rose-300 capitalize">{m.reason}</Badge>
-                        <span className="text-sm font-medium text-white">{m.name}</span>
+                      <div className="mt-1 text-[11px] text-[hsl(var(--s-text-subtle))]">
+                        <MapPin className="inline h-3 w-3 mr-0.5" />{i.zone} · reported by {i.reported_by}
+                        {i.assigned_to && <span> · assigned to {i.assigned_to}</span>}
                       </div>
-                      <div className="mt-1 text-xs text-slate-400">{m.zone} · {m.camera} · {Math.round(m.confidence * 100)}% confidence</div>
+                      {i.ai_summary && (
+                        <p className="mt-2 text-xs text-[hsl(var(--s-text-muted))] border-l-2 border-[hsl(var(--s-primary))] pl-2">
+                          {i.ai_summary}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500">{fmtTime(m.ts)}</span>
-                      <Button size="sm" variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10">View frame</Button>
-                    </div>
+                    {i.status !== 'resolved' && (
+                      <SchoolsButton size="sm" variant="outline">Acknowledge</SchoolsButton>
+                    )}
                   </div>
                 </li>
-              ))}
-              {matches.length === 0 && (
-                <li className="p-8 text-center text-sm text-slate-400">No matches in the last 24 hours.</li>
-              )}
-            </ul>
-          </GlassCard>
-        </TabsContent>
-      </Tabs>
+              );
+            })}
+          </ul>
+        )}
+      </SchoolsCard>
     </div>
   );
-}
+};
 
-function Kpi({ icon, label, value, tone = 'neutral' }: { icon: React.ReactNode; label: string; value: React.ReactNode; tone?: 'ok' | 'warn' | 'alert' | 'neutral' }) {
-  const toneClass = tone === 'ok' ? 'text-emerald-300' : tone === 'warn' ? 'text-amber-300' : tone === 'alert' ? 'text-rose-300' : 'text-white';
-  return (
-    <GlassCard className="p-4">
-      <div className="flex items-center justify-between text-xs text-slate-400">
-        <span>{label}</span>
-        <span className="text-cyan-300/70">{icon}</span>
-      </div>
-      <div className={`mt-2 text-2xl font-bold ${toneClass}`}>{value}</div>
-    </GlassCard>
-  );
-}
+export default SchoolsSecurity;

@@ -1,275 +1,161 @@
 
-# Schools Vertical — URL Rebrand, Onboarding, Admin Dashboards & Backend API Spec
+# Mispar Schools — MVP Redesign Plan
 
-The MVP focus is **Staff + Student attendance via face recognition**, served from `schools.mispartechnologies.com` (mirrored at `/schools/*` on the main domain). Everything else stays as visual placeholders.
+Scope is locked to MVP surfaces only. Everything else under `/schools/**` keeps its current scaffold until later passes.
 
----
+## Locked design taste
 
-## 1. URL & Routing Rebrand (`/msse/*` → `/schools/*`)
+- **Palette — Academic Trust**: Mispar Navy `#0B1E3F`, Academic Blue `#1E4D8C`, Primary Blue `#3B82F6`, Educational Green `#10B981`. Plus semantic: warning amber `#F59E0B`, danger `#EF4444`, info cyan `#0EA5E9`, soft academic grayscale.
+- **Typography**: Outfit (headings) + Figtree (body), loaded via Google Fonts. Tabular numerals for metrics.
+- **Theme**: Dual light/dark with system auto-detect + manual toggle. Light is the default reading mode; dark is the ops-center mode. Both ship from day one.
+- **Voice**: Modern Smart Campus — friendly, premium, school-native. Not corporate SaaS, not surveillance.
 
-### Public routes
-```
-/schools                          → Landing (was /msse)
-/schools/onboarding               → NEW — school-specific onboarding wizard
-/schools/admin                    → NEW — Mispar Technologies (Ednitio) super-admin portal
-/schools/dashboard                → School tenant dashboard (was /msse/dashboard)
-/schools/dashboard/*              → All existing module routes preserved
-/schools/dashboard/admin          → NEW — per-school admin console (attendance management)
-```
+## Pages in this pass
 
-### Subdomain detection (already in place in `PageWrapper`)
-When `host` starts with `schools.` redirect:
-- `/` → `/schools`
-- `/admin` → `/schools/admin`
-- `/dashboard/*` → `/schools/dashboard/*`
+1. `/schools` — landing
+2. `/schools/dashboard` — School Command Center (home)
+3. `/schools/dashboard/attendance/admin` — Attendance Admin
+4. `/schools/dashboard/students` — directory
+5. `/schools/dashboard/staff` — directory
+6. `/schools/dashboard/security` — Campus Security Center
+7. Shared: sidebar, top bar, theme toggle, design tokens
 
-### Code changes
-- Rename `src/pages/msse/` → `src/pages/schools/` (every file inside).
-- Rename API folder `src/lib/api/msse/` → `src/lib/api/schools/`.
-- Rename `MsseLayout`, `MsseSidebar`, `MsseThemeContext`, `MsseLanding`, etc. → `SchoolsLayout`, `SchoolsSidebar`, `SchoolsThemeContext`, `SchoolsLanding`. Keep visual design and content identical.
-- Update `App.tsx` route block to use `/schools/*` paths and new component names.
-- Add a redirect block: legacy `/msse/*` routes 301-redirect (client-side `<Navigate replace>`) to the matching `/schools/*` path so existing links/SEO continue to work.
-- Rename docs folder `docs/msse/` → `docs/schools/`. The existing step-1…step-6 prompts move with it.
+Profiles, onboarding, platform admin, settings, communication: **out of scope** for this pass — keep existing scaffolds.
 
----
+## 1. Design system foundation
 
-## 2. Schools Onboarding Wizard (`/schools/onboarding`)
+**New file**: `src/styles/schools-tokens.css` (imported only inside `SchoolsLayout`, so the main app is untouched).
 
-A specialised version of the current `/onboarding` page, locked to `organization_type === "school"` and surfacing education-specific fields. Built as `src/pages/schools/SchoolsOnboarding.tsx`, reusing the existing `onboardingSession.ts` helpers and design tokens (glassmorphism, deep blue + electric cyan).
+- HSL tokens for both themes under `.schools-root[data-theme="light"]` and `[data-theme="dark"]`:
+  - `--schools-bg`, `--schools-surface`, `--schools-surface-2`, `--schools-border`, `--schools-text`, `--schools-text-muted`
+  - `--schools-primary` (Mispar Blue), `--schools-primary-ink` (Navy), `--schools-accent` (Educational Green), `--schools-warning`, `--schools-danger`, `--schools-info`
+  - Elevation: `--schools-shadow-sm/md/lg`, `--schools-radius` (14px)
+- Load Outfit + Figtree via `index.html` `<link>` (preconnect + display=swap).
+- Extend `tailwind.config.ts` with a `schools` color namespace mapped to those CSS vars and font families `font-display` (Outfit) / `font-sans-schools` (Figtree). All Schools components use these tokens — no hardcoded hex.
 
-### Steps
-1. **Institution profile** — name, short code, motto, logo, institution type (Nursery, Primary, Secondary, Tertiary, Mixed), founded year, ownership (Public / Private / Mission).
-2. **Location & contact** — country/state/city (reuse `locationData.ts`), full address, official phone, official email, website.
-3. **Academic structure** — number of campuses, hierarchy levels enabled (Faculty / Department / Programme / Level / Class), term system (3-term / 2-semester), academic session start date.
-4. **Population & rosters** — expected counts: students, teaching staff, non-teaching staff, parents/guardians; optional CSV import (queued, processed by backend).
-5. **Attendance policy** — school day start/end, late threshold (minutes), very-late threshold, weekend days, half-day cutoff, grace days/term.
-6. **Capture points** — list of gates / classrooms / kiosks with location label and capture mode (`gate` / `classroom` / `event` / `kiosk` / `mobile`).
-7. **Admin account** — first/last name, role (Principal, Vice Principal, Bursar, Registrar, IT Admin), phone.
-8. **Plan & confirmation** — pick Starter / Pro / Business (existing pricing), accept biometric/privacy terms, submit.
+**New context**: extend `SchoolsThemeContext` with `theme: 'light' | 'dark' | 'system'`, persisted to `localStorage('schools.theme')`, applied via `data-theme` on `.schools-root`.
 
-### Persistence
-- Local: `getOnboardingStorageKeys('school')` + cookie fallback so refresh recovers state.
-- Server: single atomic `PUT /api/schools/onboarding/` (see §6) — backend creates organization, default roles, capture points, attendance policy, and seeds super-admin in one transaction.
+**New primitives** in `src/components/schools/ui/`:
+- `SchoolsCard`, `StatCard` (label + value + delta + sparkline slot), `SectionHeader`, `EmptyState`, `DataTable` (sortable, responsive → card layout on mobile), `Badge` (status variants), `Avatar` (with attendance ring), `MetricRing`, `TrendSpark`, `ThemeToggle`.
+- All accessible by default (focus-visible rings using `--schools-primary`, 44×44 tap targets, `aria-label` on icon-only buttons).
 
----
+## 2. Shell: Sidebar + Top Bar redesign
 
-## 3. Dual Admin Dashboards
+- **Sidebar** (`SchoolsSidebar.tsx` rewrite): grouped nav `Overview / Attendance / People / Security / Insights / Settings`, with collapsible icon mode, active-route highlight, role badge at bottom (Principal/Admin/Staff). Education-flavored Lucide icons (`GraduationCap`, `Users`, `UserCog`, `ShieldCheck`, `ScanFace`, `LineChart`).
+- **Top bar** (new `SchoolsTopBar.tsx`): school name + term/session chip, global search, theme toggle, notifications bell, profile menu.
+- `SchoolsLayout` wraps with `.schools-root` themed container, light bg by default, dark uses current gradient feel (tuned down).
 
-### 3a. School Admin Console — `/schools/dashboard/admin`
-Per-tenant operations cockpit for principal / vice-principal / IT admin. Already partially exists as `MsseAttendanceAdmin.tsx`; we expand it.
+## 3. Dashboard Home (`SchoolsDashboard.tsx` rewrite)
 
-Tabs:
-- **Overview** — live KPIs (present today, late, absent, at-risk) for staff + students, today's punctuality split, AI insight callouts.
-- **Roster** — unified student + staff table; filter by role/class/department/enrollment status; bulk re-notify guardians.
-- **Capture points** — health of every camera / kiosk / mobile tablet, last-event timestamp, restart action stub.
-- **Enrollment queue** — pending face enrollments with one-click "open enrollment wizard".
-- **Reports** — CSV export (date range, scope), saved-report shortcuts.
-- **Settings** — attendance policy, late thresholds, notification templates, plan + billing link.
+Sections, top to bottom:
 
-### 3b. Ednitio Platform Admin — `/schools/admin`
-Mispar Technologies internal portal (gated by existing `platform_admin` role + new check for `vertical === 'schools'`). New page `src/pages/schools/SchoolsPlatformAdmin.tsx` built on the existing `/admin-dashboard` shell.
+1. **Welcome strip**: "Good morning, {Principal}" + school name + academic session + term + date.
+2. **Today's Campus Overview** — 6 StatCards: Students Present, Students Absent, Staff Present, Staff Absent, Visitors, Attendance Rate (with delta vs yesterday).
+3. **Campus Health Score** — large MetricRing (0–100) with sub-scores: Attendance, Security, Staff Presence, Engagement. AI-generated copy line.
+4. **Attendance Trends** — interactive Recharts area chart with Daily/Weekly/Monthly/Term/Yearly tabs.
+5. **Live Attendance Feed** — right column, realtime via existing `useSchoolsRealtime('dashboard')` hook; empty state when channel pending.
+6. **At-Risk Students** — top 5 with attendance %, class, AI recommendation chip → link to student profile.
+7. **Department Performance** — horizontal bar list of classes/grades with attendance %.
+8. **Security Snapshot** — 4 mini-cards: active alerts, visitors on campus, last access event, face-match accuracy.
+9. **Upcoming Events** — list (exams, PTA, sports). Mock until backend.
 
-Tabs:
-- **Tenants** — every onboarded school: name, plan, MAU, enrolled identities, % attendance health, last seen.
-- **Onboarding queue** — incomplete onboardings, retry-email action.
-- **Identity index** — global enrolled count, average face-quality score, duplicate suspects across tenants.
-- **Face engine health** — uptime of the dedicated FR service, GPU queue depth, p50/p95 recognition latency, error rate.
-- **Billing & plans** — Paystack subscription state per tenant.
-- **Audit log** — sensitive actions across tenants.
+All numbers wired to existing `src/lib/api/schools/*` modules with `notImplemented` fallbacks → empty/skeleton states (no fake numbers shown as real).
 
----
+## 4. Attendance Admin (`SchoolsAttendanceAdmin.tsx` rewrite)
 
-## 4. Schools API Client (new, separate from main app)
+- **Header**: title + date picker + scope tabs (All / Students / Staff / Visitors) + export CSV.
+- **KPI row**: Present, Absent, Late, Attendance Rate, Avg Check-in Time — each with sparkline.
+- **Live Board**: two-column grid of class/department cards showing present/expected counts and a thin progress bar; updates from realtime hook.
+- **Attendance Heatmap**: 30-day × class matrix (reuse `AttendanceTrendChart` pattern, new heatmap component).
+- **At-Risk / Chronic Absentee Panel**: table with student, class, attendance %, last seen, AI recommendation.
+- **Recent Captures**: timeline of last 20 events (face thumbnail, name, role, capture point, confidence).
+- **Reports**: quick export buttons (Daily, Weekly, Term, Custom).
 
-The existing `src/lib/api/client.ts` keeps serving the church / corporate / healthcare verticals. Schools traffic gets its own client so we can point it at a different base URL and a dedicated face-recognition microservice.
+## 5. Students directory (`SchoolsStudents.tsx` rewrite)
 
-New files:
-```
-src/lib/api/schools/
-  schoolsApiRoutes.ts      // central route map
-  schoolsClient.ts         // fetch wrapper (mirrors client.ts patterns)
-  faceClient.ts            // talks to FR microservice (separate base URL)
-  onboarding.ts            // schools onboarding endpoints
-  students.ts              // existing — wire to real endpoints
-  staff.ts                 // existing — wire to real endpoints
-  attendance.ts            // existing — wire to real endpoints
-  identity.ts              // existing — wire to real endpoints
-  admin.ts                 // school-admin console endpoints
-  platform.ts              // Ednitio platform-admin endpoints
-```
+- Header with search, class/grade filters, status filter, "Enroll Student" CTA.
+- KPI strip: total students, enrolled biometrics, attendance rate today, at-risk count.
+- **Card grid** on desktop (avatar with attendance ring, name, class, attendance %, status badge) and **DataTable** toggle. Mobile collapses to cards.
+- Row click → existing `SchoolsStudentProfile` (untouched this pass, but routed).
 
-### Environment variables (Vite)
-```
-VITE_SCHOOLS_API_URL          // e.g. https://api.schools.mispartechnologies.com
-VITE_SCHOOLS_FR_URL           // e.g. https://fr.schools.mispartechnologies.com
-VITE_SCHOOLS_WS_URL           // wss://api.schools.mispartechnologies.com/ws
-```
+## 6. Staff directory (`SchoolsStaff.tsx` rewrite)
 
-### Shared rules (mirrors main client)
-- JWT (Supabase access token) on every request via `Authorization: Bearer`.
-- Backend infers `organization_id` from JWT — never in URL or body.
-- Pagination envelope `{ count, results, next, previous }`; `unwrapPaginated` re-exported.
-- Standard `silent` / `timeout` flags; 15s default, 45s for `/face/*`.
-- 401 → auto-logout (reuse helper from main client).
-- `notImplemented()` stub returns synthetic 404 so UI falls back to mock fixtures.
+- Same shell as Students: search, department/role filters, "Invite Staff" CTA.
+- KPI strip: total staff, present today, on leave, avg punctuality.
+- Card grid with role chip (Teacher / Admin / Security / Support), subjects/department, attendance %, last check-in.
+- Row click → existing `SchoolsStaffProfile`.
 
----
+## 7. Security Center (`SchoolsSecurity.tsx` rewrite)
 
-## 5. Backend Integration Plan (for Cursor)
+Reframed as **Campus Security Center**, school-friendly (not surveillance-coded):
 
-Deliverable: `docs/schools/backend-integration-plan.md` — single authoritative brief for the backend repo. Cursor follows it to scaffold the Django (or FastAPI) project + dedicated FR worker.
+- **Status bar**: campus status (Calm / Elevated / Alert), cameras online, gates active, last incident.
+- **Live Monitoring grid**: capture-point tiles (gate, reception, hostel, etc.) with last face match + confidence.
+- **Visitor Verification queue**: pending / approved / denied tabs with photo, host, purpose, time.
+- **Access Logs**: filterable table (who, where, when, method).
+- **Security Alerts**: severity-grouped list with acknowledge action.
+- **Face Match Activity** sparkline + accuracy %.
+- **Incident Reports**: simple list with status chips.
 
-### 5.1 Services & repos
+## 8. Landing page (`SchoolsLanding.tsx` rewrite)
 
-| Service | Purpose | Tech |
-|---|---|---|
-| `schools-api` | REST + WebSocket gateway for tenants & admin consoles | Django 5 + DRF + Channels |
-| `schools-fr` | Face enrollment + recognition (closed-set, no unknown faces) | FastAPI + InsightFace (`buffalo_l`) + pgvector |
-| `schools-worker` | Celery: notifications, CSV imports, report exports, parent SMS/WhatsApp | Celery + Redis |
-| Shared Postgres | Single DB, schema `schools` | Postgres 16 + pgvector |
-| Shared Supabase | Auth + Storage only (`faces/{org_id}/{user_id}/…`) | Supabase |
+Sections (single page, marketing tone):
 
-### 5.2 Multi-tenancy & RBAC
-- Every row carries `organization_id` (FK to existing `organizations`, scoped to `type='school'`).
-- Roles seeded on onboarding: `institution_owner`, `principal`, `vice_principal`, `registrar`, `bursar`, `it_admin`, `hod`, `teacher`, `security_officer`, `student`, `parent_guardian`. Ednitio staff use existing `platform_admin` with new `verticals=['schools']` claim.
-- Middleware rejects requests where `organization.type !== 'school'` with `403`.
+1. Hero — "The Operating System for Modern Schools." + dual CTA (Request Demo / Sign In) + animated face-scan visual reusing existing component, retinted to Academic Trust.
+2. Trust strip — logos placeholder + key stats.
+3. Modules grid — 6 cards (Attendance, Identity, Students, Staff, Security, Analytics).
+4. How it works — 4 steps (Enroll → Capture → Verify → Insights).
+5. Built for African schools — illustration + 3 value props.
+6. AI & Privacy — biometric data stays org-scoped, never sold (pulls from existing privacy memory).
+7. Pricing teaser → link to main pricing.
+8. Footer CTA + Mispar footer.
 
-### 5.3 Core endpoints (MVP — staff + student attendance)
+Mobile-first, light theme default, smooth scroll, `animate-fade-in` for sections.
 
-Base: `https://api.schools.mispartechnologies.com`
+## 9. Accessibility + Responsiveness
 
-```
-# Onboarding
-PUT    /api/schools/onboarding/                 atomic: org + policy + capture points + admin
-GET    /api/schools/onboarding/                 resume in-progress
+- WCAG AA contrast verified for both themes (tokens chosen to pass on `--schools-surface`).
+- Every icon-only button: `aria-label`.
+- Keyboard nav across sidebar, tabs, tables.
+- `h-dvh` instead of `h-screen` for full-height shells.
+- Breakpoints: mobile (<640), tablet (640–1024), desktop (>1024), large (>1440). Sidebar becomes drawer < lg.
 
-# Overview (school admin)
-GET    /api/schools/overview/                   KPI tiles
-GET    /api/schools/activity/?cursor=…          realtime feed (paginated)
+## 10. What stays untouched this pass
 
-# Students
-GET    /api/schools/students/                   ?q&class&level&enrollment&risk&page
-GET    /api/schools/students/{id}/
-POST   /api/schools/students/                   create
-PATCH  /api/schools/students/{id}/
-DELETE /api/schools/students/{id}/
-GET    /api/schools/students/{id}/attendance/   summary + trend + recent
-POST   /api/schools/students/{id}/notify-guardian/
-POST   /api/schools/students/import/            CSV → queued
+- Onboarding, platform admin, profiles (Student/Staff), module placeholders, all `/dashboard` (non-schools) routes, docs, API clients (we only consume — no new endpoints).
+- Existing backend prompts in `docs/schools/` remain authoritative; UI binds to the same endpoints already declared in `schoolsApiRoutes.ts`.
 
-# Staff
-GET    /api/schools/staff/                      ?q&department&role&employment_type&page
-GET    /api/schools/staff/{id}/
-POST   /api/schools/staff/
-PATCH  /api/schools/staff/{id}/
-DELETE /api/schools/staff/{id}/
-GET    /api/schools/staff/{id}/attendance/
-POST   /api/schools/staff/{id}/notify-manager/
-POST   /api/schools/staff/import/
+## Technical changes summary
 
-# Attendance
-GET    /api/schools/attendance/                 ?date&scope=staff|students|all&class&dept&state
-POST   /api/schools/attendance/mark/            manual override (admin only)
-PATCH  /api/schools/attendance/{id}/excuse/     reason
-GET    /api/schools/attendance/kpis/            today's aggregate
-GET    /api/schools/attendance/heatmap/         day×period
-GET    /api/schools/attendance/at-risk/         RiskStudent[]
-GET    /api/schools/attendance/sessions/        active capture sessions
-GET    /api/schools/attendance/export/?fmt=csv  signed-URL download
+**New files**
+- `src/styles/schools-tokens.css`
+- `src/components/schools/ui/{SchoolsCard,StatCard,SectionHeader,EmptyState,DataTable,Badge,Avatar,MetricRing,TrendSpark,ThemeToggle}.tsx`
+- `src/components/schools/SchoolsTopBar.tsx`
+- `src/components/schools/AttendanceHeatmap.tsx`
+- `src/components/schools/CampusHealthScore.tsx`
+- `src/components/schools/LiveCaptureTile.tsx`
 
-# Capture points
-GET    /api/schools/capture-points/
-POST   /api/schools/capture-points/
-PATCH  /api/schools/capture-points/{id}/
-POST   /api/schools/capture-points/{id}/heartbeat/   from device
+**Rewritten files**
+- `src/contexts/SchoolsThemeContext.tsx` (add light/dark/system)
+- `src/pages/schools/SchoolsLayout.tsx`
+- `src/pages/schools/SchoolsSidebar.tsx`
+- `src/pages/schools/SchoolsLanding.tsx`
+- `src/pages/schools/SchoolsDashboard.tsx`
+- `src/pages/schools/SchoolsAttendanceAdmin.tsx`
+- `src/pages/schools/SchoolsStudents.tsx`
+- `src/pages/schools/SchoolsStaff.tsx`
+- `src/pages/schools/SchoolsSecurity.tsx`
 
-# Settings
-GET/PATCH /api/schools/settings/                attendance policy, thresholds, notifications
+**Edited**
+- `tailwind.config.ts` — add `schools` color namespace + font families
+- `index.html` — Outfit + Figtree preconnect/link
+- `src/pages/schools/schoolsModules.ts` — refreshed icons + grouping for new sidebar
 
-# Platform admin (Ednitio)
-GET    /api/schools/platform/tenants/
-GET    /api/schools/platform/tenants/{org_id}/
-GET    /api/schools/platform/face-engine/health/
-GET    /api/schools/platform/duplicates/
-GET    /api/schools/platform/audit-log/
-```
+## Acceptance criteria
 
-### 5.4 Dedicated Face Recognition service
-
-Base: `https://fr.schools.mispartechnologies.com`. Closed-set — only enrolled identities can match; no temp/visitor tracking, no clustering of unknowns. This is what makes it faster than the general client.
-
-```
-POST /v1/face/enroll              { person_id, org_id, image_base64 }
-                                  → { embedding_id, quality, ok }
-POST /v1/face/re-enroll           same as above + invalidates previous embeddings
-POST /v1/face/recognize           { org_id, image_base64, capture_point_id, mode }
-                                  → { matches: [{person_id, score, bbox}], latency_ms }
-POST /v1/face/recognize-batch     for kiosk/mobile burst frames
-GET  /v1/face/health              { gpu, queue_depth, p50_ms, p95_ms, model_version }
-DELETE /v1/face/person/{id}       hard-remove embeddings
-```
-
-- Embeddings stored in `face_embeddings(org_id, person_id, vec vector(512))` + IVFFLAT index, **partitioned by `org_id`** so a query never scans across tenants → sub-50 ms p95.
-- Strict org-scoping enforced server-side from a service JWT issued by `schools-api`.
-- Anti-spoof toggle (passive liveness) configurable per tenant.
-
-### 5.5 Realtime channels
-```
-wss://api.schools.mispartechnologies.com/ws/schools/{channel}/
-  overview          KPI deltas
-  attendance        live events (student + staff)
-  capture/{id}      per-camera frames+matches
-  admin             platform-admin alerts
-```
-
-### 5.6 Data models (high-level — backend repo holds full migrations)
-`School` (extends organization), `Campus`, `Department`, `Class`, `Student`, `Guardian`, `Staff`, `EmploymentRecord`, `CapturePoint`, `AttendancePolicy`, `AttendanceEvent`, `AttendanceDailyAggregate` (materialized), `FaceEnrollment`, `RiskFlag`, `AuditLog`.
-
-### 5.7 Acceptance criteria
-- [ ] `PUT /api/schools/onboarding/` is fully atomic (rollback on any failure).
-- [ ] Mock fixtures used today match the real response shapes byte-for-byte (so the frontend works once `VITE_SCHOOLS_API_URL` is set, no other code change).
-- [ ] FR service returns `< 200 ms` p95 for `/recognize` on the staging dataset (10 k embeddings, 1 tenant).
-- [ ] All endpoints reject when `organization.type !== 'school'` or when JWT-derived `organization_id` does not match resource.
-- [ ] WebSocket handshake validates the same Supabase JWT.
-- [ ] CSV export endpoints return signed Supabase Storage URLs (never inline payloads).
-
----
-
-## 6. File-Change Summary
-
-**Renamed (folder + every file inside):**
-- `src/pages/msse/` → `src/pages/schools/` (rename classes/components accordingly)
-- `src/lib/api/msse/` → `src/lib/api/schools/`
-- `src/contexts/MsseThemeContext.tsx` → `src/contexts/SchoolsThemeContext.tsx`
-- `docs/msse/` → `docs/schools/`
-
-**New files:**
-- `src/pages/schools/SchoolsOnboarding.tsx`
-- `src/pages/schools/SchoolsPlatformAdmin.tsx`
-- `src/lib/api/schools/schoolsApiRoutes.ts`
-- `src/lib/api/schools/schoolsClient.ts`
-- `src/lib/api/schools/faceClient.ts`
-- `src/lib/api/schools/onboarding.ts`
-- `src/lib/api/schools/admin.ts`
-- `src/lib/api/schools/platform.ts`
-- `docs/schools/backend-integration-plan.md` (the full Cursor brief)
-- `docs/schools/face-recognition-service-spec.md`
-- `docs/schools/schools-onboarding-backend-prompt.md`
-
-**Edited:**
-- `src/App.tsx` — replace `/msse/*` block with `/schools/*` block + legacy redirects.
-- `src/components/PageWrapper.tsx` — update subdomain detection for `schools.`.
-- `src/pages/schools/schoolsModules.ts` (renamed) — add `admin` route, keep MVP-live status only for `students`, `staff`, `attendance`, `attendance/admin`, `identity`. Everything else stays `soon`.
-
-**Out of scope (Phase 2, unchanged):**
-- Grades, examinations, payroll, leave, hostel, transport, library, parent portal UI, communication module.
-
----
-
-## Technical Notes (for the developer)
-
-- Routes are React Router v6; legacy `/msse/*` → `/schools/*` is handled with `<Route path="/msse/*" element={<Navigate to={...} replace />} />` mapping.
-- The Schools API client deliberately duplicates the `request()` wrapper from `client.ts` (same patterns: `silent`, `timeout`, paginated unwrap, 401 auto-logout) rather than sharing code, so the two backends can evolve independently.
-- The FR client uses a 45 s timeout and posts base64 frames the same way `useFaceRecognition` does today; only the base URL changes.
-- Mock fixtures already in `students.ts` / `staff.ts` / `attendance.ts` become the contract — backend must match their shapes exactly. This lets us flip a single env var to switch from mocks to real data.
-- No changes to Supabase Auth, Storage, or RLS. Storage path stays `faces/{org_id}/{user_id}/enrollment.jpg`.
+- Light/dark toggle works across all 6 pages with persisted preference.
+- All Schools surfaces use design tokens — zero hardcoded hex outside `schools-tokens.css`.
+- No real data is fabricated: when endpoints return `notImplemented`, UI shows skeletons or empty states with helpful copy.
+- All pages responsive at 360 / 768 / 1280 / 1920 with no horizontal scroll.
+- Lighthouse a11y ≥ 95 on dashboard home in both themes.
+- Main app (`/dashboard/**`) appearance unchanged — Schools tokens scoped under `.schools-root`.
