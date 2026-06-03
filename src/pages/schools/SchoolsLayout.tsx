@@ -1,21 +1,32 @@
 import { Outlet } from 'react-router-dom';
-import { SchoolsThemeProvider } from '@/contexts/SchoolsThemeContext';
+import { SchoolsThemeProvider, useSchoolsTheme } from '@/contexts/SchoolsThemeContext';
 import { SchoolsSidebar } from './SchoolsSidebar';
+import { SchoolsTopBar } from '@/components/schools/SchoolsTopBar';
+import { useState } from 'react';
+
+const Shell = () => {
+  const { resolved } = useSchoolsTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="schools-root" data-theme={resolved}>
+      <div className="flex min-h-dvh">
+        <SchoolsSidebar mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
+
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+          <SchoolsTopBar onMenuClick={() => setMobileOpen(true)} />
+          <main className="flex-1">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SchoolsLayout = () => (
   <SchoolsThemeProvider>
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 text-slate-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-10 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="absolute right-0 top-1/3 h-[28rem] w-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
-      </div>
-      <div className="relative flex min-h-screen">
-        <SchoolsSidebar />
-        <main className="flex-1 overflow-x-hidden">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <Shell />
   </SchoolsThemeProvider>
 );
 

@@ -1,21 +1,35 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { ScanFace } from 'lucide-react';
+import { GraduationCap, X } from 'lucide-react';
 import { SCHOOLS_MODULES, SCHOOLS_GROUP_ORDER } from './schoolsModules';
 import { cn } from '@/lib/utils';
 
-export const SchoolsSidebar = () => {
+interface Props {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const SchoolsSidebar = ({ mobileOpen = false, onCloseMobile }: Props) => {
   const { pathname } = useLocation();
 
-  return (
-    <aside className="hidden lg:flex w-64 flex-col border-r border-white/10 bg-slate-950/60 backdrop-blur-xl">
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/10">
-        <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-500/30">
-          <ScanFace className="h-5 w-5 text-white" />
+  const content = (
+    <>
+      <div className="flex items-center justify-between gap-2.5 px-5 h-16 border-b border-[hsl(var(--s-border))]">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[hsl(var(--s-primary))] to-[hsl(var(--s-academic))] shadow-[0_4px_16px_-4px_hsl(var(--s-primary)/0.4)]">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <div className="leading-tight">
+            <div className="font-display text-sm font-bold text-[hsl(var(--s-primary-ink))]">Mispar Schools</div>
+            <div className="text-[10px] uppercase tracking-widest text-[hsl(var(--s-text-subtle))]">Smart Campus OS</div>
+          </div>
         </div>
-        <div className="leading-tight">
-          <div className="text-sm font-bold text-white">Schools</div>
-          <div className="text-[10px] uppercase tracking-widest text-cyan-300/70">Smart School OS</div>
-        </div>
+        <button
+          aria-label="Close menu"
+          onClick={onCloseMobile}
+          className="lg:hidden grid h-9 w-9 place-items-center rounded-lg text-[hsl(var(--s-text-muted))] hover:bg-[hsl(var(--s-surface-2))]"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
@@ -24,29 +38,30 @@ export const SchoolsSidebar = () => {
           if (items.length === 0) return null;
           return (
             <div key={group}>
-              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--s-text-subtle))]">
                 {group}
               </div>
               <ul className="space-y-0.5">
                 {items.map((m) => {
                   const Icon = m.icon;
                   const to = m.slug ? `/schools/dashboard/${m.slug}` : '/schools/dashboard';
-                  const active = pathname === to;
+                  const active = pathname === to || (m.slug === 'attendance/admin' && pathname.endsWith('/admin'));
                   return (
                     <li key={m.slug || 'home'}>
                       <NavLink
                         to={to}
+                        onClick={onCloseMobile}
                         className={cn(
                           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                           active
-                            ? 'bg-cyan-400/10 text-cyan-100 ring-1 ring-cyan-400/30'
-                            : 'text-slate-400 hover:bg-white/5 hover:text-white',
+                            ? 'bg-[hsl(var(--s-primary)/0.1)] text-[hsl(var(--s-primary))] font-medium'
+                            : 'text-[hsl(var(--s-text-muted))] hover:bg-[hsl(var(--s-surface-2))] hover:text-[hsl(var(--s-text))]',
                         )}
                       >
-                        <Icon className="h-[18px] w-[18px]" />
+                        <Icon className="h-[18px] w-[18px] shrink-0" />
                         <span className="flex-1 truncate">{m.label}</span>
                         {m.status === 'soon' && (
-                          <span className="rounded-full bg-amber-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-amber-300">
+                          <span className="rounded-full bg-[hsl(var(--s-warning)/0.12)] px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-[hsl(var(--s-warning))]">
                             Soon
                           </span>
                         )}
@@ -60,9 +75,28 @@ export const SchoolsSidebar = () => {
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-5 py-3 text-[10px] uppercase tracking-widest text-slate-500">
+      <div className="border-t border-[hsl(var(--s-border))] px-5 py-3 text-[10px] uppercase tracking-widest text-[hsl(var(--s-text-subtle))]">
         v2 · Mispar Technologies
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col bg-[hsl(var(--s-surface))] border-r border-[hsl(var(--s-border))] z-30">
+        {content}
+      </aside>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <>
+          <div className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onCloseMobile} />
+          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-[hsl(var(--s-surface))] border-r border-[hsl(var(--s-border))] s-fade-up">
+            {content}
+          </aside>
+        </>
+      )}
+    </>
   );
 };
