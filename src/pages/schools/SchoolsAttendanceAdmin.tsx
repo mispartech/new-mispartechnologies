@@ -1,398 +1,215 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertTriangle, BellRing, Download, GraduationCap, ScanFace, ShieldCheck,
-  Sparkles, Users, Zap,
+  Activity, Users, GraduationCap, UserCheck, Clock, AlertTriangle, Download,
+  ScanFace, MapPin, Radio,
 } from 'lucide-react';
-import { GlassCard } from '@/components/schools/GlassCard';
-import { LiveStatBadge } from '@/components/schools/LiveStatBadge';
-import { AiInsightCallout } from '@/components/schools/AiInsightCallout';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
-import { attendanceApi } from '@/lib/api/schools/attendance';
-import { studentsApi, type Student } from '@/lib/api/schools/students';
-import { staffApi, type Staff } from '@/lib/api/schools/staff';
-import { toast } from '@/hooks/use-toast';
+import {
+  SchoolsCard, StatCard, SectionHeader, Badge, TabBar, ProgressBar, EmptyState, SchoolsButton, Avatar,
+} from '@/components/schools/ui/SchoolsUI';
+import { AttendanceTrendChart } from '@/components/schools/AttendanceTrendChart';
+import {
+  attendanceApi, type AttendanceKPIs, type LiveCaptureSession, type AttendanceEvent, type RiskStudent,
+} from '@/lib/api/schools/attendance';
 
-type Scope = 'students' | 'staff';
+type Scope = 'all' | 'students' | 'staff' | 'visitors';
 
-const stateForToday = (i: number, late: number, absent: number): 'on_time' | 'late' | 'absent' => {
-  if (i < absent) return 'absent';
-  if (i < absent + late) return 'late';
-  return 'on_time';
-};
+const SchoolsAttendanceAdmin = () => {
+  const [scope, setScope] = useState<Scope>('all');
+  const [kpis, setKpis] = useState<AttendanceKPIs | null>(null);
+  const [sessions, setSessions] = useState<LiveCaptureSession[]>([]);
+  const [events, setEvents] = useState<AttendanceEvent[]>([]);
+  const [risk, setRisk] = useState<RiskStudent[]>([]);
 
-const stateStyle = {
-  on_time: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  late: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  absent: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-} as const;
+  useEffect(() => {
+    attendanceApi.kpis().then(setKpis);
+    attendanceApi.sessions().then(setSessions);
+    attendanceApi.events().then(setEvents);
+    attendanceApi.risk().then(setRisk);
+  }, []);
 
-export default function SchoolsAttendanceAdmin() {
-  const { connected } = useSchoolsRealtime('attendance');
-  const { data: kpis } = useQuery({ queryKey: ['schools-att-kpis'], queryFn: () => attendanceApi.kpis() });
-  const { data: students = [] } = useQuery({ queryKey: ['schools-students'], queryFn: () => studentsApi.list() });
-  const { data: staff = [] } = useQuery({ queryKey: ['schools-staff'], queryFn: () => staffApi.list() });
+  const filteredEvents = useMemo(() => {
+    if (scope === 'all') return events;
+    if (scope === 'students') return events.filter(e => e.person_role === 'student');
+    if (scope === 'staff') return events.filter(e => e.person_role === 'staff');
+    return events.filter(e => e.person_role === 'visitor');
+  }, [events, scope]);
 
-  const [scope, setScope] = useState<Scope>('students');
-  const [search, setSearch] = useState('');
-  const [filterState, setFilterState] = useState<'all' | 'on_time' | 'late' | 'absent'>('all');
-  const [range, setRange] = useState('today');
-
-  // synthesize today's roster state from 30d metrics (until backend lands)
-  const studentRoster = useMemo(() => students.map((s, i) => ({
-    id: s.id, name: s.full_name, group: s.class, enrolled: s.enrollment === 'enrolled',
-    state: stateForToday(i, s.late_count_30d > 5 ? 1 : 0, s.attendance_pct_30d < 70 ? 1 : 0),
-    firstSeen: '07:48', mode: 'gate' as const, location: 'Main Gate', confidence: 0.96,
-    raw: s,
-  })), [students]);
-
-  const staffRoster = useMemo(() => staff.map((s, i) => ({
-    id: s.id, name: s.full_name, group: `${s.role} · ${s.department}`, enrolled: s.enrollment === 'enrolled',
-    state: stateForToday(i, s.punctuality_pct_30d < 80 ? 1 : 0, s.attendance_pct_30d < 70 ? 1 : 0),
-    firstSeen: '07:42', mode: 'gate' as const, location: 'Staff Gate', confidence: 0.97,
-    raw: s,
-  })), [staff]);
-
-  const roster = scope === 'students' ? studentRoster : staffRoster;
-  const filtered = roster.filter(r =>
-    (filterState === 'all' || r.state === filterState) &&
-    (!search || r.name.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const studentSplit = useMemo(() => ({
-    present: studentRoster.filter(r => r.state !== 'absent').length,
-    late: studentRoster.filter(r => r.state === 'late').length,
-    absent: studentRoster.filter(r => r.state === 'absent').length,
-    total: studentRoster.length,
-  }), [studentRoster]);
-
-  const staffSplit = useMemo(() => ({
-    present: staffRoster.filter(r => r.state !== 'absent').length,
-    late: staffRoster.filter(r => r.state === 'late').length,
-    absent: staffRoster.filter(r => r.state === 'absent').length,
-    total: staffRoster.length,
-  }), [staffRoster]);
-
-  const studentExceptions = students.filter(s => s.risk === 'high' || s.risk === 'critical');
-  const staffExceptions = staff.filter(s => s.punctuality_pct_30d < 75 || s.absent_days_30d > 3);
-
-  const exportCsv = () => {
-    const rows = [
-      ['scope', 'name', 'group', 'state', 'first_seen', 'mode', 'location', 'confidence'],
-      ...filtered.map(r => [scope, r.name, r.group, r.state, r.firstSeen, r.mode, r.location, String(r.confidence)]),
-    ];
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `schools_attendance_${scope}_${range}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast({ title: 'CSV exported', description: `${filtered.length} rows downloaded.` });
-  };
+  const trend14 = Array.from({ length: 14 }).map((_, i) => ({
+    date: `D${i + 1}`, rate: Math.round(86 + Math.cos(i / 2) * 7 - (i === 8 ? 10 : 0)),
+  }));
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div className="mx-auto max-w-7xl px-4 lg:px-6 py-6 lg:py-8 space-y-6 s-fade-up">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <ShieldCheck className="w-8 h-8 text-cyan-400" /> Attendance Admin Console
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-[hsl(var(--s-accent))]">Attendance Operations</div>
+          <h1 className="mt-1 font-display text-2xl lg:text-3xl font-bold text-[hsl(var(--s-primary-ink))]">
+            Attendance Admin
           </h1>
-          <p className="text-white/60 mt-1">
-            Unified oversight of staff and student attendance. MVP centerpiece for school administrators.
+          <p className="mt-1 text-sm text-[hsl(var(--s-text-muted))]">
+            Live oversight of every check-in, capture point and at-risk learner.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <LiveStatBadge label={connected ? 'Live channel' : 'Realtime pending'} value={connected ? 'ON' : 'IDLE'} tone={connected ? 'emerald' : 'cyan'} />
-          <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-0" onClick={exportCsv}>
-            <Download className="w-4 h-4 mr-2" /> Export current view
-          </Button>
+          <input
+            type="date"
+            defaultValue={new Date().toISOString().slice(0, 10)}
+            className="h-10 rounded-lg border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface))] px-3 text-sm text-[hsl(var(--s-text))]"
+          />
+          <SchoolsButton variant="outline" size="md"><Download className="h-4 w-4" /> Export CSV</SchoolsButton>
         </div>
       </div>
 
-      {/* KPI overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <GlassCard glow>
-          <div className="flex items-center gap-2 text-white mb-3"><GraduationCap className="w-5 h-5 text-cyan-300" /><span className="font-semibold">Students — today</span></div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div><div className="text-2xl font-bold text-emerald-300">{studentSplit.present - studentSplit.late}</div><div className="text-[10px] text-white/50 uppercase">On time</div></div>
-            <div><div className="text-2xl font-bold text-amber-300">{studentSplit.late}</div><div className="text-[10px] text-white/50 uppercase">Late</div></div>
-            <div><div className="text-2xl font-bold text-rose-300">{studentSplit.absent}</div><div className="text-[10px] text-white/50 uppercase">Absent</div></div>
-          </div>
-          <div className="text-xs text-white/40 mt-3 text-center">{studentSplit.present}/{studentSplit.total} present</div>
-        </GlassCard>
-        <GlassCard glow>
-          <div className="flex items-center gap-2 text-white mb-3"><Users className="w-5 h-5 text-cyan-300" /><span className="font-semibold">Staff — today</span></div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div><div className="text-2xl font-bold text-emerald-300">{staffSplit.present - staffSplit.late}</div><div className="text-[10px] text-white/50 uppercase">On time</div></div>
-            <div><div className="text-2xl font-bold text-amber-300">{staffSplit.late}</div><div className="text-[10px] text-white/50 uppercase">Late</div></div>
-            <div><div className="text-2xl font-bold text-rose-300">{staffSplit.absent}</div><div className="text-[10px] text-white/50 uppercase">Absent</div></div>
-          </div>
-          <div className="text-xs text-white/40 mt-3 text-center">{staffSplit.present}/{staffSplit.total} present</div>
-        </GlassCard>
-      </div>
+      {/* Scope tabs */}
+      <TabBar<Scope>
+        value={scope}
+        onChange={setScope}
+        tabs={[
+          { value: 'all', label: 'All', count: events.length },
+          { value: 'students', label: 'Students', count: events.filter(e => e.person_role === 'student').length },
+          { value: 'staff', label: 'Staff', count: events.filter(e => e.person_role === 'staff').length },
+          { value: 'visitors', label: 'Visitors', count: events.filter(e => e.person_role === 'visitor').length },
+        ]}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <GlassCard>
-          <div className="text-xs text-white/50 uppercase tracking-wide">Active capture sessions</div>
-          <div className="text-3xl font-bold text-white mt-1">{kpis?.active_sessions ?? '—'}</div>
-          <div className="text-xs text-white/40 mt-1 flex items-center gap-1"><Zap className="w-3 h-3 text-cyan-300" />Gate · classroom · kiosk</div>
-        </GlassCard>
-        <GlassCard>
-          <div className="text-xs text-white/50 uppercase tracking-wide">Avg recognition</div>
-          <div className="text-3xl font-bold text-cyan-300 mt-1">{kpis?.avg_recognition_ms ?? '—'}<span className="text-base text-white/40">ms</span></div>
-        </GlassCard>
-        <GlassCard>
-          <div className="text-xs text-white/50 uppercase tracking-wide">Student exceptions</div>
-          <div className="text-3xl font-bold text-rose-300 mt-1">{studentExceptions.length}</div>
-        </GlassCard>
-        <GlassCard>
-          <div className="text-xs text-white/50 uppercase tracking-wide">Staff exceptions</div>
-          <div className="text-3xl font-bold text-rose-300 mt-1">{staffExceptions.length}</div>
-        </GlassCard>
-      </div>
+      {/* KPIs */}
+      <section className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+        <StatCard label="Present today" value={kpis?.present_today.toLocaleString() ?? '—'} icon={UserCheck} tone="accent" delta={2.4} />
+        <StatCard label="Expected" value={kpis?.total_expected.toLocaleString() ?? '—'} icon={Users} tone="primary" />
+        <StatCard label="On-time rate" value={kpis ? `${Math.round(kpis.on_time_rate * 100)}%` : '—'} icon={Clock} tone="accent" delta={0.8} />
+        <StatCard label="Late rate" value={kpis ? `${Math.round(kpis.late_rate * 100)}%` : '—'} icon={Clock} tone="warning" delta={-1.1} />
+        <StatCard label="At-risk students" value={kpis?.at_risk_students ?? '—'} icon={AlertTriangle} tone="danger" />
+      </section>
 
-      <AiInsightCallout title="Cross-population insight">
-        Staff punctuality dropped 4% week-over-week, concentrated in Finance and Physics. Student lateness in JSS3 correlates with the same morning windows — investigate gate throughput between 7:30–8:00 AM.
-      </AiInsightCallout>
+      {/* Trends + Live capture board */}
+      <section className="grid gap-6 lg:grid-cols-3">
+        <SchoolsCard className="lg:col-span-2">
+          <SectionHeader
+            eyebrow="Last 14 days"
+            title="Attendance trend"
+            description="Daily rate across the entire campus."
+          />
+          <AttendanceTrendChart data={trend14} height={260} />
+        </SchoolsCard>
 
-      <Tabs defaultValue="roster" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger value="roster">Live roster</TabsTrigger>
-          <TabsTrigger value="exceptions">Risk & exceptions</TabsTrigger>
-          <TabsTrigger value="reports">Reports & export</TabsTrigger>
-        </TabsList>
-
-        {/* ROSTER */}
-        <TabsContent value="roster" className="mt-4 space-y-3">
-          <GlassCard>
-            <div className="flex flex-col md:flex-row gap-2 md:items-center">
-              <Select value={scope} onValueChange={(v: Scope) => setScope(v)}>
-                <SelectTrigger className="md:w-40 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="students">Students</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input placeholder="Search name…" value={search} onChange={e => setSearch(e.target.value)} className="md:w-60 bg-white/5 border-white/10 text-white" />
-              <Select value={filterState} onValueChange={(v: typeof filterState) => setFilterState(v)}>
-                <SelectTrigger className="md:w-40 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All states</SelectItem>
-                  <SelectItem value="on_time">On time</SelectItem>
-                  <SelectItem value="late">Late</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="md:ml-auto text-xs text-white/50">{filtered.length} of {roster.length}</div>
-            </div>
-          </GlassCard>
-
-          <GlassCard className="p-0 overflow-hidden">
-            <div className="hidden lg:block">
-              <table className="w-full text-sm">
-                <thead className="text-left text-white/50 text-xs uppercase tracking-wide">
-                  <tr className="border-b border-white/10">
-                    <th className="px-5 py-3">Name</th>
-                    <th className="px-5 py-3">{scope === 'students' ? 'Class' : 'Role / Dept'}</th>
-                    <th className="px-5 py-3">Today</th>
-                    <th className="px-5 py-3">First seen</th>
-                    <th className="px-5 py-3">Mode</th>
-                    <th className="px-5 py-3">Confidence</th>
-                    <th className="px-5 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filtered.map(r => (
-                    <tr key={r.id} className="hover:bg-white/[0.03]">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-xs font-semibold ${r.enrolled ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>
-                            {r.name.charAt(0)}
-                          </div>
-                          <div className="text-white">{r.name}</div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-white/70">{r.group}</td>
-                      <td className="px-5 py-3"><Badge className={`${stateStyle[r.state]} border capitalize`}>{r.state.replace('_', ' ')}</Badge></td>
-                      <td className="px-5 py-3 text-white/70">{r.state === 'absent' ? '—' : r.firstSeen}</td>
-                      <td className="px-5 py-3 text-white/70 capitalize">{r.mode} · {r.location}</td>
-                      <td className="px-5 py-3 text-white/70">{Math.round(r.confidence * 100)}%</td>
-                      <td className="px-5 py-3 text-right space-x-2">
-                        <Button size="sm" variant="ghost" className="text-white/70 hover:bg-white/10"
-                          onClick={() => toast({ title: 'Marked excused', description: `${r.name} flagged as excused.` })}>
-                          Excuse
-                        </Button>
-                        <Button size="sm" variant="outline" className="border-white/15 text-white/80 hover:bg-white/10"
-                          onClick={async () => {
-                            if (scope === 'students') await studentsApi.notifyParent(r.id);
-                            else await staffApi.notifyManager(r.id);
-                            toast({ title: scope === 'students' ? 'Parent notified' : 'Manager notified', description: r.name });
-                          }}>
-                          <BellRing className="w-3.5 h-3.5 mr-1.5" /> Notify
-                        </Button>
-                        <Link to={`/schools/dashboard/${scope}/${r.id}`}>
-                          <Button size="sm" variant="ghost" className="text-cyan-300 hover:bg-white/10">Open</Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile */}
-            <div className="lg:hidden divide-y divide-white/5">
-              {filtered.map(r => (
-                <div key={r.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-2 flex items-center justify-center text-white text-sm font-semibold ${r.enrolled ? 'border-emerald-400/60' : 'border-amber-400/60'}`}>
-                        {r.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{r.name}</div>
-                        <div className="text-xs text-white/50">{r.group}</div>
-                      </div>
-                    </div>
-                    <Badge className={`${stateStyle[r.state]} border capitalize`}>{r.state.replace('_', ' ')}</Badge>
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <Link to={`/schools/dashboard/${scope}/${r.id}`} className="flex-1">
-                      <Button size="sm" variant="outline" className="w-full border-white/15 text-white/80">Open profile</Button>
-                    </Link>
-                    <Button size="sm" variant="outline" className="border-white/15 text-white/80"
-                      onClick={async () => {
-                        if (scope === 'students') await studentsApi.notifyParent(r.id);
-                        else await staffApi.notifyManager(r.id);
-                        toast({ title: 'Notification sent', description: r.name });
-                      }}>
-                      <BellRing className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+        <SchoolsCard>
+          <SectionHeader
+            eyebrow="Capture points"
+            title="Live board"
+            action={<span className="inline-flex items-center gap-1.5 text-[11px] text-[hsl(var(--s-accent))]"><Radio className="h-3 w-3 s-pulse-dot" /> live</span>}
+          />
+          <ul className="space-y-2.5">
+            {sessions.map(s => (
+              <li key={s.id} className="rounded-xl border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] p-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full ${s.active ? 'bg-[hsl(var(--s-accent))] s-pulse-dot' : 'bg-[hsl(var(--s-text-subtle))]'}`} />
+                  <span className="text-sm font-medium text-[hsl(var(--s-text))]">{s.location}</span>
+                  <Badge tone="subtle" className="ml-auto">{s.mode}</Badge>
                 </div>
-              ))}
-            </div>
+                <div className="mt-1.5 flex items-baseline gap-1.5 text-xs">
+                  <span className="font-display text-lg font-semibold tabular-nums text-[hsl(var(--s-primary-ink))]">
+                    {s.recognized_today}
+                  </span>
+                  <span className="text-[hsl(var(--s-text-muted))]">recognized</span>
+                  <span className="ml-auto text-[hsl(var(--s-text-subtle))]">{s.unique_faces} unique</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </SchoolsCard>
+      </section>
 
-            {filtered.length === 0 && <div className="p-10 text-center text-white/50 text-sm">No matching rows.</div>}
-          </GlassCard>
-        </TabsContent>
-
-        {/* EXCEPTIONS */}
-        <TabsContent value="exceptions" className="mt-4 space-y-3">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <GlassCard>
-              <div className="flex items-center gap-2 text-white mb-3">
-                <AlertTriangle className="w-4 h-4 text-rose-300" /><span className="font-semibold">Student absenteeism risk</span>
-              </div>
-              <div className="space-y-2">
-                {studentExceptions.map(s => (
-                  <ExceptionRow key={s.id} name={s.full_name} sub={s.class} metric={`${s.attendance_pct_30d}%`}
-                    badge={s.risk} tone={s.risk === 'critical' ? 'rose' : 'amber'}
-                    note={`${s.late_count_30d} lates · ${s.absent_days_30d} absent days (30d)`}
-                    href={`/schools/dashboard/students/${s.id}`}
-                    onNotify={async () => { await studentsApi.notifyParent(s.id); toast({ title: 'Parent notified', description: s.full_name }); }}
-                    notifyLabel="Notify parent" />
+      {/* At-risk panel */}
+      <SchoolsCard>
+        <SectionHeader
+          eyebrow="Chronic absenteeism"
+          title="At-risk learners"
+          description="Students whose pattern requires counselor or parent intervention."
+        />
+        {risk.length === 0 ? (
+          <EmptyState icon={AlertTriangle} title="No at-risk learners flagged" />
+        ) : (
+          <div className="overflow-x-auto -mx-5">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-[hsl(var(--s-text-subtle))]">
+                  <th className="px-5 py-2 font-medium">Student</th>
+                  <th className="px-5 py-2 font-medium">Class</th>
+                  <th className="px-5 py-2 font-medium">Attendance</th>
+                  <th className="px-5 py-2 font-medium">Late (30d)</th>
+                  <th className="px-5 py-2 font-medium">Risk</th>
+                  <th className="px-5 py-2 font-medium">AI note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {risk.map(r => (
+                  <tr key={r.id} className="border-t border-[hsl(var(--s-border))] hover:bg-[hsl(var(--s-surface-2))]">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={r.name} attendancePct={r.attendance_pct} size={32} />
+                        <span className="font-medium text-[hsl(var(--s-text))]">{r.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-[hsl(var(--s-text-muted))]">{r.class}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="tabular-nums font-medium text-[hsl(var(--s-text))]">{r.attendance_pct}%</span>
+                        <div className="w-16"><ProgressBar value={r.attendance_pct} tone={r.attendance_pct >= 75 ? 'primary' : 'danger'} height={4} /></div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 tabular-nums text-[hsl(var(--s-text-muted))]">{r.late_count_30d}</td>
+                    <td className="px-5 py-3">
+                      <Badge tone={r.risk === 'critical' ? 'danger' : r.risk === 'high' ? 'warning' : 'info'}>{r.risk}</Badge>
+                    </td>
+                    <td className="px-5 py-3 text-xs text-[hsl(var(--s-text-muted))] max-w-md">{r.ai_note}</td>
+                  </tr>
                 ))}
-              </div>
-            </GlassCard>
-            <GlassCard>
-              <div className="flex items-center gap-2 text-white mb-3">
-                <AlertTriangle className="w-4 h-4 text-amber-300" /><span className="font-semibold">Staff punctuality offenders</span>
-              </div>
-              <div className="space-y-2">
-                {staffExceptions.map(s => (
-                  <ExceptionRow key={s.id} name={s.full_name} sub={`${s.role} · ${s.department}`} metric={`${s.punctuality_pct_30d}%`}
-                    badge={s.punctuality_pct_30d < 70 ? 'critical' : 'high'} tone="amber"
-                    note={`${s.late_count_30d} lates · ${s.absent_days_30d} absent days (30d)`}
-                    href={`/schools/dashboard/staff/${s.id}`}
-                    onNotify={async () => { await staffApi.notifyManager(s.id); toast({ title: 'Manager notified', description: s.full_name }); }}
-                    notifyLabel="Notify manager" />
-                ))}
-              </div>
-            </GlassCard>
+              </tbody>
+            </table>
           </div>
-        </TabsContent>
+        )}
+      </SchoolsCard>
 
-        {/* REPORTS */}
-        <TabsContent value="reports" className="mt-4 space-y-3">
-          <GlassCard>
-            <div className="flex flex-col md:flex-row gap-2 md:items-center">
-              <div className="flex items-center gap-2 text-white"><Activity className="w-4 h-4 text-cyan-300" /><span className="font-semibold">Export attendance report</span></div>
-              <Select value={range} onValueChange={setRange}>
-                <SelectTrigger className="md:w-44 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                  <SelectItem value="term">Current term</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={scope} onValueChange={(v: Scope) => setScope(v)}>
-                <SelectTrigger className="md:w-44 bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="students">Students</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex gap-2 md:ml-auto">
-                <Button variant="outline" className="border-white/15 text-white/80 hover:bg-white/10" onClick={exportCsv}>
-                  <Download className="w-4 h-4 mr-2" /> CSV
-                </Button>
-                <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-0"
-                  onClick={() => toast({ title: 'PDF export queued', description: 'Server-rendered PDF ships with backend.' })}>
-                  <Download className="w-4 h-4 mr-2" /> PDF
-                </Button>
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard>
-            <div className="flex items-center gap-2 text-white mb-2"><Sparkles className="w-4 h-4 text-cyan-300" /><span className="font-semibold">What's in the report</span></div>
-            <ul className="text-sm text-white/70 list-disc pl-5 space-y-1">
-              <li>Per-person daily state (on time / late / very late / absent / excused)</li>
-              <li>Aggregate rates by class or department</li>
-              <li>Capture mode breakdown and average recognition confidence</li>
-              <li>Lateness/absenteeism flags and AI risk notes</li>
-              <li>Signed PDF cover for principal sign-off (backend)</li>
-            </ul>
-          </GlassCard>
-        </TabsContent>
-      </Tabs>
+      {/* Recent captures */}
+      <SchoolsCard>
+        <SectionHeader
+          eyebrow="Activity"
+          title="Recent captures"
+          description={`${filteredEvents.length} most recent events`}
+        />
+        {filteredEvents.length === 0 ? (
+          <EmptyState icon={Activity} title="No captures yet" />
+        ) : (
+          <ul className="space-y-2">
+            {filteredEvents.map(e => {
+              const stateTone = e.state === 'on_time' || e.state === 'present' ? 'accent'
+                : e.state === 'late' ? 'warning' : e.state === 'very_late' ? 'danger' : 'subtle';
+              const RoleIcon = e.person_role === 'student' ? GraduationCap : e.person_role === 'staff' ? Users : UserCheck;
+              return (
+                <li key={e.id} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--s-border))] bg-[hsl(var(--s-surface-2))] p-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-[hsl(var(--s-surface))] text-[hsl(var(--s-primary))]">
+                    <ScanFace className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-[hsl(var(--s-text))]">{e.person_name}</span>
+                      <Badge tone="subtle"><RoleIcon className="h-3 w-3" /> {e.person_role}</Badge>
+                      <span className="text-xs text-[hsl(var(--s-text-muted))]">· {e.class_or_dept}</span>
+                    </div>
+                    <div className="mt-0.5 inline-flex items-center gap-2 text-[11px] text-[hsl(var(--s-text-subtle))]">
+                      <MapPin className="h-3 w-3" /> {e.location} · {Math.round(e.confidence * 100)}% match
+                    </div>
+                  </div>
+                  <Badge tone={stateTone as any}>{e.state.replace('_', ' ')}</Badge>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SchoolsCard>
     </div>
   );
-}
+};
 
-function ExceptionRow({
-  name, sub, metric, badge, tone, note, onNotify, notifyLabel, href,
-}: {
-  name: string; sub: string; metric: string; badge: string;
-  tone: 'rose' | 'amber'; note: string; onNotify: () => Promise<void>;
-  notifyLabel: string; href: string;
-}) {
-  const t = tone === 'rose' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30';
-  return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/5">
-      <div className="min-w-0">
-        <div className="text-white font-medium truncate">{name}</div>
-        <div className="text-xs text-white/50 truncate">{sub} · {note}</div>
-      </div>
-      <div className="flex items-center gap-2 ml-3">
-        <div className="text-right">
-          <div className="text-white font-semibold">{metric}</div>
-          <Badge className={`${t} border capitalize text-[10px]`}>{badge}</Badge>
-        </div>
-        <Button size="sm" variant="outline" className="border-white/15 text-white/80 hover:bg-white/10" onClick={onNotify}>
-          <BellRing className="w-3.5 h-3.5 mr-1.5" />{notifyLabel}
-        </Button>
-        <Link to={href}><Button size="sm" variant="ghost" className="text-cyan-300 hover:bg-white/10">Open</Button></Link>
-      </div>
-    </div>
-  );
-}
+export default SchoolsAttendanceAdmin;
