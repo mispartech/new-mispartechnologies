@@ -464,9 +464,9 @@ const Shell = () => {
                   <div className="space-y-5">
                     <div className="grid gap-3 sm:grid-cols-3">
                       {([
-                        { id: 'starter',  name: 'Starter',  price: '$35',  blurb: 'Single campus, under 300 students' },
-                        { id: 'pro',      name: 'Pro',      price: '$65',  blurb: 'Multi-campus, full analytics', popular: true },
-                        { id: 'business', name: 'Business', price: '$100', blurb: 'Tertiary scale + parent portal' },
+                        { id: 'starter',  name: 'Starter',  price: '$35',  blurb: 'Single campus, under 300 students', popular: false },
+                        { id: 'pro',      name: 'Pro',      price: '$65',  blurb: 'Multi-campus, full analytics',       popular: true  },
+                        { id: 'business', name: 'Business', price: '$100', blurb: 'Tertiary scale + parent portal',     popular: false },
                       ] as const).map((p) => {
                         const active = data.plan === p.id;
                         return (
