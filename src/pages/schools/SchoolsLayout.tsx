@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { SchoolsThemeProvider, useSchoolsTheme } from '@/contexts/SchoolsThemeContext';
 import { SchoolsSidebar } from './SchoolsSidebar';
 import { SchoolsTopBar } from '@/components/schools/SchoolsTopBar';
+import { SchoolsFooter } from '@/components/schools/SchoolsFooter';
 import { useState } from 'react';
 
 const Shell = () => {
@@ -18,6 +19,7 @@ const Shell = () => {
           <main className="flex-1">
             <Outlet />
           </main>
+          <SchoolsFooter />
         </div>
       </div>
     </div>
