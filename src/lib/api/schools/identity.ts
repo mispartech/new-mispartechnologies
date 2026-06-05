@@ -1,23 +1,13 @@
 /**
- * Schools — Biometric Identity API client
- * Backend spec: docs/schools/step2-identity-backend-prompt.md
+ * Schools — Biometric Identity API client.
+ * Backend contract: docs/schools/frontend-integration-guide.md §4.6
  *
- * All endpoints are tenant-scoped by JWT (campus_id, faculty_id resolved
- * server-side). The frontend NEVER sends organization/user IDs in URLs.
- *
- * Endpoints expected:
- *   GET    /api/schools/identities/                  list + filters
- *   GET    /api/schools/identities/:id/              detail
- *   POST   /api/schools/identities/                  create profile (no biometric yet)
- *   POST   /api/schools/identities/:id/enroll/       upload biometric (base64 image)
- *   POST   /api/schools/identities/:id/re-enroll/    invalidate + re-enroll
- *   GET    /api/schools/identities/duplicates/       duplicate suspects feed
- *   POST   /api/schools/identities/duplicates/:id/resolve/  merge | dismiss
- *   POST   /api/schools/identities/:id/credentials/  issue RFID/NFC/QR backup
+ * Tenant scoping is server-side (Supabase JWT). The frontend never sends
+ * organization_id/user_id in URLs or bodies.
  */
-// Backend pending — these stubs always reject so the UI falls back to mock data.
-const notImplemented = <T>(_endpoint: string): Promise<T> =>
-  Promise.reject(new Error('Schools identity endpoints not yet implemented on backend'));
+
+import { schoolsRequest, schoolsFetch, unwrapPaginated } from './schoolsClient';
+import { SCHOOLS_API_ROUTES } from './schoolsApiRoutes';
 
 export type IdentityRole = 'student' | 'teacher' | 'staff' | 'admin' | 'visitor';
 export type EnrollmentStatus = 'pending' | 'enrolled' | 'expired' | 'rejected';
@@ -27,13 +17,13 @@ export interface IdentityProfile {
   id: string;
   full_name: string;
   role: IdentityRole;
-  reference_no: string;            // matric / staff ID
+  reference_no: string;
   campus: string | null;
   faculty: string | null;
   department: string | null;
   class_or_level: string | null;
   enrollment_status: EnrollmentStatus;
-  face_quality_score: number | null;  // 0..1
+  face_quality_score: number | null;
   credentials: CredentialType[];
   photo_url: string | null;
   last_seen_at: string | null;
@@ -42,7 +32,7 @@ export interface IdentityProfile {
 
 export interface DuplicateSuspect {
   id: string;
-  similarity: number;             // 0..1
+  similarity: number;
   primary: IdentityProfile;
   candidate: IdentityProfile;
   detected_at: string;
@@ -55,84 +45,66 @@ export interface IdentityListResponse {
   previous: string | null;
 }
 
-const BASE = '/api/schools/identities';
+const mapIdentity = (raw: any): IdentityProfile => ({
+  id: raw.id,
+  full_name: raw.full_name || `${raw.first_name ?? ''} ${raw.last_name ?? ''}`.trim(),
+  role: (raw.role ?? raw.person_type ?? 'student') as IdentityRole,
+  reference_no: raw.reference_no ?? raw.admission_no ?? raw.staff_no ?? '',
+  campus: raw.campus_name ?? raw.campus ?? null,
+  faculty: raw.faculty ?? null,
+  department: raw.department_name ?? raw.department ?? null,
+  class_or_level: raw.class_name ?? raw.class_or_level ?? null,
+  enrollment_status: (raw.enrollment_status ?? 'pending') as EnrollmentStatus,
+  face_quality_score: raw.face_quality_score ?? raw.quality ?? null,
+  credentials: Array.isArray(raw.credentials) ? raw.credentials : (raw.face_enrolled ? ['face'] : []),
+  photo_url: raw.photo_url ?? null,
+  last_seen_at: raw.last_seen_at ?? null,
+  created_at: raw.created_at ?? new Date().toISOString(),
+});
+
+const NOT_AVAILABLE = 'This identity endpoint is not part of the MVP backend yet.';
 
 export const schoolsIdentityApi = {
-  list: (_params?: { q?: string; role?: IdentityRole; status?: EnrollmentStatus; page?: number }) =>
-    notImplemented<IdentityListResponse>(`GET ${BASE}/`),
-
-  detail: (id: string) =>
-    notImplemented<IdentityProfile>(`GET ${BASE}/${id}/`),
-
-  create: (_payload: Partial<IdentityProfile>) =>
-    notImplemented<IdentityProfile>(`POST ${BASE}/`),
-
-  enroll: (id: string, _image_base64: string) =>
-    notImplemented<{ success: boolean; quality_score: number; message?: string }>(`POST ${BASE}/${id}/enroll/`),
-
-  reEnroll: (id: string, _image_base64: string) =>
-    notImplemented<{ success: boolean; quality_score: number }>(`POST ${BASE}/${id}/re-enroll/`),
-
-  duplicates: () =>
-    notImplemented<{ results: DuplicateSuspect[] }>(`GET ${BASE}/duplicates/`),
-
-  resolveDuplicate: (id: string, _action: 'merge' | 'dismiss') =>
-    notImplemented<unknown>(`POST ${BASE}/duplicates/${id}/resolve/`),
-
-  issueCredential: (id: string, _type: CredentialType, _value?: string) =>
-    notImplemented<unknown>(`POST ${BASE}/${id}/credentials/`),
+  async list(params: { q?: string; role?: IdentityRole; status?: EnrollmentStatus; page?: number } = {}): Promise<IdentityListResponse> {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
+    const res = await schoolsRequest<any>(`${SCHOOLS_API_ROUTES.IDENTITIES}${q.toString() ? `?${q}` : ''}`);
+    if (res.error) throw new Error(res.error);
+    const page = unwrapPaginated<any>(res.data);
+    return {
+      results: page.items.map(mapIdentity),
+      count: page.count,
+      next: page.next,
+      previous: page.previous,
+    };
+  },
+  async detail(id: string): Promise<IdentityProfile> {
+    return mapIdentity(await schoolsFetch<any>(SCHOOLS_API_ROUTES.IDENTITY(id)));
+  },
+  async create(payload: Partial<IdentityProfile>): Promise<IdentityProfile> {
+    return mapIdentity(await schoolsFetch<any>(SCHOOLS_API_ROUTES.IDENTITIES, {
+      method: 'POST', body: JSON.stringify(payload),
+    }));
+  },
+  enroll: (id: string, image_base64: string) =>
+    schoolsFetch<{ embedding_id: string; quality: number; ok: boolean; message?: string }>(
+      SCHOOLS_API_ROUTES.IDENTITY_ENROLL(id),
+      { method: 'POST', body: JSON.stringify({ image_base64 }), timeout: 45000 },
+    ),
+  reEnroll: (id: string, image_base64: string) =>
+    schoolsFetch<{ embedding_id: string; quality: number; ok: boolean }>(
+      SCHOOLS_API_ROUTES.IDENTITY_RE_ENROLL(id),
+      { method: 'POST', body: JSON.stringify({ image_base64 }), timeout: 45000 },
+    ),
+  duplicates: (): Promise<{ results: DuplicateSuspect[] }> =>
+    Promise.reject(new Error(NOT_AVAILABLE)),
+  resolveDuplicate: (_id: string, _action: 'merge' | 'dismiss') =>
+    Promise.reject(new Error(NOT_AVAILABLE)),
+  issueCredential: (_id: string, _type: CredentialType, _value?: string) =>
+    Promise.reject(new Error(NOT_AVAILABLE)),
 };
 
-/* -------------------------------------------------------------------------- */
-/* Mock data — used until backend ships. Components fall back to this on 404. */
-/* -------------------------------------------------------------------------- */
-
-export const MOCK_IDENTITIES: IdentityProfile[] = [
-  {
-    id: 'i-001', full_name: 'Adaeze Okeke', role: 'student', reference_no: 'CSC/2022/001',
-    campus: 'Main Campus', faculty: 'Science', department: 'Computer Science',
-    class_or_level: '300L', enrollment_status: 'enrolled', face_quality_score: 0.96,
-    credentials: ['face', 'rfid'], photo_url: null,
-    last_seen_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    created_at: '2025-01-12T08:00:00Z',
-  },
-  {
-    id: 'i-002', full_name: 'Ibrahim Musa', role: 'student', reference_no: 'EEE/2023/044',
-    campus: 'Main Campus', faculty: 'Engineering', department: 'Electrical Eng.',
-    class_or_level: '200L', enrollment_status: 'pending', face_quality_score: null,
-    credentials: [], photo_url: null, last_seen_at: null,
-    created_at: '2025-03-02T10:14:00Z',
-  },
-  {
-    id: 'i-003', full_name: 'Dr. Chinwe Aluko', role: 'teacher', reference_no: 'STF/0231',
-    campus: 'Main Campus', faculty: 'Science', department: 'Mathematics',
-    class_or_level: null, enrollment_status: 'enrolled', face_quality_score: 0.91,
-    credentials: ['face', 'nfc'], photo_url: null,
-    last_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    created_at: '2024-09-01T07:30:00Z',
-  },
-  {
-    id: 'i-004', full_name: 'Tomiwa Adebayo', role: 'student', reference_no: 'MTH/2021/112',
-    campus: 'Annex Campus', faculty: 'Science', department: 'Mathematics',
-    class_or_level: '400L', enrollment_status: 'expired', face_quality_score: 0.62,
-    credentials: ['face'], photo_url: null,
-    last_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 18).toISOString(),
-    created_at: '2024-02-10T09:00:00Z',
-  },
-  {
-    id: 'i-005', full_name: 'Fatima Bello', role: 'staff', reference_no: 'STF/0588',
-    campus: 'Main Campus', faculty: null, department: 'Bursary',
-    class_or_level: null, enrollment_status: 'enrolled', face_quality_score: 0.88,
-    credentials: ['face', 'rfid', 'qr'], photo_url: null,
-    last_seen_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    created_at: '2024-11-21T08:00:00Z',
-  },
-];
-
-export const MOCK_DUPLICATES: DuplicateSuspect[] = [
-  {
-    id: 'dup-1', similarity: 0.94, detected_at: new Date().toISOString(),
-    primary: MOCK_IDENTITIES[0],
-    candidate: { ...MOCK_IDENTITIES[3], full_name: 'Ada Okeke', reference_no: 'CSC/2022/091' },
-  },
-];
+/* Kept for backwards compatibility — empty arrays so any consumer that still
+ * imports the mock data renders the empty state instead of fake records. */
+export const MOCK_IDENTITIES: IdentityProfile[] = [];
+export const MOCK_DUPLICATES: DuplicateSuspect[] = [];
