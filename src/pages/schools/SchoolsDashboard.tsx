@@ -78,13 +78,14 @@ const SchoolsDashboard = () => {
 
       {/* Stat grid */}
       <section className="grid gap-4 grid-cols-2 lg:grid-cols-6">
-        <StatCard label="Students Present" value="1,284" delta={2.1} deltaLabel="vs yesterday" icon={GraduationCap} tone="primary" />
-        <StatCard label="Students Absent" value="136" delta={-1.4} deltaLabel="vs yesterday" icon={UserX} tone="danger" />
-        <StatCard label="Staff Present" value="92" delta={0.6} icon={Users} tone="accent" />
-        <StatCard label="Staff Absent" value="6" delta={-0.3} icon={UserX} tone="warning" />
-        <StatCard label="Visitors Today" value="11" icon={UserCheck} tone="info" />
-        <StatCard label="Attendance Rate" value="90.4%" delta={1.2} icon={Activity} tone="accent" />
+        <StatCard label="Present Today" value={overview ? (overview.attendance_today.present).toLocaleString() : '—'} icon={GraduationCap} tone="primary" />
+        <StatCard label="Late" value={overview?.attendance_today.late ?? '—'} icon={UserX} tone="warning" />
+        <StatCard label="Absent" value={overview?.attendance_today.absent ?? '—'} icon={UserX} tone="danger" />
+        <StatCard label="Enrolled Identities" value={overview ? overview.enrolled_identities.toLocaleString() : '—'} icon={Users} tone="accent" />
+        <StatCard label="Active Sessions" value={overview?.active_sessions ?? '—'} icon={UserCheck} tone="info" />
+        <StatCard label="At-Risk Students" value={overview?.at_risk_students ?? '—'} icon={AlertTriangle} tone="danger" />
       </section>
+
 
       {/* Health + Trends */}
       <section className="grid gap-6 lg:grid-cols-3">
