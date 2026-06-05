@@ -1,10 +1,15 @@
 /**
  * Central route map for the Schools vertical backend.
- * Served by the `schools-api` service (separate from the main mispartechnologies API).
+ * Served by the `schools-api` service.
  * Base URL: import.meta.env.VITE_SCHOOLS_API_URL
+ *
+ * Contract reference: docs/schools/frontend-integration-guide.md
  */
 
 export const SCHOOLS_API_ROUTES = {
+  // ── Health ──
+  HEALTH: '/api/schools/health/',
+
   // ── Onboarding ──
   ONBOARDING: '/api/schools/onboarding/',
 
@@ -41,11 +46,12 @@ export const SCHOOLS_API_ROUTES = {
   CAPTURE_POINT: (id: string) => `/api/schools/capture-points/${id}/`,
   CAPTURE_POINT_HEARTBEAT: (id: string) => `/api/schools/capture-points/${id}/heartbeat/`,
 
-  // ── Identity (biometric) ──
+  // ── Identities (biometric) ──
   IDENTITIES: '/api/schools/identities/',
   IDENTITY: (id: string) => `/api/schools/identities/${id}/`,
   IDENTITY_ENROLL: (id: string) => `/api/schools/identities/${id}/enroll/`,
   IDENTITY_RE_ENROLL: (id: string) => `/api/schools/identities/${id}/re-enroll/`,
+  IDENTITY_ENROLL_ALT: '/api/schools/identities/enroll/',
 
   // ── Settings ──
   SETTINGS: '/api/schools/settings/',
@@ -59,8 +65,8 @@ export const SCHOOLS_API_ROUTES = {
 } as const;
 
 /**
- * Dedicated Face Recognition microservice.
- * Closed-set: only enrolled identities can match — no unknown-face clustering.
+ * Schools Face Recognition microservice.
+ * Closed-set: only enrolled identities can match. Model: InsightFace `buffalo_s`.
  * Base URL: import.meta.env.VITE_SCHOOLS_FR_URL
  */
 export const SCHOOLS_FR_ROUTES = {
@@ -71,3 +77,6 @@ export const SCHOOLS_FR_ROUTES = {
   HEALTH: '/v1/face/health',
   DELETE_PERSON: (personId: string) => `/v1/face/person/${personId}`,
 } as const;
+
+export const isSchoolsApiConfigured = () =>
+  Boolean(import.meta.env.VITE_SCHOOLS_API_URL);
