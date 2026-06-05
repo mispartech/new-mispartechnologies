@@ -21,10 +21,11 @@ const SchoolsAttendanceAdmin = () => {
   const [risk, setRisk] = useState<RiskStudent[]>([]);
 
   useEffect(() => {
-    attendanceApi.kpis().then(setKpis);
-    attendanceApi.sessions().then(setSessions);
-    attendanceApi.events().then(setEvents);
-    attendanceApi.risk().then(setRisk);
+    attendanceApi.kpis().then(setKpis).catch(() => {});
+    attendanceApi.sessions().then(setSessions).catch(() => {});
+    attendanceApi.events().then(setEvents).catch(() => {});
+    attendanceApi.risk().then(setRisk).catch(() => {});
+
   }, []);
 
   const filteredEvents = useMemo(() => {
