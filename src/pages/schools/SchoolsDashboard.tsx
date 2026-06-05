@@ -14,7 +14,7 @@ const SchoolsDashboard = () => {
   const [risk, setRisk] = useState<RiskStudent[]>([]);
 
   useEffect(() => {
-    attendanceApi.risk().then(setRisk);
+    attendanceApi.risk().then(setRisk).catch(() => {});
   }, []);
 
   const hour = new Date().getHours();
