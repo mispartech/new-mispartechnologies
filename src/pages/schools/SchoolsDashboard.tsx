@@ -8,7 +8,7 @@ import {
   SchoolsCard, StatCard, SectionHeader, MetricRing, ProgressBar, Badge, EmptyState, SchoolsButton, Avatar,
 } from '@/components/schools/ui/SchoolsUI';
 import { AttendanceTrendChart } from '@/components/schools/AttendanceTrendChart';
-import { attendanceApi, MOCK_RISK, type RiskStudent } from '@/lib/api/schools/attendance';
+import { attendanceApi, type RiskStudent } from '@/lib/api/schools/attendance';
 
 const SchoolsDashboard = () => {
   const [risk, setRisk] = useState<RiskStudent[]>([]);
