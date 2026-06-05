@@ -55,7 +55,7 @@ export default function SchoolsStudentProfile() {
             personId={student.id}
             personName={student.full_name}
             fetcher={studentsApi.attendance}
-            onNotify={() => studentsApi.notifyGuardian(student.id).catch(() => {})}
+            onNotify={() => studentsApi.notifyGuardian(student.id)}
             notifyLabel="Notify parent"
           />
         </TabsContent>
