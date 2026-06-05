@@ -9,13 +9,21 @@ import {
 } from '@/components/schools/ui/SchoolsUI';
 import { AttendanceTrendChart } from '@/components/schools/AttendanceTrendChart';
 import { attendanceApi, type RiskStudent } from '@/lib/api/schools/attendance';
+import { overviewApi, type SchoolsOverview } from '@/lib/api/schools/overview';
+import { useSchoolsRealtime } from '@/hooks/useSchoolsRealtime';
 
 const SchoolsDashboard = () => {
   const [risk, setRisk] = useState<RiskStudent[]>([]);
+  const [overview, setOverview] = useState<SchoolsOverview | null>(null);
 
-  useEffect(() => {
+  const reload = () => {
     attendanceApi.risk().then(setRisk).catch(() => {});
-  }, []);
+    overviewApi.get().then(setOverview).catch(() => {});
+  };
+
+  useEffect(() => { reload(); }, []);
+  useSchoolsRealtime('overview', { onMessage: () => reload() });
+
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
