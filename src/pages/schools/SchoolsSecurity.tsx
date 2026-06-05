@@ -21,11 +21,12 @@ const SchoolsSecurity = () => {
   const [incidentFilter, setIncidentFilter] = useState<IncidentFilter>('all');
 
   useEffect(() => {
-    securityApi.kpis().then(setKpis);
-    securityApi.cameras().then(setCameras);
-    securityApi.incidents().then(setIncidents);
-    securityApi.gateEvents().then(setGates);
-    securityApi.watchlistMatches().then(setWatchlist);
+    securityApi.kpis().then(setKpis).catch(() => {});
+    securityApi.cameras().then(setCameras).catch(() => {});
+    securityApi.incidents().then(setIncidents).catch(() => {});
+    securityApi.gateEvents().then(setGates).catch(() => {});
+    securityApi.watchlistMatches().then(setWatchlist).catch(() => {});
+
   }, []);
 
   const status = (kpis?.open_incidents ?? 0) >= 3 ? 'Elevated' : (kpis?.open_incidents ?? 0) > 0 ? 'Monitoring' : 'Calm';
