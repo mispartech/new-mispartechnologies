@@ -14,7 +14,7 @@ const SchoolsStudents = () => {
   const [level, setLevel] = useState<LevelFilter>('all');
 
   useEffect(() => {
-    studentsApi.list().then(setStudents);
+    studentsApi.list().then(setStudents).catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {

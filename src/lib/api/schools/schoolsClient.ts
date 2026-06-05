@@ -55,6 +55,40 @@ export function unwrapPaginated<T>(data: any): {
   return { items: data ? [data] : [], count: data ? 1 : 0, next: null, previous: null };
 }
 
+/** Cursor-style envelope returned by /api/schools/activity/ */
+export function unwrapCursor<T>(data: any): { items: T[]; count: number; nextCursor: string | null; previousCursor: string | null } {
+  return {
+    items: Array.isArray(data?.results) ? data.results : [],
+    count: data?.count ?? 0,
+    nextCursor: data?.next ?? null,
+    previousCursor: data?.previous ?? null,
+  };
+}
+
+/** Short-list envelope used by /attendance/ — { count, results } without next/previous. */
+export function unwrapShortList<T>(data: any): { items: T[]; count: number } {
+  if (Array.isArray(data)) return { items: data as T[], count: data.length };
+  return { items: Array.isArray(data?.results) ? data.results : [], count: data?.count ?? 0 };
+}
+
+/**
+ * Convenience wrapper: call schoolsRequest and throw on error so callers can
+ * try/catch instead of inspecting `{ data, error }`. The underlying request
+ * already surfaces a toast notification (unless `silent` is set), so the user
+ * always sees the exact cause.
+ */
+export async function schoolsFetch<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+  baseOverride?: string,
+): Promise<T> {
+  const res = await schoolsRequest<T>(endpoint, options, baseOverride);
+  if (res.error || res.data === undefined) {
+    throw new Error(res.error || `Request failed (${res.status})`);
+  }
+  return res.data;
+}
+
 async function getAccessToken(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token ?? null;

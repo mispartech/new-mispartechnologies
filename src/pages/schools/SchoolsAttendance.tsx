@@ -289,7 +289,7 @@ export default function SchoolsAttendance() {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <SchoolsButton variant="outline" size="sm"
-                    onClick={() => { attendanceApi.notifyParent(r.id); toast({ title: 'Parent notified', description: `${r.name}'s guardian will receive an SMS + email.` }); }}>
+                    onClick={() => { attendanceApi.notifyGuardian(r.id).catch(() => {}); toast({ title: 'Parent notified', description: `${r.name}'s guardian will receive an SMS + email.` }); }}>
                     <BellRing className="h-3.5 w-3.5" /> Notify parent
                   </SchoolsButton>
                   <SchoolsButton variant="ghost" size="sm">View profile</SchoolsButton>

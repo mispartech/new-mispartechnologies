@@ -23,7 +23,7 @@ const SchoolsStaff = () => {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState<RoleFilter>('all');
 
-  useEffect(() => { staffApi.list().then(setStaff); }, []);
+  useEffect(() => { staffApi.list().then(setStaff).catch(() => {}); }, []);
 
   const filtered = useMemo(() => {
     return staff.filter(s => {
