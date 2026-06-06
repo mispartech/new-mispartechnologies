@@ -8,7 +8,7 @@ import {
 } from '@/components/schools/ui/SchoolsUI';
 import { AttendanceTrendChart } from '@/components/schools/AttendanceTrendChart';
 import {
-  attendanceApi, type AttendanceKPIs, type LiveCaptureSession, type AttendanceEvent, type RiskStudent,
+  attendanceApi, type AttendanceKPIs, type LiveCaptureSession, type AttendanceEvent, type RiskStudent, type HeatmapCell,
 } from '@/lib/api/schools/attendance';
 
 type Scope = 'all' | 'students' | 'staff' | 'visitors';
@@ -19,13 +19,14 @@ const SchoolsAttendanceAdmin = () => {
   const [sessions, setSessions] = useState<LiveCaptureSession[]>([]);
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [risk, setRisk] = useState<RiskStudent[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
 
   useEffect(() => {
     attendanceApi.kpis().then(setKpis).catch(() => {});
     attendanceApi.sessions().then(setSessions).catch(() => {});
     attendanceApi.events().then(setEvents).catch(() => {});
     attendanceApi.risk().then(setRisk).catch(() => {});
-
+    attendanceApi.heatmap().then(setHeatmap).catch(() => {});
   }, []);
 
   const filteredEvents = useMemo(() => {
@@ -35,9 +36,17 @@ const SchoolsAttendanceAdmin = () => {
     return events.filter(e => e.person_role === 'visitor');
   }, [events, scope]);
 
-  const trend14 = Array.from({ length: 14 }).map((_, i) => ({
-    date: `D${i + 1}`, rate: Math.round(86 + Math.cos(i / 2) * 7 - (i === 8 ? 10 : 0)),
-  }));
+  const trend = useMemo(() => {
+    if (!heatmap.length) return [] as { date: string; rate: number }[];
+    const grouped = new Map<string, { sum: number; n: number }>();
+    heatmap.forEach((c) => {
+      const g = grouped.get(c.day) ?? { sum: 0, n: 0 };
+      g.sum += Math.round((c.rate ?? 0) * 100);
+      g.n += 1;
+      grouped.set(c.day, g);
+    });
+    return Array.from(grouped.entries()).map(([date, v]) => ({ date, rate: v.n ? Math.round(v.sum / v.n) : 0 }));
+  }, [heatmap]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 lg:px-6 py-6 lg:py-8 space-y-6 s-fade-up">
@@ -87,11 +96,15 @@ const SchoolsAttendanceAdmin = () => {
       <section className="grid gap-6 lg:grid-cols-3">
         <SchoolsCard className="lg:col-span-2">
           <SectionHeader
-            eyebrow="Last 14 days"
+            eyebrow="Recent days"
             title="Attendance trend"
-            description="Daily rate across the entire campus."
+            description="Daily rate aggregated from the live heatmap."
           />
-          <AttendanceTrendChart data={trend14} height={260} />
+          {trend.length === 0 ? (
+            <EmptyState icon={Activity} title="No trend data" description="No attendance history available yet." />
+          ) : (
+            <AttendanceTrendChart data={trend} height={260} />
+          )}
         </SchoolsCard>
 
         <SchoolsCard>
