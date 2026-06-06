@@ -585,14 +585,18 @@ const Shell = () => {
                   <ArrowLeft className="h-4 w-4" /> Back
                 </SchoolsButton>
                 <div className="hidden sm:block text-xs text-[hsl(var(--s-text-subtle))]">
-                  Progress is saved automatically
+                  {stepError ? (
+                    <span className="text-[hsl(var(--s-danger))]">{stepError}</span>
+                  ) : (
+                    'Progress is saved automatically'
+                  )}
                 </div>
                 {step < STEPS.length - 1 ? (
-                  <SchoolsButton onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+                  <SchoolsButton onClick={goNext} disabled={!canContinue}>
                     Continue <ArrowRight className="h-4 w-4" />
                   </SchoolsButton>
                 ) : (
-                  <SchoolsButton onClick={submit} disabled={submitting}>
+                  <SchoolsButton onClick={submit} disabled={submitting || !canContinue}>
                     {submitting ? 'Setting up…' : (<><Check className="h-4 w-4" /> Finish onboarding</>)}
                   </SchoolsButton>
                 )}
