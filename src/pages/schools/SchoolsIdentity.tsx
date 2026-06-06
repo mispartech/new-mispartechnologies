@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
-  schoolsIdentityApi, MOCK_IDENTITIES, MOCK_DUPLICATES,
+  schoolsIdentityApi,
   type IdentityProfile, type DuplicateSuspect, type EnrollmentStatus, type IdentityRole,
 } from '@/lib/api/schools/identity';
 
@@ -39,22 +39,23 @@ const credIcon = (c: string) => {
 
 const SchoolsIdentity = () => {
   const [tab, setTab] = useState<Tab>('directory');
-  const [identities, setIdentities] = useState<IdentityProfile[]>(MOCK_IDENTITIES);
-  const [duplicates, setDuplicates] = useState<DuplicateSuspect[]>(MOCK_DUPLICATES);
+  const [identities, setIdentities] = useState<IdentityProfile[]>([]);
+  const [duplicates, setDuplicates] = useState<DuplicateSuspect[]>([]);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | IdentityRole>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | EnrollmentStatus>('all');
   const [selected, setSelected] = useState<IdentityProfile | null>(null);
 
-  // Fetch with graceful fallback to mock data
+  // Fetch from live backend; on failure, the underlying client already surfaces a toast.
   useEffect(() => {
     schoolsIdentityApi.list()
-      .then((r) => { if (r?.results?.length) setIdentities(r.results); })
-      .catch(() => { /* backend pending */ });
+      .then((r) => setIdentities(r?.results ?? []))
+      .catch(() => { /* surfaced via toast */ });
     schoolsIdentityApi.duplicates()
-      .then((r) => { if (r?.results?.length) setDuplicates(r.results); })
-      .catch(() => { /* backend pending */ });
+      .then((r) => setDuplicates(r?.results ?? []))
+      .catch(() => { /* duplicates endpoint not in MVP yet */ });
   }, []);
+
 
   const filtered = useMemo(() => identities.filter((i) => {
     const q = query.toLowerCase();
