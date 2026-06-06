@@ -79,11 +79,80 @@ const Shell = () => {
   const countries = useMemo(() => getCountries(), []);
   const states = useMemo(() => getStates(data.country), [data.country]);
 
-  const submit = async () => {
-    if (!data.accepted_biometric_terms) {
-      toast({ variant: 'destructive', title: 'Terms required', description: 'Please accept the biometric & privacy terms to continue.' });
+  // Per-step validation. Returns null when valid, otherwise a human-readable reason.
+  const stepError = useMemo<string | null>(() => {
+    switch (step) {
+      case 0:
+        if (!data.name.trim()) return 'Institution name is required.';
+        if (!/^[A-Z0-9]{2,8}$/.test(data.short_code)) return 'Short code must be 2–8 uppercase letters or digits.';
+        return null;
+      case 1:
+        if (!data.country) return 'Country is required.';
+        if (!data.state) return 'State / region is required.';
+        if (!data.city.trim()) return 'City is required.';
+        if (!data.phone.trim()) return 'Phone is required.';
+        if (!/^\S+@\S+\.\S+$/.test(data.email)) return 'A valid email address is required.';
+        if (!data.address.trim()) return 'Address is required.';
+        return null;
+      case 2:
+        if (!data.campus_count || data.campus_count < 1) return 'At least one campus is required.';
+        if (!data.session_start_date) return 'Session start date is required.';
+        if (!data.hierarchy_levels.length) return 'Pick at least one hierarchy level.';
+        return null;
+      case 3:
+        if (!data.expected_students || data.expected_students < 1) return 'Expected students must be at least 1.';
+        if (data.expected_teaching_staff < 0) return 'Teaching staff cannot be negative.';
+        return null;
+      case 4:
+        if (!data.policy.day_start || !data.policy.day_end) return 'Day start and end are required.';
+        if (data.policy.late_threshold_min < 0) return 'Late threshold cannot be negative.';
+        if (data.policy.very_late_threshold_min < data.policy.late_threshold_min) return 'Very-late threshold must be ≥ late threshold.';
+        return null;
+      case 5:
+        if (!data.capture_points.length) return 'Add at least one capture point.';
+        if (data.capture_points.some((c) => !c.label.trim())) return 'Every capture point needs a label.';
+        return null;
+      case 6:
+        if (!data.admin_first_name.trim()) return 'Admin first name is required.';
+        if (!data.admin_last_name.trim()) return 'Admin last name is required.';
+        if (!data.admin_phone.trim()) return 'Admin phone is required.';
+        return null;
+      case 7:
+        if (!data.plan) return 'Select a plan.';
+        if (!data.accepted_biometric_terms) return 'Accept the biometric & privacy terms to continue.';
+        return null;
+      default:
+        return null;
+    }
+  }, [step, data]);
+
+  const canContinue = stepError === null;
+
+  const goNext = () => {
+    if (!canContinue) {
+      toast({ variant: 'destructive', title: 'Complete this step first', description: stepError ?? '' });
       return;
     }
+    setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  };
+
+  const goToStep = (i: number) => {
+    // Allow going back to any prior step. Forward jumps require all preceding steps to be valid.
+    if (i <= step) { setStep(i); return; }
+    if (!canContinue) {
+      toast({ variant: 'destructive', title: 'Complete this step first', description: stepError ?? '' });
+      return;
+    }
+    setStep(i);
+  };
+
+
+  const submit = async () => {
+    if (stepError) {
+      toast({ variant: 'destructive', title: 'Complete this step first', description: stepError });
+      return;
+    }
+
     setSubmitting(true);
     const res = await schoolsOnboardingApi.submit(data);
     setSubmitting(false);
