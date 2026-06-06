@@ -233,7 +233,7 @@ const Shell = () => {
                   return (
                     <button
                       key={s.key}
-                      onClick={() => setStep(i)}
+                      onClick={() => goToStep(i)}
                       className={cn(
                         'w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left transition group',
                         state === 'current' && 'bg-[hsl(var(--s-primary)/0.08)] ring-1 ring-[hsl(var(--s-primary)/0.25)]',
