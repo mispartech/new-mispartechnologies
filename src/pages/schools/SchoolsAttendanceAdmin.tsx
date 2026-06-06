@@ -96,11 +96,15 @@ const SchoolsAttendanceAdmin = () => {
       <section className="grid gap-6 lg:grid-cols-3">
         <SchoolsCard className="lg:col-span-2">
           <SectionHeader
-            eyebrow="Last 14 days"
+            eyebrow="Recent days"
             title="Attendance trend"
-            description="Daily rate across the entire campus."
+            description="Daily rate aggregated from the live heatmap."
           />
-          <AttendanceTrendChart data={trend14} height={260} />
+          {trend.length === 0 ? (
+            <EmptyState icon={Activity} title="No trend data" description="No attendance history available yet." />
+          ) : (
+            <AttendanceTrendChart data={trend} height={260} />
+          )}
         </SchoolsCard>
 
         <SchoolsCard>
