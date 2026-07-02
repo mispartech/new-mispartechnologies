@@ -1,161 +1,227 @@
 
-# Mispar Schools — MVP Redesign Plan
+## Migration plan — Schools → dedicated Lovable project (remix strategy)
 
-Scope is locked to MVP surfaces only. Everything else under `/schools/**` keeps its current scaffold until later passes.
+You picked **"Remix this project"** — this is the safest path because the stack, auth, Supabase client, shadcn setup, and every Schools file transfer verbatim with zero rewrites.
 
-## Locked design taste
+The `Project Blank Slate` (TanStack Start) will be **discarded** — it's incompatible with the current stack.
 
-- **Palette — Academic Trust**: Mispar Navy `#0B1E3F`, Academic Blue `#1E4D8C`, Primary Blue `#3B82F6`, Educational Green `#10B981`. Plus semantic: warning amber `#F59E0B`, danger `#EF4444`, info cyan `#0EA5E9`, soft academic grayscale.
-- **Typography**: Outfit (headings) + Figtree (body), loaded via Google Fonts. Tabular numerals for metrics.
-- **Theme**: Dual light/dark with system auto-detect + manual toggle. Light is the default reading mode; dark is the ops-center mode. Both ship from day one.
-- **Voice**: Modern Smart Campus — friendly, premium, school-native. Not corporate SaaS, not surveillance.
+---
 
-## Pages in this pass
+### Step-by-step you'll drive (Lovable dashboard actions)
 
-1. `/schools` — landing
-2. `/schools/dashboard` — School Command Center (home)
-3. `/schools/dashboard/attendance/admin` — Attendance Admin
-4. `/schools/dashboard/students` — directory
-5. `/schools/dashboard/staff` — directory
-6. `/schools/dashboard/security` — Campus Security Center
-7. Shared: sidebar, top bar, theme toggle, design tokens
+These aren't things an agent can do — remixing and creating projects are dashboard-only actions.
 
-Profiles, onboarding, platform admin, settings, communication: **out of scope** for this pass — keep existing scaffolds.
+1. **In this project's Settings → General → "Remix this project"** — creates a new project with an identical copy of the codebase. Name it **"Mispar Schools"**.
+2. Delete the blank `Project Blank Slate` (you don't need it).
+3. Open the new "Mispar Schools" project. In its first chat message paste:
+   > "Follow `docs/MIGRATION-schools-only.md` step by step. This project should serve Schools only."
+4. The agent inside the new project executes the prune script below (it has the file already because it was cloned from here).
 
-## 1. Design system foundation
+---
 
-**New file**: `src/styles/schools-tokens.css` (imported only inside `SchoolsLayout`, so the main app is untouched).
+### What I'll do inside THIS project before you remix
 
-- HSL tokens for both themes under `.schools-root[data-theme="light"]` and `[data-theme="dark"]`:
-  - `--schools-bg`, `--schools-surface`, `--schools-surface-2`, `--schools-border`, `--schools-text`, `--schools-text-muted`
-  - `--schools-primary` (Mispar Blue), `--schools-primary-ink` (Navy), `--schools-accent` (Educational Green), `--schools-warning`, `--schools-danger`, `--schools-info`
-  - Elevation: `--schools-shadow-sm/md/lg`, `--schools-radius` (14px)
-- Load Outfit + Figtree via `index.html` `<link>` (preconnect + display=swap).
-- Extend `tailwind.config.ts` with a `schools` color namespace mapped to those CSS vars and font families `font-display` (Outfit) / `font-sans-schools` (Figtree). All Schools components use these tokens — no hardcoded hex.
+Create one file that the remixed project will read and execute:
 
-**New context**: extend `SchoolsThemeContext` with `theme: 'light' | 'dark' | 'system'`, persisted to `localStorage('schools.theme')`, applied via `data-theme` on `.schools-root`.
+**`docs/MIGRATION-schools-only.md`** — a self-contained checklist the new project's agent follows. It contains:
 
-**New primitives** in `src/components/schools/ui/`:
-- `SchoolsCard`, `StatCard` (label + value + delta + sparkline slot), `SectionHeader`, `EmptyState`, `DataTable` (sortable, responsive → card layout on mobile), `Badge` (status variants), `Avatar` (with attendance ring), `MetricRing`, `TrendSpark`, `ThemeToggle`.
-- All accessible by default (focus-visible rings using `--schools-primary`, 44×44 tap targets, `aria-label` on icon-only buttons).
+#### Section A — DELETE these paths
+```
+src/pages/Index.tsx
+src/pages/AboutUs.tsx
+src/pages/OurTeam.tsx
+src/pages/Careers.tsx
+src/pages/PressMedia.tsx
+src/pages/Blog.tsx
+src/pages/PrivacyPolicy.tsx
+src/pages/TermsOfService.tsx
+src/pages/CookiePolicy.tsx
+src/pages/SmartAttendance.tsx
+src/pages/SecuritySystems.tsx
+src/pages/HealthcareIntegration.tsx
+src/pages/EducationalSolutions.tsx
+src/pages/CorporateAccess.tsx
+src/pages/JoinOrganization.tsx
+src/pages/Onboarding.tsx              ← generic; Schools uses SchoolsOnboarding
+src/pages/dashboard/**                 ← entire generic dashboard
+src/pages/platform/**                  ← platform admin (Schools has its own)
+src/components/dashboard/**            ← generic dashboard components
+src/components/Navbar.tsx
+src/components/Footer.tsx
+src/components/HeroSection.tsx
+src/components/FeaturesSection.tsx
+src/components/HowItWorksSection.tsx
+src/components/SolutionsSection.tsx
+src/components/PricingSection.tsx
+src/components/RoadmapSection.tsx
+src/components/CTASection.tsx
+src/components/TestimonialSection.tsx
+src/components/DemoSection.tsx
+src/components/DemoForm.tsx
+src/components/DemoRequestModal.tsx
+src/components/LightweightDemoForm.tsx
+src/components/InteractiveFaceDemo.tsx
+src/components/FaceScanVisualization.tsx
+src/components/PrivacyTrustSection.tsx
+src/components/AttendanceSimulation.tsx
+src/components/ComingSoonOverlay.tsx
+src/lib/api/demoApi.ts
+src/lib/api/platformApi.ts
+src/lib/api/platformAdminAuth.ts
+src/lib/api/paystack.ts
+src/lib/api/apiRoutes.ts               ← main-app routes; Schools has its own
+src/lib/api/client.ts                  ← same reason
+src/lib/demoSession.ts
+src/lib/onboardingSession.ts
+src/lib/roleConfig.ts
+src/contexts/TerminologyContext.tsx
+src/contexts/ThemeContext.tsx          ← main-app theme; Schools has SchoolsThemeContext
+src/hooks/useFaceRecognition.ts
+src/hooks/useFaceEnrollmentGuard.ts
+src/hooks/useAttendanceAudio.ts
+src/hooks/useCameraDevices.ts
+src/hooks/useKeyboardShortcuts.ts
+src/hooks/useWakeLock.ts
+docs/backend-paystack-and-plan-gating-prompt.md
+docs/education-phase1-backend-prompt.md
+docs/education-phase2-backend-prompt.md
+docs/paystack-backend-spec.md
+```
 
-## 2. Shell: Sidebar + Top Bar redesign
+#### Section B — KEEP these paths (Schools + shared infra)
+```
+src/pages/schools/**
+src/pages/Auth.tsx
+src/pages/Register.tsx
+src/pages/ResetPassword.tsx
+src/pages/EmailVerified.tsx
+src/pages/Logout.tsx
+src/pages/NotFound.tsx
+src/components/schools/**
+src/components/PageWrapper.tsx        ← simplified (strip subdomain redirect)
+src/components/ScrollToTop.tsx
+src/components/ui/**                   ← shadcn primitives
+src/contexts/SchoolsThemeContext.tsx
+src/contexts/DjangoAuthContext.tsx
+src/hooks/useSchoolsRealtime.ts
+src/hooks/useSchoolsResource.ts
+src/hooks/use-mobile.tsx
+src/hooks/use-toast.ts
+src/hooks/useCountUp.ts
+src/hooks/useDocumentTitle.ts
+src/lib/api/schools/**
+src/lib/utils.ts
+src/lib/isUuid.ts
+src/lib/locationData.ts
+src/integrations/supabase/client.ts
+src/styles/schools-tokens.css
+src/index.css
+src/main.tsx
+src/App.css
+src/vite-env.d.ts
+docs/schools/**
+public/**
+package.json, vite.config.ts, tailwind.config.ts, tsconfig*.json, components.json,
+eslint.config.js, index.html, capacitor.config.ts, .env
+```
 
-- **Sidebar** (`SchoolsSidebar.tsx` rewrite): grouped nav `Overview / Attendance / People / Security / Insights / Settings`, with collapsible icon mode, active-route highlight, role badge at bottom (Principal/Admin/Staff). Education-flavored Lucide icons (`GraduationCap`, `Users`, `UserCog`, `ShieldCheck`, `ScanFace`, `LineChart`).
-- **Top bar** (new `SchoolsTopBar.tsx`): school name + term/session chip, global search, theme toggle, notifications bell, profile menu.
-- `SchoolsLayout` wraps with `.schools-root` themed container, light bg by default, dark uses current gradient feel (tuned down).
+#### Section C — REWRITE `src/App.tsx` (mount Schools at root)
+Replace the current App with a Schools-only version:
+```tsx
+<Routes>
+  <Route path="/" element={<SchoolsLanding />} />
+  <Route path="/onboarding" element={<SchoolsOnboarding />} />
+  <Route path="/auth" element={<Auth />} />
+  <Route path="/register" element={<Register />} />
+  <Route path="/reset-password" element={<ResetPassword />} />
+  <Route path="/email-verified" element={<EmailVerified />} />
+  <Route path="/logout" element={<Logout />} />
+  <Route path="/admin" element={<SchoolsPlatformAdmin />} />
+  <Route path="/dashboard" element={<SchoolsLayout />}>
+    <Route index element={<SchoolsDashboard />} />
+    <Route path="identity" element={<SchoolsIdentity />} />
+    <Route path="attendance" element={<SchoolsAttendance />} />
+    <Route path="attendance/admin" element={<SchoolsAttendanceAdmin />} />
+    <Route path="admin" element={<SchoolsAttendanceAdmin />} />
+    <Route path="security" element={<SchoolsSecurity />} />
+    <Route path="students" element={<SchoolsStudents />} />
+    <Route path="students/:id" element={<SchoolsStudentProfile />} />
+    <Route path="staff" element={<SchoolsStaff />} />
+    <Route path="staff/:id" element={<SchoolsStaffProfile />} />
+    <Route path=":module" element={<SchoolsModulePlaceholder />} />
+  </Route>
+  {/* legacy in-app links still work */}
+  <Route path="/schools/*" element={<Navigate to="/" replace />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
 
-## 3. Dashboard Home (`SchoolsDashboard.tsx` rewrite)
+#### Section D — Rewrite internal Schools links
+All Schools pages hard-code `/schools/dashboard/...`, `/schools/onboarding`, etc. Global find-replace inside the new project only:
+- `/schools/dashboard` → `/dashboard`
+- `/schools/onboarding` → `/onboarding`
+- `/schools/admin` → `/admin`
+- `/schools`  (bare) → `/`
 
-Sections, top to bottom:
+Files to touch: everything in `src/pages/schools/**` and `src/components/schools/**` (~ 20 files, mechanical).
 
-1. **Welcome strip**: "Good morning, {Principal}" + school name + academic session + term + date.
-2. **Today's Campus Overview** — 6 StatCards: Students Present, Students Absent, Staff Present, Staff Absent, Visitors, Attendance Rate (with delta vs yesterday).
-3. **Campus Health Score** — large MetricRing (0–100) with sub-scores: Attendance, Security, Staff Presence, Engagement. AI-generated copy line.
-4. **Attendance Trends** — interactive Recharts area chart with Daily/Weekly/Monthly/Term/Yearly tabs.
-5. **Live Attendance Feed** — right column, realtime via existing `useSchoolsRealtime('dashboard')` hook; empty state when channel pending.
-6. **At-Risk Students** — top 5 with attendance %, class, AI recommendation chip → link to student profile.
-7. **Department Performance** — horizontal bar list of classes/grades with attendance %.
-8. **Security Snapshot** — 4 mini-cards: active alerts, visitors on campus, last access event, face-match accuracy.
-9. **Upcoming Events** — list (exams, PTA, sports). Mock until backend.
+#### Section E — Simplify `PageWrapper.tsx`
+Remove `useSchoolsSubdomainRedirect` entirely (this project **is** the subdomain now).
 
-All numbers wired to existing `src/lib/api/schools/*` modules with `notImplemented` fallbacks → empty/skeleton states (no fake numbers shown as real).
+#### Section F — Environment variables to set in the new project
+```
+VITE_SCHOOLS_API_URL=https://api.schools.mispartechnologies.com
+VITE_SCHOOLS_FR_URL=<face-recognition service base>
+VITE_SCHOOLS_WS_URL=<wss host>
+VITE_SUPABASE_URL=https://vbakqmbnkhzpzmwbcczz.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<anon key from current .env>
+```
 
-## 4. Attendance Admin (`SchoolsAttendanceAdmin.tsx` rewrite)
+#### Section G — Backend cutover checklist (Django side)
+- Add `schools.mispartechnologies.com` to `ALLOWED_HOSTS`
+- Add same origin to `CORS_ALLOWED_ORIGINS`
+- Add same origin to Supabase Auth → URL Configuration → redirect allow-list
 
-- **Header**: title + date picker + scope tabs (All / Students / Staff / Visitors) + export CSV.
-- **KPI row**: Present, Absent, Late, Attendance Rate, Avg Check-in Time — each with sparkline.
-- **Live Board**: two-column grid of class/department cards showing present/expected counts and a thin progress bar; updates from realtime hook.
-- **Attendance Heatmap**: 30-day × class matrix (reuse `AttendanceTrendChart` pattern, new heatmap component).
-- **At-Risk / Chronic Absentee Panel**: table with student, class, attendance %, last seen, AI recommendation.
-- **Recent Captures**: timeline of last 20 events (face thumbnail, name, role, capture point, confidence).
-- **Reports**: quick export buttons (Daily, Weekly, Term, Custom).
+#### Section H — Deploy sequence
+1. Publish new project → `mispar-schools.lovable.app` (verify smoke tests)
+2. Lovable → Domains → connect `schools.mispartechnologies.com` to new project
+3. Wait for TLS
+4. Return to THIS project and run cleanup pass (see below)
 
-## 5. Students directory (`SchoolsStudents.tsx` rewrite)
+---
 
-- Header with search, class/grade filters, status filter, "Enroll Student" CTA.
-- KPI strip: total students, enrolled biometrics, attendance rate today, at-risk count.
-- **Card grid** on desktop (avatar with attendance ring, name, class, attendance %, status badge) and **DataTable** toggle. Mobile collapses to cards.
-- Row click → existing `SchoolsStudentProfile` (untouched this pass, but routed).
+### What I'll do inside THIS project AFTER cutover (separate approval)
 
-## 6. Staff directory (`SchoolsStaff.tsx` rewrite)
+Once you confirm `schools.mispartechnologies.com` is live on the new project, I'll open a second small PR here that:
 
-- Same shell as Students: search, department/role filters, "Invite Staff" CTA.
-- KPI strip: total staff, present today, on leave, avg punctuality.
-- Card grid with role chip (Teacher / Admin / Security / Support), subjects/department, attendance %, last check-in.
-- Row click → existing `SchoolsStaffProfile`.
+1. Removes all `src/pages/schools/**`, `src/components/schools/**`, `src/lib/api/schools/**`, `src/hooks/useSchools*.ts`, `src/contexts/SchoolsThemeContext.tsx`, `src/styles/schools-tokens.css`, `docs/schools/**`.
+2. Removes Schools imports + routes from `src/App.tsx`.
+3. Replaces the whole `/schools/*` block with a **single redirect catch-all** so old bookmarks / marketing links continue to work:
+```tsx
+<Route path="/schools/*" element={<ExternalRedirect base="https://schools.mispartechnologies.com" />} />
+```
+4. Strips `useSchoolsSubdomainRedirect` from `PageWrapper.tsx` (its target now lives natively at the subdomain).
 
-## 7. Security Center (`SchoolsSecurity.tsx` rewrite)
+I will NOT do that cleanup until you tell me cutover succeeded — it's the rollback safety net.
 
-Reframed as **Campus Security Center**, school-friendly (not surveillance-coded):
+---
 
-- **Status bar**: campus status (Calm / Elevated / Alert), cameras online, gates active, last incident.
-- **Live Monitoring grid**: capture-point tiles (gate, reception, hostel, etc.) with last face match + confidence.
-- **Visitor Verification queue**: pending / approved / denied tabs with photo, host, purpose, time.
-- **Access Logs**: filterable table (who, where, when, method).
-- **Security Alerts**: severity-grouped list with acknowledge action.
-- **Face Match Activity** sparkline + accuracy %.
-- **Incident Reports**: simple list with status chips.
+### Files this plan creates in THIS project (only, before you remix)
 
-## 8. Landing page (`SchoolsLanding.tsx` rewrite)
+1. `docs/MIGRATION-schools-only.md` — the full checklist above, verbatim, so the remixed project's agent can execute it without needing this conversation.
+2. Nothing else. No code is moved, no routes changed here until post-cutover.
 
-Sections (single page, marketing tone):
+---
 
-1. Hero — "The Operating System for Modern Schools." + dual CTA (Request Demo / Sign In) + animated face-scan visual reusing existing component, retinted to Academic Trust.
-2. Trust strip — logos placeholder + key stats.
-3. Modules grid — 6 cards (Attendance, Identity, Students, Staff, Security, Analytics).
-4. How it works — 4 steps (Enroll → Capture → Verify → Insights).
-5. Built for African schools — illustration + 3 value props.
-6. AI & Privacy — biometric data stays org-scoped, never sold (pulls from existing privacy memory).
-7. Pricing teaser → link to main pricing.
-8. Footer CTA + Mispar footer.
+### High-risk items to be aware of
 
-Mobile-first, light theme default, smooth scroll, `animate-fade-in` for sections.
+- **Supabase Auth sessions are per-origin.** Users signed in at `mispartechnologies.com` will re-authenticate at `schools.mispartechnologies.com`. Acceptable for MVP; cross-subdomain SSO is a Phase 2 task.
+- **Django CORS + `ALLOWED_HOSTS`** must be updated **before** first real login on the new domain or every request 4xxs.
+- **Preview vs published mismatch you observed:** likely a stale build cache. Once the new project is published to its own subdomain and DNS points there, this becomes irrelevant. If it recurs, we investigate then.
+- **`docs/schools/*` will be duplicated** during the remix window (present in both projects). The post-cutover cleanup step deletes them here.
 
-## 9. Accessibility + Responsiveness
+---
 
-- WCAG AA contrast verified for both themes (tokens chosen to pass on `--schools-surface`).
-- Every icon-only button: `aria-label`.
-- Keyboard nav across sidebar, tabs, tables.
-- `h-dvh` instead of `h-screen` for full-height shells.
-- Breakpoints: mobile (<640), tablet (640–1024), desktop (>1024), large (>1440). Sidebar becomes drawer < lg.
+### Deliverable of THIS turn (once you approve)
 
-## 10. What stays untouched this pass
-
-- Onboarding, platform admin, profiles (Student/Staff), module placeholders, all `/dashboard` (non-schools) routes, docs, API clients (we only consume — no new endpoints).
-- Existing backend prompts in `docs/schools/` remain authoritative; UI binds to the same endpoints already declared in `schoolsApiRoutes.ts`.
-
-## Technical changes summary
-
-**New files**
-- `src/styles/schools-tokens.css`
-- `src/components/schools/ui/{SchoolsCard,StatCard,SectionHeader,EmptyState,DataTable,Badge,Avatar,MetricRing,TrendSpark,ThemeToggle}.tsx`
-- `src/components/schools/SchoolsTopBar.tsx`
-- `src/components/schools/AttendanceHeatmap.tsx`
-- `src/components/schools/CampusHealthScore.tsx`
-- `src/components/schools/LiveCaptureTile.tsx`
-
-**Rewritten files**
-- `src/contexts/SchoolsThemeContext.tsx` (add light/dark/system)
-- `src/pages/schools/SchoolsLayout.tsx`
-- `src/pages/schools/SchoolsSidebar.tsx`
-- `src/pages/schools/SchoolsLanding.tsx`
-- `src/pages/schools/SchoolsDashboard.tsx`
-- `src/pages/schools/SchoolsAttendanceAdmin.tsx`
-- `src/pages/schools/SchoolsStudents.tsx`
-- `src/pages/schools/SchoolsStaff.tsx`
-- `src/pages/schools/SchoolsSecurity.tsx`
-
-**Edited**
-- `tailwind.config.ts` — add `schools` color namespace + font families
-- `index.html` — Outfit + Figtree preconnect/link
-- `src/pages/schools/schoolsModules.ts` — refreshed icons + grouping for new sidebar
-
-## Acceptance criteria
-
-- Light/dark toggle works across all 6 pages with persisted preference.
-- All Schools surfaces use design tokens — zero hardcoded hex outside `schools-tokens.css`.
-- No real data is fabricated: when endpoints return `notImplemented`, UI shows skeletons or empty states with helpful copy.
-- All pages responsive at 360 / 768 / 1280 / 1920 with no horizontal scroll.
-- Lighthouse a11y ≥ 95 on dashboard home in both themes.
-- Main app (`/dashboard/**`) appearance unchanged — Schools tokens scoped under `.schools-root`.
+I will create only one file: **`docs/MIGRATION-schools-only.md`**. Then you remix, and the new project's agent executes the checklist.
