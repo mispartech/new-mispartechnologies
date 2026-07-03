@@ -59,21 +59,18 @@ import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 import AcademicStructure from "./pages/dashboard/AcademicStructure";
 import AcademicCalendar from "./pages/dashboard/AcademicCalendar";
 import CourseRosters from "./pages/dashboard/CourseRosters";
-import SchoolsLanding from "./pages/schools/SchoolsLanding";
-import SchoolsLayout from "./pages/schools/SchoolsLayout";
-import SchoolsDashboard from "./pages/schools/SchoolsDashboard";
-import SchoolsModulePlaceholder from "./pages/schools/SchoolsModulePlaceholder";
-import SchoolsIdentity from "./pages/schools/SchoolsIdentity";
-import SchoolsAttendance from "./pages/schools/SchoolsAttendance";
-import SchoolsAttendanceAdmin from "./pages/schools/SchoolsAttendanceAdmin";
-import SchoolsSecurity from "./pages/schools/SchoolsSecurity";
-import SchoolsStudents from "./pages/schools/SchoolsStudents";
-import SchoolsStudentProfile from "./pages/schools/SchoolsStudentProfile";
-import SchoolsStaff from "./pages/schools/SchoolsStaff";
-import SchoolsStaffProfile from "./pages/schools/SchoolsStaffProfile";
-import SchoolsOnboarding from "./pages/schools/SchoolsOnboarding";
-import SchoolsPlatformAdmin from "./pages/schools/SchoolsPlatformAdmin";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+
+const SCHOOLS_HOST = "https://schools.mispartechnologies.com";
+
+const SchoolsExternalRedirect = () => {
+  const { pathname, search, hash } = useLocation();
+  if (typeof window !== "undefined") {
+    const suffix = pathname.replace(/^\/schools/, "") || "/";
+    window.location.replace(`${SCHOOLS_HOST}${suffix}${search}${hash}`);
+  }
+  return null;
+};
 
 const queryClient = new QueryClient();
 
