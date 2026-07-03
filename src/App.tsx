@@ -107,27 +107,12 @@ const App = () => (
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/join/:slug" element={<JoinOrganization />} />
 
-              {/* Schools — schools.mispartechnologies.com (mirrored at /schools/*) */}
-              <Route path="/schools" element={<SchoolsLanding />} />
-              <Route path="/schools/onboarding" element={<SchoolsOnboarding />} />
-              <Route path="/schools/admin" element={<SchoolsPlatformAdmin />} />
-              <Route path="/schools/dashboard" element={<SchoolsLayout />}>
-                <Route index element={<SchoolsDashboard />} />
-                <Route path="identity" element={<SchoolsIdentity />} />
-                <Route path="attendance" element={<SchoolsAttendance />} />
-                <Route path="attendance/admin" element={<SchoolsAttendanceAdmin />} />
-                <Route path="admin" element={<SchoolsAttendanceAdmin />} />
-                <Route path="security" element={<SchoolsSecurity />} />
-                <Route path="students" element={<SchoolsStudents />} />
-                <Route path="students/:id" element={<SchoolsStudentProfile />} />
-                <Route path="staff" element={<SchoolsStaff />} />
-                <Route path="staff/:id" element={<SchoolsStaffProfile />} />
-                <Route path=":module" element={<SchoolsModulePlaceholder />} />
-              </Route>
+              {/* Schools moved to schools.mispartechnologies.com */}
+              <Route path="/schools" element={<SchoolsExternalRedirect />} />
+              <Route path="/schools/*" element={<SchoolsExternalRedirect />} />
+              <Route path="/msse" element={<SchoolsExternalRedirect />} />
+              <Route path="/msse/*" element={<SchoolsExternalRedirect />} />
 
-              {/* Legacy /msse/* redirects → /schools/* */}
-              <Route path="/msse" element={<Navigate to="/schools" replace />} />
-              <Route path="/msse/*" element={<Navigate to="/schools" replace />} />
               
               {/* Platform Admin Routes */}
               <Route path="/admin-register" element={<AdminRegister />} />
