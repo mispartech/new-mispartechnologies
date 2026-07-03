@@ -59,7 +59,7 @@ import SubscriptionSettings from "./pages/dashboard/SubscriptionSettings";
 import AcademicStructure from "./pages/dashboard/AcademicStructure";
 import AcademicCalendar from "./pages/dashboard/AcademicCalendar";
 import CourseRosters from "./pages/dashboard/CourseRosters";
-import { Navigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const SCHOOLS_HOST = "https://schools.mispartechnologies.com";
 
